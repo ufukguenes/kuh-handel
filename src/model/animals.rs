@@ -1,9 +1,9 @@
 use std::fmt;
 
 struct Animal {
-    value: i32,
-    
-
+    value: u32,
+    occurences: u32,
+    inflation: [u32; occurences]
 }
 
 impl Display for Animal {

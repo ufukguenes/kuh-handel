@@ -1,10 +1,10 @@
-use model::animals::Animal;
+use model::animals::{DefaultAnimalFactory, AnimalFactory};
+use model::animals::AnimalSet;
 mod model;
 
 fn main() {
+    let animal_set: AnimalSet = DefaultAnimalFactory::new(500, vec![0, 4]); 
 
-    let animal = Animal::new(100, 5, [1, 2, 3, 4]);
-
-    println!("Animal value: {}", animal);
+    println!("Animal value: {}", animal_set);
 }
 

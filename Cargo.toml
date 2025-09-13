@@ -2,3 +2,6 @@
 name = "kuh-handel"
 version = "0.1.0"
 edition = "2024"
+
+[dependencies]
+zerocopy = "0.8.27"

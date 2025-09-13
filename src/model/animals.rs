@@ -6,30 +6,33 @@ use std::fmt::Display;
 pub enum AnimalError {
     InvalidArgument,
     InvalidState,
+    InvalidDraw,
 }
 
 type AnimalResult<T> = Result<T, AnimalError>;
 
-pub struct DefaultAnimalFactory {}
+pub struct DefaultAnimalSetFactory {}
 
-impl AnimalFactory for DefaultAnimalFactory {
-    fn new(value_number: u32, inflation: Vec<u32>) -> AnimalSet {
+impl AnimalSetFactory for DefaultAnimalSetFactory {
+    fn new(value_number: u32, inflation_numbers: Vec<u32>) -> AnimalSet {
+        let inflation = inflation_numbers.iter().map(|e| Value::new(*e)).collect();
         let value = Value::new(value_number);
-        let money_value: Money = Money::new(value);
         AnimalSet {
-            animal: Animal::new(money_value),
+            animal: Animal::new(value),
             inflation: inflation,
+            draw_count: 0,
         }
     }
 }
 
-pub trait AnimalFactory {
+pub trait AnimalSetFactory {
     fn new(value: u32, inflation: Vec<u32>) -> AnimalSet;
 }
 
 pub struct AnimalSet {
     animal: Animal,
-    inflation: Vec<u32>,
+    inflation: Vec<Value>,
+    draw_count: usize,
 }
 
 impl Display for AnimalSet {
@@ -46,11 +49,19 @@ impl AnimalSet {
     fn animals(&self) -> Vec<Animal> {
         vec![self.animal; self.occurrences()]
     }
+
+    fn draw_animal(&mut self) -> Result<Value, AnimalError> {
+        if self.draw_count == self.occurrences() {
+            return Err(AnimalError::InvalidDraw);
+        }
+        self.draw_count += 1;
+        return Ok(self.inflation[self.draw_count - 1]);
+    }
 }
 
 #[derive(Clone, Copy)]
 pub struct Animal {
-    value: Money,
+    value: Value,
 }
 
 impl Display for Animal {
@@ -60,7 +71,11 @@ impl Display for Animal {
 }
 
 impl Animal {
-    pub fn new(value: Money) -> Self {
+    pub fn new(value: Value) -> Self {
         Animal { value }
+    }
+
+    pub fn value(&self) -> Value {
+        self.value
     }
 }

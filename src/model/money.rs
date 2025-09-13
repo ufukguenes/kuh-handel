@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::Display;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct Value {
     value: u32,
 }
@@ -9,10 +9,6 @@ pub struct Value {
 impl Value {
     pub fn new(value: u32) -> Self {
         Value { value: value }
-    }
-
-    pub fn get_value(&self) -> u32 {
-        self.value
     }
 }
 
@@ -22,7 +18,7 @@ impl Display for Value {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Money {
     value: Value,
 }

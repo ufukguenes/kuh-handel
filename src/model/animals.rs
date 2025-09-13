@@ -42,11 +42,11 @@ impl Display for AnimalSet {
 }
 
 impl AnimalSet {
-    fn occurrences(&self) -> usize {
+    pub fn occurrences(&self) -> usize {
         self.inflation.len()
     }
 
-    fn animals(&self) -> Vec<Animal> {
+    pub fn animals(&self) -> Vec<Animal> {
         vec![self.animal; self.occurrences()]
     }
 

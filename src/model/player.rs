@@ -1,4 +1,5 @@
 use crate::model::animals::Animal;
+use crate::model::game_logic::Game;
 
 use super::money::Money;
 use std::collections::HashMap;
@@ -23,6 +24,7 @@ pub enum AuctionValue {
     Pass,
 }
 
+// ToDo: we need the number of cards to be visible for the opponent -> based on the amount he has to decide whether to take the deal or place a counter bid
 pub struct TradeAmount {
     amount: Vec<Money>,
 }
@@ -34,8 +36,9 @@ pub struct PlayerId {
 pub enum FirstPhaseAction {
     Draw,
     Trade {
-        player: PlayerId,
-        amout: TradeAmount,
+        opponent: PlayerId,
+        animal: Animal,
+        amount: TradeAmount,
     },
 }
 
@@ -50,32 +53,34 @@ pub struct AuctionState {
 }
 
 pub trait PlayerActions {
-    fn provide_bidding(state: AuctionState) -> AuctionValue;
-    fn draw_or_trade() -> FirstPhaseAction;
-    fn buy_or_sell(state: AuctionState) -> AuctionAction;
+    fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue;
+    fn draw_or_trade(&mut self) -> FirstPhaseAction;
+    fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction;
 }
 
 pub struct RandomPlayerActions {}
 
 impl PlayerActions for RandomPlayerActions {
-    fn provide_bidding(state: AuctionState) -> AuctionValue {
+    fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
         AuctionValue::Pass
     }
 
-    fn draw_or_trade() -> FirstPhaseAction {
+    fn draw_or_trade(&mut self) -> FirstPhaseAction {
         FirstPhaseAction::Draw
     }
 
-    fn buy_or_sell(state: AuctionState) -> AuctionAction {
+    fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction {
         AuctionAction::Buy
     }
+
+    // ToDo: add the other actions -> the actual trade needs to be implemented (doing the attack as well as the counter bid)
 }
 
 pub struct Player<T: PlayerActions> {
     id: String,
     wallet: Wallet,
     owned_animals: Vec<Animal>, // ToDo: maybe all this construct "stall"
-    player_actions: T,
+    pub player_actions: T,
 }
 
 impl<T> Player<T>
@@ -101,6 +106,11 @@ where
     }
 }
 
+#[derive(Debug)]
+pub enum GameError {
+    PlayerNotFound,
+}
+
 pub struct PlayerGroup<T: PlayerActions> {
     players: Vec<Player<T>>,
 }
@@ -117,5 +127,45 @@ where
                 .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
                 .collect(),
         }
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Player<T>> {
+        self.players.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Player<T>> {
+        self.players.iter_mut()
+    }
+
+    pub fn get(&self, index: usize) -> Result<&Player<T>, GameError> {
+        self.players.get(index).ok_or(GameError::PlayerNotFound)
+    }
+
+    pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<&mut Player<T>, GameError> {
+        self.players
+            .iter_mut()
+            .find(|p| &p.id == &id.name)
+            .ok_or(GameError::PlayerNotFound)
+    }
+
+    pub fn get_mut(&mut self, index: usize) -> Result<&mut Player<T>, GameError> {
+        self.players.get_mut(index).ok_or(GameError::PlayerNotFound)
+    }
+}
+
+impl<T> PlayerActions for Player<T>
+where
+    T: PlayerActions,
+{
+    fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
+        self.player_actions.provide_bidding(state)
+    }
+
+    fn draw_or_trade(&mut self) -> FirstPhaseAction {
+        self.player_actions.draw_or_trade()
+    }
+
+    fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction {
+        self.player_actions.buy_or_sell(state)
     }
 }

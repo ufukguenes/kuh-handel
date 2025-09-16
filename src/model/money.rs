@@ -27,6 +27,12 @@ impl Money {
     pub fn new(value: Value) -> Self {
         Money { value }
     }
+
+    pub fn new_u32(value: u32) -> Self {
+        Money {
+            value: Value::new(value),
+        }
+    }
 }
 
 impl Display for Money {

@@ -46,7 +46,7 @@ impl Game<RandomPlayerActions> {
             wallet,
         );
 
-        Game::new(players, game_stack)
+        Game::new(players, game_stack, 0x0815u64)
     }
 
     pub fn new_random_game(player_ids: Vec<String>, seed: u64) -> Self {
@@ -104,6 +104,6 @@ impl Game<RandomPlayerActions> {
             wallet,
         );
 
-        Game::new(players, game_stack)
+        Game::new(players, game_stack, seed)
     }
 }

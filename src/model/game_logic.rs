@@ -5,6 +5,9 @@ use crate::model::player::Player;
 use crate::model::player::PlayerActions;
 use crate::model::player::PlayerGroup;
 use crate::model::player::TradeAmount;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
+use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 
 use std::fmt;
@@ -56,7 +59,7 @@ impl<T> Game<T>
 where
     T: PlayerActions,
 {
-    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>) -> Self {
+    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>, seed: u64) -> Self {
         let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
 
@@ -66,6 +69,8 @@ where
                 game_stack.push(Rc::clone(animal));
             }
         }
+
+        game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
         Game {
             players: players,

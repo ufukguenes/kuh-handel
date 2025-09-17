@@ -7,13 +7,18 @@ use crate::model::player::PlayerGroup;
 use crate::model::player::TradeAmount;
 use std::collections::HashMap;
 
+use std::fmt;
+use std::fmt::Display;
+use std::rc::Rc;
+
 pub struct Game<T>
 where
     T: PlayerActions,
 {
     players: PlayerGroup<T>,
-    game_stack: Vec<Animal>,
-    animal_usage: HashMap<Animal, AnimalSet>,
+    game_stack: Vec<Rc<Animal>>,
+    animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
+    animal_sets: Vec<Rc<AnimalSet>>,
 }
 
 pub enum GameError {
@@ -23,21 +28,51 @@ pub enum GameError {
 
 type GameResult<T = ()> = Result<T, GameError>;
 
+impl<T> Display for Game<T>
+where
+    T: PlayerActions,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "num_players {}\n \n
+            size_game_stack {}\n \n 
+            game_stack ",
+            self.players.len(),
+            self.game_stack.len()
+        )?;
+        for animal in self.game_stack.clone() {
+            write!(f, "{} ", animal)?;
+        }
+        write!(f, " \n \n num_animal_sets {} \n \n", self.animal_sets.len())?;
+
+        for set in self.animal_sets.iter() {
+            write!(f, "{} ", set)?;
+        }
+        write!(f, "")
+    }
+}
+
 impl<T> Game<T>
 where
     T: PlayerActions,
 {
-    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<AnimalSet>) -> Self {
-        let animal_usage: HashMap<Animal, AnimalSet> = HashMap::new();
-        let mut game_stack = Vec::<Animal>::new();
-        animal_sets
-            .iter()
-            .for_each(|set| game_stack.append(&mut set.animals()));
-        todo!();
+    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>) -> Self {
+        let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
+        let mut game_stack: Vec<Rc<Animal>> = Vec::new();
+
+        for set in animal_sets.iter() {
+            for animal in set.animals() {
+                animal_usage.insert(Rc::clone(animal), Rc::clone(set));
+                game_stack.push(Rc::clone(animal));
+            }
+        }
+
         Game {
             players: players,
             game_stack: game_stack,
             animal_usage: animal_usage,
+            animal_sets: animal_sets,
         }
     }
 

@@ -1,3 +1,4 @@
+use std::env::var;
 use std::fmt;
 use std::fmt::Display;
 
@@ -32,6 +33,10 @@ impl Money {
         Money {
             value: Value::new(value),
         }
+    }
+
+    pub fn get_value(self) -> Value {
+        self.value
     }
 }
 

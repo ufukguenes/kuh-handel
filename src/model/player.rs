@@ -151,6 +151,10 @@ where
     pub fn get_mut(&mut self, index: usize) -> Result<&mut Player<T>, GameError> {
         self.players.get_mut(index).ok_or(GameError::PlayerNotFound)
     }
+
+    pub fn len(&self) -> usize {
+        self.players.len()
+    }
 }
 
 impl<T> PlayerActions for Player<T>

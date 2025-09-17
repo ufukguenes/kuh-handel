@@ -1,6 +1,9 @@
+use crate::model::animals;
+
 use super::money::{Money, Value};
 use std::fmt;
 use std::fmt::Display;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum AnimalError {
@@ -15,24 +18,54 @@ pub struct DefaultAnimalSetFactory {}
 
 impl AnimalSetFactory for DefaultAnimalSetFactory {
     fn new(value_number: u32, inflation_numbers: Vec<u32>) -> AnimalSet {
-        let inflation = inflation_numbers.iter().map(|e| Value::new(*e)).collect();
+        let inflation: Vec<Value> = inflation_numbers.iter().map(|e| Value::new(*e)).collect();
         let value = Value::new(value_number);
+
+        let animal = Animal::new(value);
+        let animals = inflation
+            .clone()
+            .iter()
+            .map(|_| Rc::new(animal.clone()))
+            .collect();
+
         AnimalSet {
-            animal: Animal::new(value),
+            animal: animal,
             inflation: inflation,
             draw_count: 0,
+            animals: animals,
+        }
+    }
+
+    fn new_from_value(value_number: u32, inflation: Vec<Value>) -> AnimalSet {
+        let value = Value::new(value_number);
+
+        let animal = Animal::new(value);
+        let animals = inflation
+            .clone()
+            .iter()
+            .map(|_| Rc::new(animal.clone()))
+            .collect();
+
+        AnimalSet {
+            animal: animal,
+            inflation: inflation,
+            draw_count: 0,
+            animals: animals,
         }
     }
 }
 
 pub trait AnimalSetFactory {
     fn new(value: u32, inflation: Vec<u32>) -> AnimalSet;
+    fn new_from_value(value: u32, inflation: Vec<Value>) -> AnimalSet;
 }
 
+#[derive(Clone)]
 pub struct AnimalSet {
     animal: Animal,
     inflation: Vec<Value>,
     draw_count: usize,
+    animals: Vec<Rc<Animal>>,
 }
 
 impl Display for AnimalSet {
@@ -46,8 +79,8 @@ impl AnimalSet {
         self.inflation.len()
     }
 
-    pub fn animals(&self) -> Vec<Animal> {
-        vec![self.animal; self.occurrences()]
+    pub fn animals(&self) -> &Vec<Rc<Animal>> {
+        &self.animals
     }
 
     fn draw_animal(&mut self) -> Result<Value, AnimalError> {
@@ -59,7 +92,7 @@ impl AnimalSet {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Animal {
     value: Value,
 }

@@ -35,19 +35,18 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "num_players {}\n \n
-            size_game_stack {}\n \n 
-            game_stack ",
+            "num_players: {}\nsize_game_stack: {}\ngame_stack: \n",
             self.players.len(),
             self.game_stack.len()
         )?;
-        for animal in self.game_stack.clone() {
-            write!(f, "{} ", animal)?;
-        }
-        write!(f, " \n \n num_animal_sets {} \n \n", self.animal_sets.len())?;
 
-        for set in self.animal_sets.iter() {
-            write!(f, "{} ", set)?;
+        for (i, animal) in self.game_stack.clone().iter().enumerate() {
+            write!(f, "     {}: {}\n", i, animal)?;
+        }
+        write!(f, " \nnum_animal_sets: {} \n", self.animal_sets.len())?;
+
+        for (i, set) in self.animal_sets.iter().enumerate() {
+            write!(f, "     {}: {}\n", i, set)?;
         }
         write!(f, "")
     }

@@ -4,8 +4,24 @@ use model::game_logic::Game;
 mod model;
 
 fn main() {
-    let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
     let seed: u64 = 0;
+
+    println!("-------Default game--------\n");
+    let game: Game<model::player::RandomPlayerActions> = Game::new_default_game(
+        vec![
+            String::from("ufuk"),
+            String::from("leon"),
+            String::from("gregor"),
+        ],
+        seed,
+    );
+    println!("{}", game);
+
+    println!("");
+    println!("---------------------------");
+    println!("");
+
+    println!("-------Random game---------\n");
     let game: Game<model::player::RandomPlayerActions> = Game::new_random_game(
         vec![
             String::from("ufuk"),
@@ -14,7 +30,6 @@ fn main() {
         ],
         seed,
     );
-    println!("Animal value: {}", animal_set);
 
     println!("{}", game);
 }

@@ -29,8 +29,15 @@ pub struct TradeAmount {
     amount: Vec<Money>,
 }
 
+#[derive(PartialEq, Eq)]
 pub struct PlayerId {
     name: String,
+}
+
+impl Display for PlayerId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 pub enum FirstPhaseAction {
@@ -77,7 +84,7 @@ impl PlayerActions for RandomPlayerActions {
 }
 
 pub struct Player<T: PlayerActions> {
-    id: String,
+    id: PlayerId,
     wallet: Wallet,
     owned_animals: Vec<Animal>, // ToDo: maybe all this construct "stall"
     pub player_actions: T,
@@ -89,11 +96,15 @@ where
 {
     pub fn new(id: String, wallet: Wallet, player_actions: T) -> Self {
         Player {
-            id: id,
+            id: PlayerId { name: id },
             wallet: wallet,
             owned_animals: Vec::new(),
             player_actions,
         }
+    }
+
+    pub fn get_string_id(&self) -> String {
+        self.id.name.clone()
     }
 }
 
@@ -144,7 +155,7 @@ where
     pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<&mut Player<T>, GameError> {
         self.players
             .iter_mut()
-            .find(|p| &p.id == &id.name)
+            .find(|p| &p.id == id)
             .ok_or(GameError::PlayerNotFound)
     }
 

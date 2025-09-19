@@ -82,6 +82,28 @@ where
         Ok(())
     }
 
+    pub fn num_players(self) -> usize {
+        self.players.len()
+    }
+
+    pub fn get_all_ids(&self) -> Vec<String> {
+        self.players
+            .iter()
+            .map(|p| p.get_string_id().clone())
+            .collect()
+    }
+
+    pub fn get_player_by_id(&self, id: String) -> &Player<T> {
+        self.players
+            .iter()
+            .find(|p| p.get_string_id() == id)
+            .ok_or(err) // todo
+    }
+
+    pub fn get_player_for_current_turn(&self) -> &Player<T> {
+        self.players.get(0).unwrap() // todo
+    }
+
     fn auction(&mut self, player: &mut Player<T>, animal: Animal) {
         // Do the auction with the animal
     }

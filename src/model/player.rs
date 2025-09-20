@@ -134,7 +134,7 @@ where
     }
 
     pub fn id(&self) -> &str {
-        &self.id[..]
+        &self.id.name
     }
 }
 
@@ -194,7 +194,7 @@ where
     pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<Rc<RefCell<Player<T>>>, GameError> {
         self.players
             .iter()
-            .find(|p| p.borrow().id == id.name)
+            .find(|p| p.borrow().id.name == id.name)
             .ok_or(GameError::PlayerNotFound)
             .cloned()
     }

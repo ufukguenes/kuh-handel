@@ -42,7 +42,7 @@ where
         // todo can i clone the sender without breaking the connection, or should i borrow with Arc?
         self.connected_players
             .iter()
-            .find(|p| p.player.get_string_id() == player.get_string_id())
+            .find(|p| p.player.id() == player.id())
             .map(|p| p.sender.clone())
     }
 
@@ -52,11 +52,7 @@ where
 
         game.get_all_ids()
             .iter()
-            .filter(|id| {
-                !connected_players
-                    .iter()
-                    .any(|p| &&p.player.get_string_id() == id)
-            })
+            .filter(|id| !connected_players.iter().any(|p| &&p.player.id() == id))
             .map(|str| str.clone())
             .collect()
     }
@@ -149,10 +145,10 @@ where
     // Clean up on disconnection.
     state
         .connected_players
-        .retain(|player| player.player.get_string_id() != player_id);
+        .retain(|player| player.player.id() != player_id);
 }
 
-async fn organize_new_game<T>(state: WebsocketGame<T>)
+pub async fn organize_new_game<T>(state: WebsocketGame<T>)
 where
     T: PlayerActions,
 {

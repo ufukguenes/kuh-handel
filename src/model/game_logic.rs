@@ -89,26 +89,29 @@ where
         Ok(())
     }
 
-    pub fn num_players(self) -> usize {
-        self.players.len()
+    pub fn num_players(&self) -> usize {
+        self.players.borrow().len()
     }
 
     pub fn get_all_ids(&self) -> Vec<String> {
         self.players
+            .borrow()
             .iter()
-            .map(|p| p.get_string_id().clone())
+            .map(|p| p.borrow().id().to_string())
             .collect()
     }
 
-    pub fn get_player_by_id(&self, id: String) -> &Player<T> {
+    pub fn get_player_by_id(&self, id: String) -> Result<Rc<RefCell<Player<T>>>, &str> {
         self.players
+            .borrow()
             .iter()
-            .find(|p| p.get_string_id() == id)
-            .ok_or(err) // todo
+            .find(|p| p.borrow().id() == id)
+            .map(|p| Rc::clone(p))
+            .ok_or("err") // todo
     }
 
-    pub fn get_player_for_current_turn(&self) -> &Player<T> {
-        self.players.get(0).unwrap() // todo
+    pub fn get_player_for_current_turn(&self) -> Rc<RefCell<Player<T>>> {
+        self.players.borrow().get(0).unwrap() // todo
     }
 
     fn auction(&mut self, player: &mut Player<T>, animal: &Animal) {

@@ -59,13 +59,6 @@ where
 }
 
 // todo this should just be a hash map inside the websocket game
-pub struct WebsocketPlayer<T>
-where
-    T: PlayerActions,
-{
-    player: Arc<Player<T>>,
-    sender: mpsc::Sender<Message>,
-}
 
 #[tokio::main]
 async fn main() {

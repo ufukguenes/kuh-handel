@@ -7,7 +7,8 @@ use model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
 use model::game_logic::Game;
 use std::sync::Arc;
 
-use backend_api::{WebsocketGame, WebsocketPlayer, organize_new_game, websocket_handler};
+use backend_api::{WebsocketGame, organize_new_game, websocket_handler};
+use model::player::player_actions::websocket_actions::WebsocketActions;
 use std::net::SocketAddr;
 
 #[tokio::main]
@@ -44,6 +45,7 @@ async fn main() {
 
     println!("{}", game);
 
+    /*
     let ws_game = WebsocketGame::new(Arc::new(game));
     // start the game in a seperate thread, so that server can handle connections
     tokio::spawn(organize_new_game(Arc::clone(&ws_game)));
@@ -54,4 +56,5 @@ async fn main() {
     let address = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+    */
 }

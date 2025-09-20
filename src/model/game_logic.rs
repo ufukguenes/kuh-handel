@@ -1,10 +1,10 @@
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
-use crate::model::player::FirstPhaseAction;
-use crate::model::player::Player;
-use crate::model::player::PlayerActions;
-use crate::model::player::PlayerGroup;
-use crate::model::player::TradeAmount;
+use crate::model::player::base_player::FirstPhaseAction;
+use crate::model::player::base_player::Player;
+use crate::model::player::base_player::TradeAmount;
+use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;

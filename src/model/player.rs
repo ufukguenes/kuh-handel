@@ -1,10 +1,15 @@
 use crate::model::animals::Animal;
 use crate::model::game_logic::Game;
+use crate::model::money::Value;
 
 use super::money::Money;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::f32::consts::E;
 use std::fmt;
 use std::fmt::Display;
+use std::io::empty;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Wallet {
@@ -16,6 +21,25 @@ impl Wallet {
         Wallet {
             bank_notes: bank_notes,
         }
+    }
+
+    pub fn withdraw(&mut self, amount: Value) -> Result<(), GameError> {
+        // ToDo: implement the actual version of withdraw (check money and maybe receive not a value but a handful of money)
+
+        let key = self
+            .bank_notes
+            .iter()
+            .find(|(key, _)| key.get_value() >= amount)
+            .map(|(key, _)| *key);
+        match key {
+            Some(k) => {
+                self.bank_notes
+                    .entry(k)
+                    .and_modify(|e| *e = e.checked_sub(1).or(Some(0)).unwrap());
+            }
+            None => (),
+        };
+        Ok(())
     }
 }
 
@@ -86,7 +110,7 @@ impl PlayerActions for RandomPlayerActions {
 pub struct Player<T: PlayerActions> {
     id: PlayerId,
     wallet: Wallet,
-    owned_animals: Vec<Animal>, // ToDo: maybe all this construct "stall"
+    owned_animals: Vec<Animal>,
     pub player_actions: T,
 }
 
@@ -103,8 +127,14 @@ where
         }
     }
 
-    pub fn get_string_id(&self) -> String {
-        self.id.name.clone()
+    pub fn consume_animal(&mut self, animal: &Animal) {
+        println!("Player {} consumes animal {}", self.id(), animal,);
+        self.owned_animals.push(*animal);
+        self.wallet.withdraw(animal.value()).unwrap();
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id[..]
     }
 }
 
@@ -123,7 +153,7 @@ pub enum GameError {
 }
 
 pub struct PlayerGroup<T: PlayerActions> {
-    players: Vec<Player<T>>,
+    players: Vec<Rc<RefCell<Player<T>>>>,
 }
 
 impl<T> PlayerGroup<T>
@@ -135,32 +165,38 @@ where
             players: player_ids
                 .iter()
                 .zip(player_actions)
-                .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
+                .map(|(id, player_action)| {
+                    Rc::new(RefCell::new(Player::new(
+                        id.clone(),
+                        wallet.clone(),
+                        player_action,
+                    )))
+                })
                 .collect(),
         }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Player<T>> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Rc<RefCell<Player<T>>>> {
         self.players.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Player<T>> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Rc<RefCell<Player<T>>>> {
         self.players.iter_mut()
     }
 
-    pub fn get(&self, index: usize) -> Result<&Player<T>, GameError> {
-        self.players.get(index).ok_or(GameError::PlayerNotFound)
-    }
-
-    pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<&mut Player<T>, GameError> {
+    pub fn get(&self, index: usize) -> Result<Rc<RefCell<Player<T>>>, GameError> {
         self.players
-            .iter_mut()
-            .find(|p| &p.id == id)
+            .get(index)
             .ok_or(GameError::PlayerNotFound)
+            .cloned()
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Result<&mut Player<T>, GameError> {
-        self.players.get_mut(index).ok_or(GameError::PlayerNotFound)
+    pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<Rc<RefCell<Player<T>>>, GameError> {
+        self.players
+            .iter()
+            .find(|p| p.borrow().id == id.name)
+            .ok_or(GameError::PlayerNotFound)
+            .cloned()
     }
 
     pub fn len(&self) -> usize {

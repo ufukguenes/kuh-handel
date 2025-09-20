@@ -13,8 +13,11 @@ use std::net::SocketAddr;
 #[tokio::main]
 async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
+
     let seed: u64 = 0;
-    let game: Game<model::player::RandomPlayerActions> = Game::new_random_game(
+
+    println!("-------Default game--------\n");
+    let mut game = Game::new_default_game(
         vec![
             String::from("ufuk"),
             String::from("leon"),
@@ -22,7 +25,22 @@ async fn main() {
         ],
         seed,
     );
-    println!("Animal value: {}", animal_set);
+    println!("{}", game);
+    game.play().unwrap();
+
+    println!("");
+    println!("---------------------------");
+    println!("");
+
+    println!("-------Random game---------\n");
+    let game = Game::new_random_game(
+        vec![
+            String::from("ufuk"),
+            String::from("leon"),
+            String::from("gregor"),
+        ],
+        seed,
+    );
 
     println!("{}", game);
 

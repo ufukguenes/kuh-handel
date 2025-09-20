@@ -5,6 +5,10 @@ use crate::model::player::Player;
 use crate::model::player::PlayerActions;
 use crate::model::player::PlayerGroup;
 use crate::model::player::TradeAmount;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
+use rand_chacha::ChaCha8Rng;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use std::fmt;
@@ -15,12 +19,13 @@ pub struct Game<T>
 where
     T: PlayerActions,
 {
-    players: PlayerGroup<T>,
+    players: Rc<RefCell<PlayerGroup<T>>>,
     game_stack: Vec<Rc<Animal>>,
     animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
     animal_sets: Vec<Rc<AnimalSet>>,
 }
 
+#[derive(Debug)]
 pub enum GameError {
     InvalidAction,
     InvalidState,
@@ -36,7 +41,7 @@ where
         write!(
             f,
             "num_players: {}\nsize_game_stack: {}\ngame_stack: \n",
-            self.players.len(),
+            self.players.borrow().len(),
             self.game_stack.len()
         )?;
 
@@ -56,7 +61,7 @@ impl<T> Game<T>
 where
     T: PlayerActions,
 {
-    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>) -> Self {
+    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>, seed: u64) -> Self {
         let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
 
@@ -67,8 +72,10 @@ where
             }
         }
 
+        game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
+
         Game {
-            players: players,
+            players: Rc::new(RefCell::new(players)),
             game_stack: game_stack,
             animal_usage: animal_usage,
             animal_sets: animal_sets,
@@ -104,8 +111,9 @@ where
         self.players.get(0).unwrap() // todo
     }
 
-    fn auction(&mut self, player: &mut Player<T>, animal: Animal) {
-        // Do the auction with the animal
+    fn auction(&mut self, player: &mut Player<T>, animal: &Animal) {
+        // ToDo: replace the dummy
+        player.consume_animal(animal);
     }
 
     fn trade(
@@ -125,22 +133,31 @@ where
         //   in the auction ask each player to bid, and provide the current transaction state = tuple of player and his/her current/highest bid
         //
         while !self.game_stack.is_empty() {
-            let mut player = self.players.get_mut(current_player_idx).unwrap();
-            // ToDo: we need to work with RefCell and Rc to avoid borrow issues
-            // match player.draw_or_trade() {
-            //     FirstPhaseAction::Draw => self.auction(player, self.game_stack.pop().unwrap()),
-            //     FirstPhaseAction::Trade {
-            //         opponent,
-            //         animal,
-            //         amount,
-            //     } => self.trade(
-            //         player,
-            //         self.players.get_by_id_mut(&opponent).unwrap(),
-            //         amount,
-            //         animal,
-            //     ),
-            // }
-            // current_player_idx += 1;
+            println!("--- New turn ---");
+            let players = self.players.clone();
+            let mut players = players.borrow_mut();
+            let player = players.get(current_player_idx).unwrap();
+            let mut player = player.borrow_mut();
+            match player.draw_or_trade() {
+                FirstPhaseAction::Draw => {
+                    let card = self.game_stack.pop().unwrap();
+                    println!("Player {} drew card: {}", player.id(), card);
+                    self.auction(&mut *player, &card)
+                }
+                FirstPhaseAction::Trade {
+                    opponent,
+                    animal,
+                    amount,
+                } => {
+                    let opponent = players.get_by_id_mut(&opponent).unwrap();
+                    let mut opponent = opponent.borrow_mut();
+                    self.trade(&mut *player, &mut *opponent, amount, animal);
+                }
+            };
+            current_player_idx = (current_player_idx + 1) % players.len();
+            println!("");
+
+            // ToDo: a lot of stuff to do here
         }
     }
 

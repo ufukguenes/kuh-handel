@@ -1,6 +1,4 @@
-use crate::model::animals;
-
-use super::money::{Money, Value};
+use super::money::{money::Money, value::Value};
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;

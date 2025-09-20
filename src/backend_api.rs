@@ -1,6 +1,6 @@
 use crate::model::{
     self,
-    player::{self, Player, PlayerActions},
+    player::{Player, PlayerActions},
 };
 
 use axum::{
@@ -10,10 +10,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures_util::{
-    SinkExt, StreamExt,
-    stream::{SplitSink, SplitStream},
-};
+use futures_util::{SinkExt, StreamExt};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -118,7 +115,7 @@ where
     // Create a channel to send messages from the game loop to this specific bot.
     let (tx, mut rx) = mpsc::channel(1);
 
-    let player_id = String::from("player id i need to parse form request");
+    let player_id = todo!("player id i need to parse form request");
     let new_websocket_player = WebsocketPlayer {
         player: state.game.get_player_by_id(player_id),
         sender: tx,
@@ -130,7 +127,7 @@ where
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
     // Use a separate task to handle messages from the game loop.
-    //todo do i need this?
+    todo!("do i need this?");
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if ws_sender.send(msg).await.is_err() {
@@ -142,7 +139,7 @@ where
     // The main loop for receiving messages from the bot.
     while let Some(msg) = ws_receiver.next().await {
         if let Ok(Message::Text(text)) = msg {
-            // Here, you would process the bot's action based on the game state.
+            todo!("process the bot's action based on the game state.");
             println!("Received action from bot ID {}: {}", player_id, text.trim());
         }
     }
@@ -160,10 +157,7 @@ where
     T: PlayerActions,
 {
     let mut missing_players = state.get_missing_players();
-    loop {
-        if missing_players.len() == 0 {
-            break;
-        }
+    while missing_players.len() > 0 {
         println!("Waiting for missing players: {:?}", missing_players);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         missing_players = state.get_missing_players();
@@ -200,7 +194,5 @@ where
         // In a real game, you would implement a more robust system for
         // waiting for responses and handling timeouts.
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-
-        todo!("do game step")
     }
 }

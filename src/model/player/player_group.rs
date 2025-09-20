@@ -1,6 +1,6 @@
 use crate::model::game_errors::GameError;
 use crate::model::money::wallet::Wallet;
-use crate::model::player::base_player::Player;
+use crate::model::player::base_player::{Player, PlayerId};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -47,7 +47,7 @@ where
     pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<Rc<RefCell<Player<T>>>, GameError> {
         self.players
             .iter()
-            .find(|p| p.borrow().id.name == id.name)
+            .find(|p| p.borrow().id() == id.name())
             .ok_or(GameError::PlayerNotFound)
             .cloned()
     }

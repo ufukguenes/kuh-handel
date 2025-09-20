@@ -1,6 +1,5 @@
 use crate::model::{
-    self,
-    player::{Player, PlayerActions},
+    self, player::base_player::Player, player::player_actions::base_player_actions::PlayerActions,
 };
 
 use axum::{
@@ -11,8 +10,13 @@ use axum::{
     response::IntoResponse,
 };
 use futures_util::{SinkExt, StreamExt};
-use std::collections::VecDeque;
 use std::sync::Arc;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+    rc::Rc,
+};
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
 
@@ -23,7 +27,7 @@ pub struct WebsocketGame<T>
 where
     T: PlayerActions,
 {
-    connected_players: Vec<WebsocketPlayer<T>>,
+    connected_players: HashMap<String, mpsc::Sender<Message>>,
     game: Arc<Game<T>>,
 }
 
@@ -33,26 +37,16 @@ where
 {
     pub fn new(game: Arc<Game<T>>) -> Self {
         WebsocketGame {
-            connected_players: Vec::new(),
+            connected_players: HashMap::new(),
             game: game,
         }
     }
 
-    pub fn get_sender_for_player(&self, player: &Player<T>) -> Option<mpsc::Sender<Message>> {
-        // todo can i clone the sender without breaking the connection, or should i borrow with Arc?
-        self.connected_players
-            .iter()
-            .find(|p| p.player.id() == player.id())
-            .map(|p| p.sender.clone())
-    }
-
     pub fn get_missing_players(&self) -> Vec<String> {
-        let game: Arc<Game<T>> = Arc::clone(&self.game);
-        let connected_players = &self.connected_players;
-
-        game.get_all_ids()
+        self.game
+            .get_all_ids()
             .iter()
-            .filter(|id| !connected_players.iter().any(|p| &&p.player.id() == id))
+            .filter(|id| !self.connected_players.keys().any(|key_id| &key_id == id))
             .map(|str| str.clone())
             .collect()
     }
@@ -60,6 +54,7 @@ where
 
 // todo this should just be a hash map inside the websocket game
 
+/*
 #[tokio::main]
 async fn main() {
     // The server's game state.
@@ -84,6 +79,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+    */
 
 pub async fn websocket_handler<T>(
     ws: WebSocketUpgrade,
@@ -105,10 +101,8 @@ where
     let (tx, mut rx) = mpsc::channel(1);
 
     let player_id = todo!("player id i need to parse form request");
-    let new_websocket_player = WebsocketPlayer {
-        player: state.game.get_player_by_id(player_id),
-        sender: tx,
-    };
+
+    state.connected_players.insert(player_id, tx);
 
     println!("Bot connected with ID: {}", player_id);
 
@@ -136,9 +130,7 @@ where
     println!("Bot ID {} disconnected.", player_id);
 
     // Clean up on disconnection.
-    state
-        .connected_players
-        .retain(|player| player.player.id() != player_id);
+    state.connected_players.remove(player_id.as_str());
 }
 
 pub async fn organize_new_game<T>(state: WebsocketGame<T>)
@@ -159,14 +151,17 @@ where
         }
 
         let current_player = state.game.get_player_for_current_turn();
-        let current_sender = state.get_sender_for_player(current_player).unwrap();
+        let current_sender = state
+            .connected_players
+            .get(current_player.borrow().id())
+            .unwrap();
 
-        println!("\nIt's bot ID {}'s turn.", current_player);
+        println!("\nIt's bot ID {}'s turn.", current_player.borrow());
 
         // Send a turn message to the current bot.
         let turn_message = format!(
             "Your turn, bot ID {}. Please provide an action.\n",
-            current_player
+            current_player.borrow()
         );
 
         if let Err(e) = current_sender
@@ -175,7 +170,8 @@ where
         {
             eprintln!(
                 "Failed to send turn message to bot ID {}: {}",
-                current_player, e
+                current_player.borrow(),
+                e
             );
         }
 

@@ -1,8 +1,6 @@
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
-use crate::model::player::base_player::FirstPhaseAction;
-use crate::model::player::base_player::Player;
-use crate::model::player::base_player::TradeAmount;
+use crate::model::player::base_player::{FirstPhaseAction, Player, TradeAmount};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;

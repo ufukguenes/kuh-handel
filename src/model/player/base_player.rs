@@ -18,6 +18,12 @@ pub struct PlayerId {
     name: String,
 }
 
+impl PlayerId {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 impl Display for PlayerId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)

@@ -10,14 +10,15 @@ use axum::{
     response::IntoResponse,
 };
 use futures_util::{SinkExt, StreamExt};
-use std::sync::Arc;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     hash::Hash,
     rc::Rc,
 };
+use std::{intrinsics::breakpoint, sync::Arc};
 use tokio::sync::Mutex;
+
 use tokio::sync::mpsc;
 
 use model::game_logic::Game;
@@ -27,7 +28,6 @@ pub struct WebsocketGame<T>
 where
     T: PlayerActions,
 {
-    connected_players: HashMap<String, mpsc::Sender<Message>>,
     game: Arc<Game<T>>,
 }
 
@@ -35,13 +35,6 @@ impl<T> WebsocketGame<T>
 where
     T: PlayerActions,
 {
-    pub fn new(game: Arc<Game<T>>) -> Self {
-        WebsocketGame {
-            connected_players: HashMap::new(),
-            game: game,
-        }
-    }
-
     pub fn get_missing_players(&self) -> Vec<String> {
         self.game
             .get_all_ids()
@@ -95,42 +88,56 @@ async fn handle_socket<'a, T>(socket: WebSocket, state: WebsocketGame<T>)
 where
     T: PlayerActions,
 {
+    let player_id = todo!("player id i need to parse form request");
     println!("New bot connecting...");
 
-    // Create a channel to send messages from the game loop to this specific bot.
-    let (tx, mut rx) = mpsc::channel(1);
+    // for each bot, create two channels
+    // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
+    // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
+    // to the websocket so it can send it to the client-bot
 
-    let player_id = todo!("player id i need to parse form request");
-
-    state.connected_players.insert(player_id, tx);
+    let (state_sender, state_receiver) = mpsc::channel(1);
+    let (action_sender, action_receiver) = mpsc::channel(1);
 
     println!("Bot connected with ID: {}", player_id);
 
-    // Split the WebSocket into a sender and a receiver.
-    let (mut ws_sender, mut ws_receiver) = socket.split();
-
-    // Use a separate task to handle messages from the game loop.
-    todo!("do i need this?");
-    tokio::spawn(async move {
-        while let Some(msg) = rx.recv().await {
-            if ws_sender.send(msg).await.is_err() {
-                break;
+    loop {
+        // send state and possible actions to client-bot
+        let recv_state: Option<Message> = state_receiver.recv().await;
+        match recv_state {
+            Some(msg) => {
+                if let Err(e) = socket.send(msg).await {
+                    eprintln!("Error sending message: {}", e);
+                }
             }
+            None => todo!(),
         }
-    });
 
-    // The main loop for receiving messages from the bot.
-    while let Some(msg) = ws_receiver.next().await {
-        if let Ok(Message::Text(text)) = msg {
-            todo!("process the bot's action based on the game state.");
-            println!("Received action from bot ID {}: {}", player_id, text.trim());
+        // receive action and send to server-bot
+        if let Some(Ok(msg)) = socket.recv().await {
+            match msg {
+                Message::Text(utf8_bytes) => match action_sender.send(msg).await {
+                    Ok(_) => println!("action has been send to game"),
+                    Err(_) => eprintln!("failure sending action to game"),
+                },
+                Message::Close(close_frame) => {
+                    println!("Closing WebSocket connection.");
+                    break;
+                }
+                _ => {
+                    eprint!(
+                        "received unknown message type from client, closing WebSocket connection"
+                    );
+                    break;
+                }
+            }
         }
     }
 
     println!("Bot ID {} disconnected.", player_id);
 
-    // Clean up on disconnection.
-    state.connected_players.remove(player_id.as_str());
+    state_receiver.close();
+    action_receiver.close();
 }
 
 pub async fn organize_new_game<T>(state: WebsocketGame<T>)

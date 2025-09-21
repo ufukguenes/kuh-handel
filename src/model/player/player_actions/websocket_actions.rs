@@ -2,6 +2,7 @@ use crate::model::player::base_player::{
     AuctionAction, AuctionState, AuctionValue, FirstPhaseAction,
 };
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use axum::Json;
 use axum::{
     extract::{
         State,
@@ -12,7 +13,8 @@ use axum::{
 use tokio::sync::mpsc;
 
 pub struct WebsocketActions {
-    sender: mpsc::Sender<Message>,
+    state_sender: mpsc::Sender<Message>,
+    action_receiver: mpsc::Receiver<Message>,
 }
 
 impl PlayerActions for WebsocketActions {

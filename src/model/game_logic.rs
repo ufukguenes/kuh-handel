@@ -6,21 +6,23 @@ use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
-use std::cell::RefCell;
+
 use std::collections::HashMap;
+use tokio::sync::Mutex;
 
 use std::fmt;
 use std::fmt::Display;
-use std::rc::Rc;
+
+use std::sync::Arc;
 
 pub struct Game<T>
 where
     T: PlayerActions,
 {
-    players: Rc<RefCell<PlayerGroup<T>>>,
-    game_stack: Vec<Rc<Animal>>,
-    animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
-    animal_sets: Vec<Rc<AnimalSet>>,
+    players: Arc<Mutex<PlayerGroup<T>>>,
+    game_stack: Vec<Arc<Animal>>,
+    animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>>,
+    animal_sets: Vec<Arc<AnimalSet>>,
 }
 
 #[derive(Debug)]
@@ -39,7 +41,7 @@ where
         write!(
             f,
             "num_players: {}\nsize_game_stack: {}\ngame_stack: \n",
-            self.players.borrow().len(),
+            self.players.blocking_lock().len(),
             self.game_stack.len()
         )?;
 
@@ -59,21 +61,21 @@ impl<T> Game<T>
 where
     T: PlayerActions,
 {
-    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Rc<AnimalSet>>, seed: u64) -> Self {
-        let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
-        let mut game_stack: Vec<Rc<Animal>> = Vec::new();
+    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Arc<AnimalSet>>, seed: u64) -> Self {
+        let mut animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>> = HashMap::new();
+        let mut game_stack: Vec<Arc<Animal>> = Vec::new();
 
         for set in animal_sets.iter() {
             for animal in set.animals() {
-                animal_usage.insert(Rc::clone(animal), Rc::clone(set));
-                game_stack.push(Rc::clone(animal));
+                animal_usage.insert(Arc::clone(animal), Arc::clone(set));
+                game_stack.push(Arc::clone(animal));
             }
         }
 
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
         Game {
-            players: Rc::new(RefCell::new(players)),
+            players: Arc::new(Mutex::new(players)),
             game_stack: game_stack,
             animal_usage: animal_usage,
             animal_sets: animal_sets,
@@ -88,28 +90,28 @@ where
     }
 
     pub fn num_players(&self) -> usize {
-        self.players.borrow().len()
+        self.players.blocking_lock().len()
     }
 
     pub fn get_all_ids(&self) -> Vec<String> {
         self.players
-            .borrow()
+            .blocking_lock()
             .iter()
-            .map(|p| p.borrow().id().to_string())
+            .map(|p| p.blocking_lock().id().to_string())
             .collect()
     }
 
-    pub fn get_player_by_id(&self, id: String) -> Result<Rc<RefCell<Player<T>>>, &str> {
+    pub fn get_player_by_id(&self, id: String) -> Result<Arc<Mutex<Player<T>>>, &str> {
         self.players
-            .borrow()
+            .blocking_lock()
             .iter()
-            .find(|p| p.borrow().id() == id)
-            .map(|p| Rc::clone(p))
+            .find(|p| p.blocking_lock().id() == id)
+            .map(|p| Arc::clone(p))
             .ok_or("err") // todo
     }
 
-    pub fn get_player_for_current_turn(&self) -> Rc<RefCell<Player<T>>> {
-        self.players.borrow().get(0).unwrap() // todo
+    pub fn get_player_for_current_turn(&self) -> Arc<Mutex<Player<T>>> {
+        self.players.blocking_lock().get(0).unwrap() // todo
     }
 
     pub fn remove_player(&mut self, id: String) {}
@@ -140,9 +142,9 @@ where
         while !self.game_stack.is_empty() {
             println!("--- New turn ---");
             let players = self.players.clone();
-            let mut players = players.borrow_mut();
+            let mut players = players.blocking_lock();
             let player = players.get(current_player_idx).unwrap();
-            let mut player = player.borrow_mut();
+            let mut player = player.blocking_lock();
             match player.draw_or_trade() {
                 FirstPhaseAction::Draw => {
                     let card = self.game_stack.pop().unwrap();
@@ -155,7 +157,7 @@ where
                     amount,
                 } => {
                     let opponent = players.get_by_id_mut(&opponent).unwrap();
-                    let mut opponent = opponent.borrow_mut();
+                    let mut opponent = opponent.blocking_lock();
                     self.trade(&mut *player, &mut *opponent, amount, animal);
                 }
             };

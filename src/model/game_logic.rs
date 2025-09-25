@@ -112,6 +112,10 @@ where
         self.players.borrow().get(0).unwrap() // todo
     }
 
+    pub fn remove_player(&mut self, id: String) {}
+
+    pub fn play_one_round(&mut self) {}
+
     fn auction(&mut self, player: &mut Player<T>, animal: &Animal) {
         // ToDo: replace the dummy
         player.consume_animal(animal);

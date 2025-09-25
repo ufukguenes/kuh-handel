@@ -1,5 +1,10 @@
 use crate::model::{
-    self, player::base_player::Player, player::player_actions::base_player_actions::PlayerActions,
+    self,
+    game_errors::GameError,
+    player::{
+        base_player::Player,
+        player_actions::{base_player_actions::PlayerActions, websocket_actions::WebsocketActions},
+    },
 };
 
 use axum::{
@@ -10,13 +15,13 @@ use axum::{
     response::IntoResponse,
 };
 use futures_util::{SinkExt, StreamExt};
+use std::sync::Arc;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     hash::Hash,
     rc::Rc,
 };
-use std::{intrinsics::breakpoint, sync::Arc};
 use tokio::sync::Mutex;
 
 use tokio::sync::mpsc;
@@ -24,24 +29,82 @@ use tokio::sync::mpsc;
 use model::game_logic::Game;
 
 // Define the game state. It now tracks players and the current turn.
-pub struct WebsocketGame<T>
+pub struct WebsocketGame<'a, T>
 where
     T: PlayerActions,
 {
     game: Arc<Game<T>>,
+    connected_players: HashMap<String, (&'a mpsc::Receiver<Message>, &'a mpsc::Sender<Message>)>,
+    websocket_players: Vec<&'a Player<WebsocketActions>>,
 }
 
-impl<T> WebsocketGame<T>
+impl<'a, T> WebsocketGame<'a, T>
 where
     T: PlayerActions,
 {
+    pub fn new(
+        game: Arc<Game<T>>,
+        websocket_players: Vec<&'a Player<WebsocketActions>>,
+    ) -> Result<WebsocketGame<'a, T>, GameError> {
+        let mut connected_players: HashMap<
+            String,
+            (&mpsc::Receiver<Message>, &mpsc::Sender<Message>),
+        > = HashMap::new();
+        let all_player_ids = game.get_all_ids();
+
+        let mut player_id;
+        let mut channels;
+        for ws_player in websocket_players.iter() {
+            player_id = ws_player.id().to_string();
+            channels = ws_player.player_actions.get_channels();
+
+            if all_player_ids.contains(&player_id) {
+                connected_players.insert(player_id, channels);
+            } else {
+                return Result::Err(GameError::PlayerNotFound);
+            }
+        }
+
+        Result::Ok(WebsocketGame {
+            game: game,
+            connected_players: connected_players,
+            websocket_players: websocket_players,
+        })
+    }
+
     pub fn get_missing_players(&self) -> Vec<String> {
-        self.game
-            .get_all_ids()
+        let mut missing_players: Vec<String> = Vec::new();
+        for ws_player in self.websocket_players.iter() {
+            if !self.connected_players.contains_key(ws_player.id()) {
+                missing_players.push(ws_player.id().to_string());
+            }
+        }
+
+        return missing_players;
+    }
+
+    pub fn insert_channels(
+        &mut self,
+        player_id: String,
+    ) -> Result<(&'a mpsc::Receiver<Message>, &'a mpsc::Sender<Message>), GameError> {
+        match self
+            .websocket_players
             .iter()
-            .filter(|id| !self.connected_players.keys().any(|key_id| &key_id == id))
-            .map(|str| str.clone())
-            .collect()
+            .find(|player| player.id() == player_id)
+        {
+            Some(player) => {
+                let new_channels = player.player_actions.get_channels();
+                self.connected_players
+                    .insert(player_id.clone(), new_channels);
+                return Result::Ok(new_channels);
+            }
+            None => return Result::Err(GameError::PlayerNotFound),
+        };
+    }
+
+    pub fn delete_channels(&mut self, player_id: String) {
+        // todo  close the connection, but doing that gives borrow issues, that i don't want to deal with now
+        self.connected_players.remove(&player_id);
     }
 }
 
@@ -74,9 +137,9 @@ async fn main() {
 }
     */
 
-pub async fn websocket_handler<T>(
+pub async fn websocket_handler<'a, T>(
     ws: WebSocketUpgrade,
-    State(state): State<WebsocketGame<T>>,
+    State(state): State<WebsocketGame<'a, T>>,
 ) -> impl IntoResponse
 where
     T: PlayerActions,
@@ -84,63 +147,63 @@ where
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-async fn handle_socket<'a, T>(socket: WebSocket, state: WebsocketGame<T>)
+async fn handle_socket<'a, T>(socket: WebSocket, state: WebsocketGame<'a, T>)
 where
     T: PlayerActions,
 {
     let player_id = todo!("player id i need to parse form request");
     println!("New bot connecting...");
 
-    // for each bot, create two channels
-    // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
-    // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
-    // to the websocket so it can send it to the client-bot
+    if let Result::Ok((state_receiver, action_sender)) = state.insert_channels(player_id) {
+        // for each bot, create two channels
+        // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
+        // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
+        // to the websocket so it can send it to the client-bot
 
-    let (state_sender, state_receiver) = mpsc::channel(1);
-    let (action_sender, action_receiver) = mpsc::channel(1);
+        println!("Bot connected with ID: {}", player_id);
 
-    println!("Bot connected with ID: {}", player_id);
+        loop {
+            // send state and possible actions to client-bot
+            let recv_state: Option<Message> = state_receiver.recv().await;
+            match recv_state {
+                Some(msg) => {
+                    if let Err(e) = socket.send(msg).await {
+                        eprintln!("Error sending message: {}", e);
+                    }
+                }
+                None => todo!(),
+            }
 
-    loop {
-        // send state and possible actions to client-bot
-        let recv_state: Option<Message> = state_receiver.recv().await;
-        match recv_state {
-            Some(msg) => {
-                if let Err(e) = socket.send(msg).await {
-                    eprintln!("Error sending message: {}", e);
+            // receive action and send to server-bot
+            if let Some(Ok(msg)) = socket.recv().await {
+                match msg {
+                    Message::Text(utf8_bytes) => match action_sender.send(msg).await {
+                        Ok(_) => println!("action has been send to game"),
+                        Err(_) => eprintln!("failure sending action to game"),
+                    },
+                    Message::Close(close_frame) => {
+                        println!("Closing WebSocket connection.");
+                        break;
+                    }
+                    _ => {
+                        eprint!(
+                            "received unknown message type from client, closing WebSocket connection"
+                        );
+                        break;
+                    }
                 }
             }
-            None => todo!(),
         }
 
-        // receive action and send to server-bot
-        if let Some(Ok(msg)) = socket.recv().await {
-            match msg {
-                Message::Text(utf8_bytes) => match action_sender.send(msg).await {
-                    Ok(_) => println!("action has been send to game"),
-                    Err(_) => eprintln!("failure sending action to game"),
-                },
-                Message::Close(close_frame) => {
-                    println!("Closing WebSocket connection.");
-                    break;
-                }
-                _ => {
-                    eprint!(
-                        "received unknown message type from client, closing WebSocket connection"
-                    );
-                    break;
-                }
-            }
-        }
-    }
+        println!("Bot ID {} disconnected.", player_id);
 
-    println!("Bot ID {} disconnected.", player_id);
-
-    state_receiver.close();
-    action_receiver.close();
+        state.delete_channels(player_id);
+    } else {
+        println!("Connection failed for bot with ID: {}", player_id)
+    };
 }
 
-pub async fn organize_new_game<T>(state: WebsocketGame<T>)
+pub async fn organize_new_game<T>(state: WebsocketGame<'_, T>)
 where
     T: PlayerActions,
 {
@@ -154,33 +217,21 @@ where
     loop {
         missing_players = state.get_missing_players();
         if missing_players.len() > 0 {
-            todo!("handle missing player");
+            todo!("wait for possible reconnect");
+            print!("removing players: {:?}", missing_players);
+            for player_id in missing_players {
+                state.game.remove_player(player_id);
+            }
         }
 
         let current_player = state.game.get_player_for_current_turn();
-        let current_sender = state
-            .connected_players
-            .get(current_player.borrow().id())
-            .unwrap();
-
         println!("\nIt's bot ID {}'s turn.", current_player.borrow());
+        // todo, should i use this: state.game.play_one_round();
 
-        // Send a turn message to the current bot.
-        let turn_message = format!(
-            "Your turn, bot ID {}. Please provide an action.\n",
-            current_player.borrow()
-        );
-
-        if let Err(e) = current_sender
-            .send(Message::Text(Utf8Bytes::from(turn_message)))
-            .await
-        {
-            eprintln!(
-                "Failed to send turn message to bot ID {}: {}",
-                current_player.borrow(),
-                e
-            );
-        }
+        // todo should we send the game state for each round to each player,
+        // effectively no difference but then the player could have more time
+        // to calculate stuff while other player calculate their actions, but could also be more complicated
+        // to implement the bot this way
 
         // Wait for a short period to allow the bot to respond.
         // In a real game, you would implement a more robust system for

@@ -10,7 +10,9 @@ use axum::{
     },
     response::IntoResponse,
 };
-use tokio::sync::mpsc;
+use std::sync::Arc;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::{Mutex, mpsc};
 
 pub struct WebsocketActions {
     // for each bot, create two channels
@@ -19,35 +21,77 @@ pub struct WebsocketActions {
     // to the websocket so it can send it to the client-bot
 
     // used by the player
-    state_sender: mpsc::Sender<Message>,
-    action_receiver: mpsc::Receiver<Message>,
+    state_sender: Sender<Message>,
+    action_receiver: Receiver<Message>,
 
     // used by the WebSocket connection
-    state_receiver: mpsc::Receiver<Message>,
-    action_sender: mpsc::Sender<Message>,
+    state_receiver: Arc<Mutex<Receiver<Message>>>,
+    action_sender: Arc<Mutex<Sender<Message>>>,
 }
 
+pub type AsyncChannel = (Arc<Mutex<Receiver<Message>>>, Arc<Mutex<Sender<Message>>>);
+
 impl WebsocketActions {
-    pub fn get_channels(&self) -> (&mpsc::Receiver<Message>, &mpsc::Sender<Message>) {
-        (&self.state_receiver, &self.action_sender)
+    pub fn new() -> WebsocketActions {
+        let (state_sender, state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
+        let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) =
+            mpsc::channel(1);
+
+        let async_state_receiver = Arc::new(Mutex::new(state_receiver));
+        let async_action_sender = Arc::new(Mutex::new(action_sender));
+        WebsocketActions {
+            state_sender: state_sender,
+            action_receiver: action_receiver,
+            state_receiver: async_state_receiver,
+            action_sender: async_action_sender,
+        }
+    }
+
+    pub fn get_channels(&self) -> AsyncChannel {
+        (
+            Arc::clone(&self.state_receiver),
+            Arc::clone(&self.action_sender),
+        )
     }
 
     pub fn close_connections(&mut self) {
-        self.state_receiver.close();
+        self.state_receiver.blocking_lock().close();
         self.action_receiver.close();
     }
 }
 
 impl PlayerActions for WebsocketActions {
     fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
-        todo!()
+        self.state_sender
+            .blocking_send(Message::Text(Utf8Bytes::from("ws bidding state message")));
+        let msg = self.action_receiver.blocking_recv();
+        match msg {
+            Some(msg) => println!("ws: provide bidding {}", msg.to_text().unwrap()),
+            None => println!("ws: provide bidding None"),
+        }
+
+        AuctionValue::Pass
     }
 
     fn draw_or_trade(&mut self) -> FirstPhaseAction {
-        todo!()
+        self.state_sender
+            .blocking_send(Message::Text(Utf8Bytes::from("ws draw_or_trade state")));
+        let msg = self.action_receiver.blocking_recv();
+        match msg {
+            Some(msg) => println!("ws: draw_or_trade {}", msg.to_text().unwrap()),
+            None => println!("ws: draw_or_trade None"),
+        }
+        FirstPhaseAction::Draw
     }
 
     fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction {
-        todo!()
+        self.state_sender
+            .blocking_send(Message::Text(Utf8Bytes::from("ws buy_or_sell state")));
+        let msg = self.action_receiver.blocking_recv();
+        match msg {
+            Some(msg) => println!("ws: buy_or_sell {}", msg.to_text().unwrap()),
+            None => println!("ws: buy_or_sell None"),
+        }
+        AuctionAction::Buy
     }
 }

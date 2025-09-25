@@ -2,14 +2,21 @@ use super::game_logic::Game;
 use crate::model::{
     animals::{Animal, AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
     money::{money::Money, value::Value, wallet::Wallet},
-    player::{player_actions::random_actions::RandomPlayerActions, player_group::PlayerGroup},
+    player::{
+        base_player::Player,
+        player_actions::{base_player_actions::PlayerActions, random_actions::RandomPlayerActions},
+        player_group::PlayerGroup,
+    },
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::{collections::HashMap, rc::Rc, vec};
+use std::{collections::HashMap, sync::Arc, vec};
 
-impl Game<RandomPlayerActions> {
-    pub fn new_default_game(player_ids: Vec<String>, seed: u64) -> Self {
+impl<T> Game<T>
+where
+    T: PlayerActions,
+{
+    pub fn new_default_game(player_ids: Vec<String>, players_actions: Vec<T>, seed: u64) -> Self {
         let mut bank_notes: HashMap<Money, u32> = HashMap::new();
         bank_notes.insert(Money::new(Value::new(0)), 2);
         bank_notes.insert(Money::new(Value::new(10)), 4);
@@ -26,30 +33,26 @@ impl Game<RandomPlayerActions> {
         let cow = DefaultAnimalSetFactory::new(800, vec![0; 4]);
         let horse = DefaultAnimalSetFactory::new(1000, vec![0; 4]);
 
-        let game_stack: Vec<Rc<AnimalSet>> = vec![
-            Rc::new(chicken),
-            Rc::new(goose),
-            Rc::new(cat),
-            Rc::new(dog),
-            Rc::new(sheep),
-            Rc::new(goat),
-            Rc::new(donkey),
-            Rc::new(pig),
-            Rc::new(cow),
-            Rc::new(horse),
+        let game_stack: Vec<Arc<AnimalSet>> = vec![
+            Arc::new(chicken),
+            Arc::new(goose),
+            Arc::new(cat),
+            Arc::new(dog),
+            Arc::new(sheep),
+            Arc::new(goat),
+            Arc::new(donkey),
+            Arc::new(pig),
+            Arc::new(cow),
+            Arc::new(horse),
         ];
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup<RandomPlayerActions> = PlayerGroup::new(
-            player_ids.clone(),
-            player_ids.iter().map(|e| RandomPlayerActions {}).collect(),
-            wallet,
-        );
+        let players: PlayerGroup<T> = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
 
         Game::new(players, game_stack, seed)
     }
 
-    pub fn new_random_game(player_ids: Vec<String>, seed: u64) -> Self {
+    pub fn new_random_game(player_ids: Vec<String>, players_actions: Vec<T>, seed: u64) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let ratio_player_money: u32 = rng.random_range(1..=3).try_into().unwrap();
         let animals_per_player: u32 = rng.random_range(2..=4).try_into().unwrap();
@@ -69,7 +72,7 @@ impl Game<RandomPlayerActions> {
         bank_notes.insert(ten, 4 * ratio_player_money);
         bank_notes.insert(fifty, ratio_player_money);
 
-        let mut game_stack: Vec<Rc<AnimalSet>> = Vec::new();
+        let mut game_stack: Vec<Arc<AnimalSet>> = Vec::new();
 
         let min_animal_value: u32 = 10;
         let max_animal_value: u32 = 500;
@@ -93,14 +96,14 @@ impl Game<RandomPlayerActions> {
                 }
 
                 let animal_set = DefaultAnimalSetFactory::new_from_value(random_value, inflation);
-                game_stack.push(Rc::new(animal_set));
+                game_stack.push(Arc::new(animal_set));
             }
         }
 
         let wallet: Wallet = Wallet::new(bank_notes);
         let players: PlayerGroup<RandomPlayerActions> = PlayerGroup::new(
             player_ids.clone(),
-            player_ids.iter().map(|e| RandomPlayerActions {}).collect(),
+            players_actions;
             wallet,
         );
 

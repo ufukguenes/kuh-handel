@@ -1,7 +1,7 @@
 use super::money::{money::Money, value::Value};
 use std::fmt;
 use std::fmt::Display;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum AnimalError {
@@ -23,7 +23,7 @@ impl AnimalSetFactory for DefaultAnimalSetFactory {
         let animals = inflation
             .clone()
             .iter()
-            .map(|_| Rc::new(animal.clone()))
+            .map(|_| Arc::new(animal.clone()))
             .collect();
 
         AnimalSet {
@@ -41,7 +41,7 @@ impl AnimalSetFactory for DefaultAnimalSetFactory {
         let animals = inflation
             .clone()
             .iter()
-            .map(|_| Rc::new(animal.clone()))
+            .map(|_| Arc::new(animal.clone()))
             .collect();
 
         AnimalSet {
@@ -63,7 +63,7 @@ pub struct AnimalSet {
     animal: Animal,
     inflation: Vec<Value>,
     draw_count: usize,
-    animals: Vec<Rc<Animal>>,
+    animals: Vec<Arc<Animal>>,
 }
 
 impl Display for AnimalSet {
@@ -77,7 +77,7 @@ impl AnimalSet {
         self.inflation.len()
     }
 
-    pub fn animals(&self) -> &Vec<Rc<Animal>> {
+    pub fn animals(&self) -> &Vec<Arc<Animal>> {
         &self.animals
     }
 

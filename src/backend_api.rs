@@ -3,7 +3,8 @@ use crate::model::{
     game_errors::GameError,
     player::{
         base_player::Player,
-        player_actions::{base_player_actions::PlayerActions, websocket_actions::WebsocketActions},
+        player_actions::base_player_actions::PlayerActions,
+        player_actions::websocket_actions::{AsyncChannel, WebsocketActions},
     },
 };
 
@@ -14,49 +15,44 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures_util::{SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt, stream};
 use std::sync::Arc;
 use std::{
-    cell::RefCell,
     collections::{HashMap, VecDeque},
     hash::Hash,
-    rc::Rc,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 use tokio::sync::mpsc;
 
 use model::game_logic::Game;
 
 // Define the game state. It now tracks players and the current turn.
-pub struct WebsocketGame<'a, T>
+pub struct WebsocketGame<T>
 where
     T: PlayerActions,
 {
-    game: Arc<Game<T>>,
-    connected_players: HashMap<String, (&'a mpsc::Receiver<Message>, &'a mpsc::Sender<Message>)>,
-    websocket_players: Vec<&'a Player<WebsocketActions>>,
+    game: Arc<Mutex<Game<T>>>,
+    connected_players: HashMap<String, AsyncChannel>,
+    websocket_players: Vec<Arc<Mutex<Player<WebsocketActions>>>>,
 }
 
-impl<'a, T> WebsocketGame<'a, T>
+impl<T> WebsocketGame<T>
 where
     T: PlayerActions,
 {
-    pub fn new(
-        game: Arc<Game<T>>,
-        websocket_players: Vec<&'a Player<WebsocketActions>>,
-    ) -> Result<WebsocketGame<'a, T>, GameError> {
-        let mut connected_players: HashMap<
-            String,
-            (&mpsc::Receiver<Message>, &mpsc::Sender<Message>),
-        > = HashMap::new();
-        let all_player_ids = game.get_all_ids();
+    pub async fn new(
+        game: Arc<Mutex<Game<T>>>,
+        websocket_players: Vec<Arc<Mutex<Player<WebsocketActions>>>>,
+    ) -> Result<WebsocketGame<T>, GameError> {
+        let mut connected_players: HashMap<String, AsyncChannel> = HashMap::new();
+        let all_player_ids = game.lock().await.get_all_ids();
 
         let mut player_id;
-        let mut channels;
+        let mut channels: AsyncChannel;
         for ws_player in websocket_players.iter() {
-            player_id = ws_player.id().to_string();
-            channels = ws_player.player_actions.get_channels();
+            player_id = ws_player.lock().await.id().to_string();
+            channels = ws_player.lock().await.player_actions.get_channels();
 
             if all_player_ids.contains(&player_id) {
                 connected_players.insert(player_id, channels);
@@ -72,38 +68,52 @@ where
         })
     }
 
-    pub fn get_missing_players(&self) -> Vec<String> {
-        let mut missing_players: Vec<String> = Vec::new();
-        for ws_player in self.websocket_players.iter() {
-            if !self.connected_players.contains_key(ws_player.id()) {
-                missing_players.push(ws_player.id().to_string());
-            }
-        }
-
-        return missing_players;
+    pub async fn get_missing_players(&self) -> Vec<String> {
+        let missing_players = stream::iter(&self.websocket_players)
+            .filter_map(|ws_player| async move {
+                let player_lock: MutexGuard<'_, Player<WebsocketActions>> = ws_player.lock().await;
+                if !self.connected_players.contains_key(player_lock.id()) {
+                    Some(player_lock.id().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<String>>()
+            .await;
+        missing_players
     }
 
-    pub fn insert_channels(
-        &mut self,
-        player_id: String,
-    ) -> Result<(&'a mpsc::Receiver<Message>, &'a mpsc::Sender<Message>), GameError> {
+    pub async fn insert_channels(&mut self, player_id: String) -> Result<AsyncChannel, GameError> {
         match self
             .websocket_players
             .iter()
-            .find(|player| player.id() == player_id)
+            .find(|player| player.blocking_lock().id() == player_id) // todo remove blocking lock with .lock().await, and fix related issues
         {
             Some(player) => {
-                let new_channels = player.player_actions.get_channels();
-                self.connected_players
-                    .insert(player_id.clone(), new_channels);
-                return Result::Ok(new_channels);
+                let (state_receiver, action_sender) = player.blocking_lock().player_actions.get_channels(); // todo remove blocking lock with .lock().await, and fix related issues
+                self.connected_players.insert(
+                    player_id.clone(),
+                    (Arc::clone(&state_receiver), Arc::clone(&action_sender)),
+                );
+                return Result::Ok((Arc::clone(&state_receiver), Arc::clone(&action_sender)));
             }
             None => return Result::Err(GameError::PlayerNotFound),
         };
     }
 
-    pub fn delete_channels(&mut self, player_id: String) {
+    pub async fn delete_channels(&mut self, player_id: String) {
         // todo  close the connection, but doing that gives borrow issues, that i don't want to deal with now
+
+        let player = self
+            .websocket_players
+            .iter()
+            .find(|player| player.blocking_lock().id() == player_id); // todo remove blocking lock with .lock().await, and fix related issues
+        {
+            match player {
+                Some(player) => player.lock().await.player_actions.close_connections(),
+                None => todo!(),
+            }
+        }
         self.connected_players.remove(&player_id);
     }
 }
@@ -137,24 +147,26 @@ async fn main() {
 }
     */
 
-pub async fn websocket_handler<'a, T>(
+pub async fn websocket_handler<T>(
     ws: WebSocketUpgrade,
-    State(state): State<WebsocketGame<'a, T>>,
+    State(state): State<Arc<Mutex<WebsocketGame<T>>>>,
 ) -> impl IntoResponse
 where
-    T: PlayerActions,
+    T: PlayerActions + Send + 'static,
 {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-async fn handle_socket<'a, T>(socket: WebSocket, state: WebsocketGame<'a, T>)
+async fn handle_socket<T>(socket: WebSocket, state: Arc<Mutex<WebsocketGame<T>>>)
 where
     T: PlayerActions,
 {
     let player_id = todo!("player id i need to parse form request");
     println!("New bot connecting...");
 
-    if let Result::Ok((state_receiver, action_sender)) = state.insert_channels(player_id) {
+    if let Result::Ok((state_receiver, action_sender)) =
+        state.lock().await.insert_channels(player_id).await
+    {
         // for each bot, create two channels
         // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
         // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
@@ -164,7 +176,9 @@ where
 
         loop {
             // send state and possible actions to client-bot
-            let recv_state: Option<Message> = state_receiver.recv().await;
+            let recv_state: Option<Message> = state_receiver.lock().await.recv().await;
+            println!("{}", recv_state.unwrap().to_text().unwrap());
+
             match recv_state {
                 Some(msg) => {
                     if let Err(e) = socket.send(msg).await {
@@ -176,8 +190,9 @@ where
 
             // receive action and send to server-bot
             if let Some(Ok(msg)) = socket.recv().await {
+                println!("{}", msg.to_text().unwrap());
                 match msg {
-                    Message::Text(utf8_bytes) => match action_sender.send(msg).await {
+                    Message::Text(utf8_bytes) => match action_sender.lock().await.send(msg).await {
                         Ok(_) => println!("action has been send to game"),
                         Err(_) => eprintln!("failure sending action to game"),
                     },
@@ -197,35 +212,46 @@ where
 
         println!("Bot ID {} disconnected.", player_id);
 
-        state.delete_channels(player_id);
+        state.lock().await.delete_channels(player_id);
     } else {
         println!("Connection failed for bot with ID: {}", player_id)
     };
 }
 
-pub async fn organize_new_game<T>(state: WebsocketGame<'_, T>)
+pub async fn organize_new_game<T>(state: Arc<Mutex<WebsocketGame<T>>>)
 where
     T: PlayerActions,
 {
-    let mut missing_players = state.get_missing_players();
+    let mut missing_players = state.lock().await.get_missing_players().await;
     while missing_players.len() > 0 {
         println!("Waiting for missing players: {:?}", missing_players);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        missing_players = state.get_missing_players();
+        missing_players = state.lock().await.get_missing_players().await;
     }
 
     loop {
-        missing_players = state.get_missing_players();
+        missing_players = state.lock().await.get_missing_players().await;
         if missing_players.len() > 0 {
-            todo!("wait for possible reconnect");
             print!("removing players: {:?}", missing_players);
-            for player_id in missing_players {
-                state.game.remove_player(player_id);
-            }
+            stream::iter(missing_players)
+                .for_each(|id| {
+                    let state_arc = Arc::clone(&state);
+                    async move {
+                        let mut game_state = state_arc.lock().await;
+                        game_state.game.lock().await.remove_player(id);
+                    }
+                })
+                .await;
         }
 
-        let current_player = state.game.get_player_for_current_turn();
-        println!("\nIt's bot ID {}'s turn.", current_player.borrow());
+        let current_player = state
+            .lock()
+            .await
+            .game
+            .lock()
+            .await
+            .get_player_for_current_turn();
+        println!("\nIt's bot ID {}'s turn.", current_player.lock().await);
         // todo, should i use this: state.game.play_one_round();
 
         // todo should we send the game state for each round to each player,

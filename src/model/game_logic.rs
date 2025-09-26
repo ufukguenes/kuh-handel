@@ -1,11 +1,13 @@
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
+use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::{FirstPhaseAction, Player, TradeAmount};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
+use tokio::sync::MutexGuard;
 
 use std::collections::HashMap;
 use tokio::sync::Mutex;
@@ -23,6 +25,7 @@ where
     game_stack: Vec<Arc<Animal>>,
     animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>>,
     animal_sets: Vec<Arc<AnimalSet>>,
+    num_players: usize,
 }
 
 #[derive(Debug)]
@@ -41,7 +44,7 @@ where
         write!(
             f,
             "num_players: {}\nsize_game_stack: {}\ngame_stack: \n",
-            self.players.blocking_lock().len(),
+            self.num_players,
             self.game_stack.len()
         )?;
 
@@ -64,6 +67,7 @@ where
     pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Arc<AnimalSet>>, seed: u64) -> Self {
         let mut animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>> = HashMap::new();
         let mut game_stack: Vec<Arc<Animal>> = Vec::new();
+        let num_players = players.len();
 
         for set in animal_sets.iter() {
             for animal in set.animals() {
@@ -79,6 +83,7 @@ where
             game_stack: game_stack,
             animal_usage: animal_usage,
             animal_sets: animal_sets,
+            num_players: num_players,
         }
     }
 
@@ -89,29 +94,31 @@ where
         Ok(())
     }
 
-    pub fn num_players(&self) -> usize {
-        self.players.blocking_lock().len()
+    pub async fn num_players(&mut self) -> usize {
+        self.num_players = self.players.lock().await.len();
+        self.num_players
     }
 
-    pub fn get_all_ids(&self) -> Vec<String> {
-        self.players
-            .blocking_lock()
-            .iter()
-            .map(|p| p.blocking_lock().id().to_string())
-            .collect()
+    pub async fn get_all_ids(&self) -> Vec<String> {
+        let mut all_ids = Vec::new();
+        for player in self.players.lock().await.iter() {
+            all_ids.push(player.lock().await.id().to_string());
+        }
+        return all_ids;
     }
 
-    pub fn get_player_by_id(&self, id: String) -> Result<Arc<Mutex<Player<T>>>, &str> {
-        self.players
-            .blocking_lock()
-            .iter()
-            .find(|p| p.blocking_lock().id() == id)
-            .map(|p| Arc::clone(p))
-            .ok_or("err") // todo
+    pub async fn get_player_by_id(&self, id: String) -> Option<Arc<Mutex<Player<T>>>> {
+        for player in self.players.lock().await.iter() {
+            if player.lock().await.id() == id {
+                return Some(Arc::clone(player));
+            }
+        }
+
+        return None;
     }
 
-    pub fn get_player_for_current_turn(&self) -> Arc<Mutex<Player<T>>> {
-        self.players.blocking_lock().get(0).unwrap() // todo
+    pub async fn get_player_for_current_turn(&self) -> Arc<Mutex<Player<T>>> {
+        self.players.lock().await.get(0).unwrap() // todo
     }
 
     pub fn remove_player(&mut self, id: String) {}
@@ -125,15 +132,15 @@ where
 
     fn trade(
         &mut self,
-        challenger: &mut Player<T>,
-        opponent: &mut Player<T>,
+        challenger: MutexGuard<Player<T>>,
+        opponent: Arc<Mutex<Player<T>>>,
         amount: TradeAmount,
         animal: Animal,
     ) {
         // Trigger the trade between challenger and opponent
     }
 
-    fn draw_phase(&mut self) {
+    async fn draw_phase(&mut self) {
         let mut current_player_idx = 0usize;
         // get player order and iterate over them
         // draw a card and trigger the auction
@@ -142,9 +149,9 @@ where
         while !self.game_stack.is_empty() {
             println!("--- New turn ---");
             let players = self.players.clone();
-            let mut players = players.blocking_lock();
+            let mut players = players.lock().await;
             let player = players.get(current_player_idx).unwrap();
-            let mut player = player.blocking_lock();
+            let mut player = player.lock().await;
             match player.draw_or_trade() {
                 FirstPhaseAction::Draw => {
                     let card = self.game_stack.pop().unwrap();
@@ -156,9 +163,8 @@ where
                     animal,
                     amount,
                 } => {
-                    let opponent = players.get_by_id_mut(&opponent).unwrap();
-                    let mut opponent = opponent.blocking_lock();
-                    self.trade(&mut *player, &mut *opponent, amount, animal);
+                    let opponent = players.get_by_id_mut(&opponent).await.unwrap();
+                    self.trade(player, opponent, amount, animal);
                 }
             };
             current_player_idx = (current_player_idx + 1) % players.len();

@@ -54,8 +54,8 @@ impl WebsocketActions {
         )
     }
 
-    pub fn close_connections(&mut self) {
-        self.state_receiver.blocking_lock().close();
+    pub async fn close_connections(&mut self) {
+        self.state_receiver.lock().await.close();
         self.action_receiver.close();
     }
 }

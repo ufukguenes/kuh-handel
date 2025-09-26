@@ -44,12 +44,16 @@ where
             .cloned()
     }
 
-    pub fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<Arc<Mutex<Player<T>>>, GameError> {
-        self.players
-            .iter()
-            .find(|p| p.blocking_lock().id() == id.name())
-            .ok_or(GameError::PlayerNotFound)
-            .cloned()
+    pub async fn get_by_id_mut(
+        &mut self,
+        id: &PlayerId,
+    ) -> Result<Arc<Mutex<Player<T>>>, GameError> {
+        for player in self.players.iter() {
+            if player.lock().await.id() == id.name() {
+                return Ok(Arc::clone(&player));
+            }
+        }
+        Err(GameError::PlayerNotFound)
     }
 
     pub fn len(&self) -> usize {

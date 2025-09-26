@@ -37,15 +37,18 @@ async fn main() {
         player_actions,
         seed,
     );
-    println!("{}", game);
-    game.play().unwrap();
 
+    game.num_players().await;
+    println!("{}", game);
+
+    game.num_players().await;
+    //game.play().unwrap();
     println!("{}", game);
 
     let websocket_players = vec![
-        game.get_player_by_id("ufuk".to_string()).unwrap(),
-        game.get_player_by_id("leon".to_string()).unwrap(),
-        game.get_player_by_id("gregor".to_string()).unwrap(),
+        game.get_player_by_id("ufuk".to_string()).await.unwrap(),
+        game.get_player_by_id("leon".to_string()).await.unwrap(),
+        game.get_player_by_id("gregor".to_string()).await.unwrap(),
     ];
 
     let ws_game = Arc::new(Mutex::new(

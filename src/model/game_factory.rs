@@ -101,11 +101,7 @@ where
         }
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup<RandomPlayerActions> = PlayerGroup::new(
-            player_ids.clone(),
-            players_actions;
-            wallet,
-        );
+        let players: PlayerGroup<T> = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
 
         Game::new(players, game_stack, seed)
     }

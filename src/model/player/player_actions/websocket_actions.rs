@@ -23,39 +23,24 @@ pub struct WebsocketActions {
     // used by the player
     state_sender: Sender<Message>,
     action_receiver: Receiver<Message>,
-
-    // used by the WebSocket connection
-    state_receiver: Arc<Mutex<Receiver<Message>>>,
-    action_sender: Arc<Mutex<Sender<Message>>>,
 }
 
-pub type AsyncChannel = (Arc<Mutex<Receiver<Message>>>, Arc<Mutex<Sender<Message>>>);
-
 impl WebsocketActions {
-    pub fn new() -> WebsocketActions {
+    pub fn new() -> (WebsocketActions, (Receiver<Message>, Sender<Message>)) {
         let (state_sender, state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
         let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) =
             mpsc::channel(1);
 
-        let async_state_receiver = Arc::new(Mutex::new(state_receiver));
-        let async_action_sender = Arc::new(Mutex::new(action_sender));
-        WebsocketActions {
-            state_sender: state_sender,
-            action_receiver: action_receiver,
-            state_receiver: async_state_receiver,
-            action_sender: async_action_sender,
-        }
-    }
-
-    pub fn get_channels(&self) -> AsyncChannel {
         (
-            Arc::clone(&self.state_receiver),
-            Arc::clone(&self.action_sender),
+            WebsocketActions {
+                state_sender: state_sender,
+                action_receiver: action_receiver,
+            },
+            (state_receiver, action_sender),
         )
     }
 
     pub async fn close_connections(&mut self) {
-        self.state_receiver.lock().await.close();
         self.action_receiver.close();
     }
 }

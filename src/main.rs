@@ -19,7 +19,11 @@ use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 #[tokio::main]
 async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-    let player_actions: Vec<Box<dyn PlayerActions>> = vec![Box::new(RandomPlayerActions{}), Box::new(RandomPlayerActions{}), Box::new(WebsocketActions::new())]
+    let player_actions: Vec<WebsocketActions> = vec![
+        WebsocketActions::new(),
+        WebsocketActions::new(),
+        WebsocketActions::new(),
+    ];
 
     let seed: u64 = 0;
 
@@ -38,7 +42,17 @@ async fn main() {
 
     println!("{}", game);
 
-    let ws_game = WebsocketGame::new(Arc::new(Mutex::new(game)));
+    let websocket_players = vec![
+        game.get_player_by_id("ufuk".to_string()).unwrap(),
+        game.get_player_by_id("leon".to_string()).unwrap(),
+        game.get_player_by_id("gregor".to_string()).unwrap(),
+    ];
+
+    let ws_game = Arc::new(Mutex::new(
+        WebsocketGame::new(Arc::new(Mutex::new(game)), websocket_players)
+            .await
+            .unwrap(),
+    ));
     // start the game in a seperate thread, so that server can handle connections
     tokio::spawn(organize_new_game(Arc::clone(&ws_game)));
 

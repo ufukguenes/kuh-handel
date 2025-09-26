@@ -19,12 +19,9 @@ use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 #[tokio::main]
 async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-    let player_actions: Vec<WebsocketActions> = vec![
-        WebsocketActions::new(),
-        WebsocketActions::new(),
-        WebsocketActions::new(),
-    ];
-
+    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new();
+    let (gregor_ws_action, gregor_channel) = WebsocketActions::new();
+    let (leon_ws_action, leon_channel) = WebsocketActions::new();
     let seed: u64 = 0;
 
     println!("-------Default game--------\n");
@@ -34,7 +31,7 @@ async fn main() {
             String::from("leon"),
             String::from("gregor"),
         ],
-        player_actions,
+        vec![ufuk_ws_action, leon_ws_action, gregor_ws_action],
         seed,
     );
 
@@ -45,16 +42,15 @@ async fn main() {
     //game.play().unwrap();
     println!("{}", game);
 
-    let websocket_players = vec![
-        game.get_player_by_id("ufuk".to_string()).await.unwrap(),
-        game.get_player_by_id("leon".to_string()).await.unwrap(),
-        game.get_player_by_id("gregor".to_string()).await.unwrap(),
-    ];
+    let mut websocket_channels_per_player = vec![ufuk_channel, leon_channel, gregor_channel];
 
     let ws_game = Arc::new(Mutex::new(
-        WebsocketGame::new(Arc::new(Mutex::new(game)), websocket_players)
-            .await
-            .unwrap(),
+        WebsocketGame::new(
+            Arc::new(Mutex::new(game)),
+            &mut websocket_channels_per_player,
+        )
+        .await
+        .unwrap(),
     ));
     // start the game in a seperate thread, so that server can handle connections
     tokio::spawn(organize_new_game(Arc::clone(&ws_game)));

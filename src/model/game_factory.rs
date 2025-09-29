@@ -12,11 +12,12 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::{collections::HashMap, sync::Arc, vec};
 
-impl<T> Game<T>
-where
-    T: PlayerActions,
-{
-    pub fn new_default_game(player_ids: Vec<String>, players_actions: Vec<T>, seed: u64) -> Self {
+impl Game {
+    pub fn new_default_game(
+        player_ids: Vec<String>,
+        players_actions: Vec<Box<dyn PlayerActions>>,
+        seed: u64,
+    ) -> Self {
         let mut bank_notes: HashMap<Money, u32> = HashMap::new();
         bank_notes.insert(Money::new(Value::new(0)), 2);
         bank_notes.insert(Money::new(Value::new(10)), 4);
@@ -47,12 +48,16 @@ where
         ];
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup<T> = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
+        let players: PlayerGroup = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
 
         Game::new(players, game_stack, seed)
     }
 
-    pub fn new_random_game(player_ids: Vec<String>, players_actions: Vec<T>, seed: u64) -> Self {
+    pub fn new_random_game(
+        player_ids: Vec<String>,
+        players_actions: Vec<Box<dyn PlayerActions>>,
+        seed: u64,
+    ) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let ratio_player_money: u32 = rng.random_range(1..=3).try_into().unwrap();
         let animals_per_player: u32 = rng.random_range(2..=4).try_into().unwrap();
@@ -101,7 +106,7 @@ where
         }
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup<T> = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
+        let players: PlayerGroup = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
 
         Game::new(players, game_stack, seed)
     }

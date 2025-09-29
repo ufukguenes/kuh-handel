@@ -59,18 +59,15 @@ pub struct TradeAmount {
     amount: Vec<Money>,
 }
 
-pub struct Player<T: PlayerActions> {
+pub struct Player {
     id: PlayerId,
     wallet: Wallet,
     owned_animals: Vec<Animal>,
-    pub player_actions: T,
+    pub player_actions: Box<dyn PlayerActions>,
 }
 
-impl<T> Player<T>
-where
-    T: PlayerActions,
-{
-    pub fn new(id: String, wallet: Wallet, player_actions: T) -> Self {
+impl Player {
+    pub fn new(id: String, wallet: Wallet, player_actions: Box<dyn PlayerActions>) -> Self {
         Player {
             id: PlayerId { name: id },
             wallet: wallet,
@@ -90,19 +87,13 @@ where
     }
 }
 
-impl<T> Display for Player<T>
-where
-    T: PlayerActions,
-{
+impl Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)
     }
 }
 
-impl<T> PlayerActions for Player<T>
-where
-    T: PlayerActions,
-{
+impl PlayerActions for Player {
     fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
         self.player_actions.provide_bidding(state)
     }

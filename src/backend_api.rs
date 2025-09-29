@@ -38,41 +38,40 @@ pub struct AuthParams {
 }
 
 pub struct WebsocketGame {
-    game: Arc<Mutex<Game<WebsocketActions>>>,
-    connected_players: HashMap<String, bool>,
-    channel_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)>,
+    game: Arc<Mutex<Game>>,
+    connected_players: Arc<Mutex<HashMap<String, bool>>>,
+    channel_per_player: Arc<Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>>,
 }
 
 impl WebsocketGame {
     pub async fn new(
-        game: Arc<Mutex<Game<WebsocketActions>>>,
-        websocket_channels_per_player: &mut Vec<(Receiver<Message>, Sender<Message>)>,
+        game: Arc<Mutex<Game>>,
+        websocket_channels_per_player: Arc<
+            Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>,
+        >,
     ) -> Result<WebsocketGame, GameError> {
-        let mut connected_players: HashMap<String, bool> = HashMap::new();
-        let mut channel_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)> =
-            HashMap::new();
-        let game_arc = Arc::clone(&game);
-        let game_lock = game_arc.lock().await;
+        let mut connected_players: Arc<Mutex<HashMap<String, bool>>> =
+            Arc::new(Mutex::new(HashMap::new()));
 
-        let mut reduced_size = 0;
-        for (idx, player_id) in game_lock.get_all_ids().await.iter().enumerate() {
-            let (rec, send) = websocket_channels_per_player.remove(idx - reduced_size);
-            connected_players.insert(player_id.clone(), false);
-            channel_per_player.insert(player_id.clone(), (rec, send));
-            reduced_size += 1;
+        for player_id in websocket_channels_per_player.lock().await.keys() {
+            connected_players
+                .lock()
+                .await
+                .insert(player_id.clone(), false);
         }
 
         Result::Ok(WebsocketGame {
             game: game,
             connected_players: connected_players,
-            channel_per_player: channel_per_player,
+            channel_per_player: websocket_channels_per_player,
         })
     }
 
     pub async fn get_missing_players(&self) -> Vec<String> {
         let mut missing_players = Vec::new();
-        for player_id in self.game.lock().await.get_all_ids().await.iter() {
-            let is_connected = self.connected_players.get(player_id).unwrap();
+        let locked_connected_player = self.connected_players.lock().await;
+        for player_id in self.channel_per_player.lock().await.keys() {
+            let is_connected = locked_connected_player.get(player_id).unwrap();
             if !is_connected {
                 missing_players.push(player_id.clone());
             }
@@ -104,6 +103,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
         .lock()
         .await
         .channel_per_player
+        .lock()
+        .await
         .remove(&player_id)
         .unwrap();
 
@@ -111,6 +112,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
         .lock()
         .await
         .connected_players
+        .lock()
+        .await
         .insert(player_id.clone(), true);
 
     loop {
@@ -155,6 +158,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
         .lock()
         .await
         .connected_players
+        .lock()
+        .await
         .insert(player_id, false);
 
     state_receiver.close();

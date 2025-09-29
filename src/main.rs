@@ -1,12 +1,16 @@
 mod backend_api;
 mod model;
 
+use axum::extract::ws::Message;
 use axum::{Router, routing};
 use model::animals::AnimalSet;
 use model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
 use model::game_logic::Game;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::vec;
 use tokio::sync::Mutex;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use backend_api::{WebsocketGame, organize_new_game, websocket_handler};
 use model::player::player_actions::websocket_actions::WebsocketActions;
@@ -16,11 +20,16 @@ use crate::model::player::player_actions;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 
+// todos:
+// done - 1. change to dyn PlayerActions
+// 2. make game non async
+// 3. dont use lock everywhere, specifically only lock attributes that need it instead of whole struct and follow async guidlines
+
 #[tokio::main]
 async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
     let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new();
-    let (gregor_ws_action, gregor_channel) = WebsocketActions::new();
+    let gregor_ws_action = RandomPlayerActions {};
     let (leon_ws_action, leon_channel) = WebsocketActions::new();
     let seed: u64 = 0;
 
@@ -31,7 +40,11 @@ async fn main() {
             String::from("leon"),
             String::from("gregor"),
         ],
-        vec![ufuk_ws_action, leon_ws_action, gregor_ws_action],
+        vec![
+            Box::new(ufuk_ws_action),
+            Box::new(leon_ws_action),
+            Box::new(gregor_ws_action),
+        ],
         seed,
     );
 
@@ -42,12 +55,16 @@ async fn main() {
     //game.play().unwrap();
     println!("{}", game);
 
-    let mut websocket_channels_per_player = vec![ufuk_channel, leon_channel, gregor_channel];
+    let websocket_channels_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)> =
+        HashMap::from([
+            ("ufuk".to_string(), ufuk_channel),
+            ("leon".to_string(), leon_channel),
+        ]);
 
     let ws_game = Arc::new(Mutex::new(
         WebsocketGame::new(
             Arc::new(Mutex::new(game)),
-            &mut websocket_channels_per_player,
+            Arc::new(Mutex::new(websocket_channels_per_player)),
         )
         .await
         .unwrap(),

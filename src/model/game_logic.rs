@@ -17,11 +17,8 @@ use std::fmt::Display;
 
 use std::sync::Arc;
 
-pub struct Game<T>
-where
-    T: PlayerActions,
-{
-    players: Arc<Mutex<PlayerGroup<T>>>,
+pub struct Game {
+    players: Arc<Mutex<PlayerGroup>>,
     game_stack: Vec<Arc<Animal>>,
     animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>>,
     animal_sets: Vec<Arc<AnimalSet>>,
@@ -36,10 +33,7 @@ pub enum GameError {
 
 type GameResult<T = ()> = Result<T, GameError>;
 
-impl<T> Display for Game<T>
-where
-    T: PlayerActions,
-{
+impl Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -60,11 +54,8 @@ where
     }
 }
 
-impl<T> Game<T>
-where
-    T: PlayerActions,
-{
-    pub fn new(players: PlayerGroup<T>, animal_sets: Vec<Arc<AnimalSet>>, seed: u64) -> Self {
+impl Game {
+    pub fn new(players: PlayerGroup, animal_sets: Vec<Arc<AnimalSet>>, seed: u64) -> Self {
         let mut animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>> = HashMap::new();
         let mut game_stack: Vec<Arc<Animal>> = Vec::new();
         let num_players = players.len();
@@ -107,7 +98,7 @@ where
         return all_ids;
     }
 
-    pub async fn get_player_by_id(&self, id: String) -> Option<Arc<Mutex<Player<T>>>> {
+    pub async fn get_player_by_id(&self, id: String) -> Option<Arc<Mutex<Player>>> {
         for player in self.players.lock().await.iter() {
             if player.lock().await.id() == id {
                 return Some(Arc::clone(player));
@@ -117,7 +108,7 @@ where
         return None;
     }
 
-    pub async fn get_player_for_current_turn(&self) -> Arc<Mutex<Player<T>>> {
+    pub async fn get_player_for_current_turn(&self) -> Arc<Mutex<Player>> {
         self.players.lock().await.get(0).unwrap() // todo
     }
 
@@ -125,15 +116,15 @@ where
 
     pub fn play_one_round(&mut self) {}
 
-    fn auction(&mut self, player: &mut Player<T>, animal: &Animal) {
+    fn auction(&mut self, player: &mut Player, animal: &Animal) {
         // ToDo: replace the dummy
         player.consume_animal(animal);
     }
 
     fn trade(
         &mut self,
-        challenger: MutexGuard<Player<T>>,
-        opponent: Arc<Mutex<Player<T>>>,
+        challenger: MutexGuard<Player>,
+        opponent: Arc<Mutex<Player>>,
         amount: TradeAmount,
         animal: Animal,
     ) {

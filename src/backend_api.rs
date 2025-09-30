@@ -115,9 +115,18 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
 
     loop {
         // send state and possible actions to client-bot
-        let recv_state: Option<Message> = state_receiver.recv().await;
-        println!("{}", recv_state.clone().unwrap().to_text().unwrap());
 
+        println!("waiting to receive game state info for bot {}", player_id);
+        let recv_state: Option<Message> = state_receiver.recv().await;
+        println!("received game state info for bot {}", player_id);
+
+        println!(
+            "game state info for bot {}: {}",
+            player_id,
+            recv_state.clone().unwrap().to_text().unwrap()
+        );
+
+        println!("waiting to send state to client of bot {}", player_id);
         match recv_state {
             Some(msg) => {
                 if let Err(e) = socket.send(msg).await {
@@ -126,22 +135,32 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
             }
             None => todo!(),
         }
+        println!("finished sending state to client of bot {}", player_id);
 
         // receive action and send to server-bot
+        println!("waiting to receive action from client of bot {}", player_id);
         if let Some(Ok(msg)) = socket.recv().await {
-            println!("{}", msg.clone().to_text().unwrap());
+            println!(
+                "bot {} action: {}",
+                player_id,
+                msg.clone().to_text().unwrap()
+            );
+            println!("finished receiving action from client of bot {}", player_id);
+
+            println!("waiting to send action of bot {} to game", player_id);
             match msg {
                 Message::Text(_) => match action_sender.send(msg).await {
-                    Ok(_) => println!("action has been send to game"),
-                    Err(_) => eprintln!("failure sending action to game"),
+                    Ok(_) => println!("action of bot {} has been send to game", player_id),
+                    Err(_) => eprintln!("failure sending action of bot {} to game", player_id),
                 },
                 Message::Close(_) => {
-                    println!("Closing WebSocket connection.");
+                    println!("Closing WebSocket connection of bot {}.", player_id);
                     break;
                 }
                 _ => {
                     eprint!(
-                        "received unknown message type from client, closing WebSocket connection"
+                        "received unknown message type from client of bot {}, closing WebSocket connection",
+                        player_id
                     );
                     break;
                 }

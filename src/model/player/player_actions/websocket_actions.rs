@@ -59,9 +59,13 @@ impl PlayerActions for WebsocketActions {
     }
 
     fn draw_or_trade(&mut self) -> FirstPhaseAction {
+        println!("Trying to send draw or trade");
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws draw_or_trade state")));
+        println!("has send draw or trade");
+        println!("trying to receive draw or trade");
         let msg = self.action_receiver.blocking_recv();
+        println!("has received draw or trade");
         match msg {
             Some(msg) => println!("ws: draw_or_trade {}", msg.to_text().unwrap()),
             None => println!("ws: draw_or_trade None"),

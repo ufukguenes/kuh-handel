@@ -1,20 +1,24 @@
 import websocket
 import time
 # Connect to your server
-ws = websocket.WebSocket()
-ws.connect("ws://localhost:3000/game?player_id=ufuk")
+ufuk_ws = websocket.WebSocket()
+leon_ws = websocket.WebSocket()
+ufuk_ws.connect("ws://localhost:3000/game?player_id=ufuk")
 
-time.sleep(3)
-ws.connect("ws://localhost:3000/game?player_id=leon")
+time.sleep(2)
+leon_ws.connect("ws://localhost:3000/game?player_id=leon")
 
 print("Connected to server")
 
 # Send a test message
-ws.send("Hello from Python client!")
+ufuk_ws.send("Hello from Python client!")
 
 # Receive a response
-response = ws.recv()
+response = ufuk_ws.recv()
 print("Received:", response)
 
 # Close the connection
-ws.close()
+ufuk_ws.close()
+leon_ws.close()
+
+

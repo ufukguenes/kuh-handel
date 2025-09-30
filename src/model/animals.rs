@@ -94,7 +94,7 @@ impl AnimalSet {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Animal {
-    value: Value,
+    pub value: Value,
 }
 
 impl Display for Animal {

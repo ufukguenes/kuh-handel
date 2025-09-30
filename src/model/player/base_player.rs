@@ -1,14 +1,19 @@
 use serde::{Deserialize, Serialize};
 
 use crate::model::animals::Animal;
+use crate::model::money::money::Money;
+use crate::model::money::value::Value;
 use crate::model::money::wallet::Wallet;
+use crate::model::player::player_actions::actions::{
+    InitialTrade, TradeOffer, TradeOpponentDecision,
+};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::player_actions::actions::{AuctionDecision, PlayerTurnDecision};
 use crate::player_actions::game_updates::{AuctionRound, Bidding, GameUpdate};
 use std::fmt;
 use std::fmt::Display;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlayerId {
     name: String,
 }
@@ -48,8 +53,12 @@ impl Player {
         self.wallet.withdraw(animal.value()).unwrap();
     }
 
-    pub fn id(&self) -> &str {
-        &self.id.name
+    pub fn id(&self) -> &PlayerId {
+        &self.id
+    }
+
+    pub fn can_trade(&self) -> bool {
+        todo!()
     }
 }
 
@@ -76,26 +85,19 @@ impl PlayerActions for Player {
         self.player_actions.receive_game_update(update)
     }
 
-    fn send_money_to_player(
-        &mut self,
-        player: PlayerId,
-        amount: crate::model::money::value::Value,
-    ) -> Vec<crate::model::money::money::Money> {
+    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
         self.player_actions.send_money_to_player(player, amount)
     }
 
-    fn receive_from_player(
-        &mut self,
-        player: PlayerId,
-        money: Vec<crate::model::money::money::Money>,
-    ) {
+    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
         self.player_actions.receive_from_player(player, money)
     }
 
-    fn respond_to_trade(
-        &mut self,
-        offer: super::player_actions::actions::TradeOffer,
-    ) -> super::player_actions::actions::TradeOpponentDecision {
+    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         self.player_actions.respond_to_trade(offer)
+    }
+
+    fn trade(&mut self) -> InitialTrade {
+        todo!()
     }
 }

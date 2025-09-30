@@ -7,7 +7,7 @@ use crate::model::money::value::Value;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Money {
-    value: Value,
+    pub value: Value,
 }
 
 impl Money {

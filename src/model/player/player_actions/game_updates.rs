@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use url::ParseOptions;
 
 use crate::model::{
     animals::{Animal, AnimalSet},
@@ -10,9 +11,9 @@ type Points = usize;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
-    host: PlayerId,
-    animal: Animal,
-    bids: Vec<(PlayerId, Bidding)>,
+    pub host: PlayerId,
+    pub animal: Animal,
+    pub bids: Vec<(PlayerId, Bidding)>,
 }
 
 /// After each game event, all players are informed about what happened.
@@ -48,16 +49,44 @@ pub enum GameUpdate {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MoneyTransfer {
-    from: PlayerId,
-    to: PlayerId,
-    card_amount: usize,
-    min_value: Value,
+    pub from: PlayerId,
+    pub to: PlayerId,
+    pub card_amount: usize,
+    pub min_value: Value,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub enum Bidding {
     Pass,
     Bid(Money),
+}
+
+impl PartialEq for Bidding {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Bidding::Pass, Bidding::Pass) => true,
+            (Bidding::Pass, _) => false,
+            (_, Bidding::Pass) => false,
+            (Bidding::Bid(a), Bidding::Bid(b)) => a == b,
+        }
+    }
+}
+
+impl Ord for Bidding {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Bidding::Pass, Bidding::Pass) => std::cmp::Ordering::Equal,
+            (Bidding::Pass, _) => std::cmp::Ordering::Less,
+            (_, Bidding::Pass) => std::cmp::Ordering::Greater,
+            (Bidding::Bid(a), Bidding::Bid(b)) => a.cmp(b),
+        }
+    }
+}
+
+impl PartialOrd for Bidding {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

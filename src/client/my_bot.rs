@@ -3,7 +3,10 @@ use crate::model::{
     player::{
         base_player::PlayerId,
         player_actions::{
-            actions::{AuctionDecision, PlayerTurnDecision, TradeOffer, TradeOpponentDecision},
+            actions::{
+                AuctionDecision, InitialTrade, PlayerTurnDecision, TradeOffer,
+                TradeOpponentDecision,
+            },
             base_player_actions::PlayerActions,
             game_updates::{AuctionRound, Bidding, GameUpdate},
         },
@@ -29,15 +32,19 @@ impl PlayerActions for MyBot {
         todo!()
     }
 
-    fn send_money_to_player(&mut self, player: PlayerId, amount: Value) -> Vec<Money> {
+    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
         todo!()
     }
 
-    fn receive_from_player(&mut self, player: PlayerId, money: Vec<Money>) {
+    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
         todo!()
     }
 
     fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        todo!()
+    }
+
+    fn trade(&mut self) -> InitialTrade {
         todo!()
     }
 }

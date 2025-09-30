@@ -47,11 +47,19 @@ impl PlayerGroup {
 
     pub fn get_by_id(&self, id: &PlayerId) -> Result<Rc<RefCell<Player>>, GameError> {
         for player in self.players.iter() {
-            if player.borrow().id() == id.name() {
+            if player.borrow().id() == id {
                 return Ok(Rc::clone(&player));
             }
         }
         Err(GameError::PlayerNotFound)
+    }
+
+    pub fn get_auction_players(&self, excluding: &PlayerId) -> Vec<Rc<RefCell<Player>>> {
+        self.players
+            .iter()
+            .filter(|p| p.borrow().id() != excluding)
+            .cloned()
+            .collect()
     }
 
     pub fn len(&self) -> usize {

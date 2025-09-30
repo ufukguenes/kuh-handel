@@ -1,7 +1,9 @@
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
-use crate::model::player::player_actions::actions::{TradeOffer, TradeOpponentDecision};
+use crate::model::player::player_actions::actions::{
+    InitialTrade, TradeOffer, TradeOpponentDecision,
+};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_actions::game_updates::Bidding;
 use crate::player_actions::actions::{AuctionDecision, PlayerTurnDecision};
@@ -25,15 +27,19 @@ impl PlayerActions for RandomPlayerActions {
         todo!()
     }
 
-    fn send_money_to_player(&mut self, player: PlayerId, amount: Value) -> Vec<Money> {
+    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
         todo!()
     }
 
-    fn receive_from_player(&mut self, player: PlayerId, money: Vec<Money>) {
+    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
         todo!()
     }
 
     fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        todo!()
+    }
+
+    fn trade(&mut self) -> InitialTrade {
         todo!()
     }
 

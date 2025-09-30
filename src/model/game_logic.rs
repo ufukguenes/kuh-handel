@@ -1,12 +1,11 @@
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
 use crate::model::money::money::Money;
-use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::Player;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::player_actions::game_updates::AnimalTradeCount;
 use crate::model::player::player_group::PlayerGroup;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
-use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
+use crate::player_actions::actions::PlayerTurnDecision;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
@@ -128,6 +127,7 @@ impl Game {
         opponent: Rc<RefCell<Player>>,
         amount: Vec<Money>,
         animal: Animal,
+        animal_count: AnimalTradeCount,
     ) {
         // Trigger the trade between challenger and opponent
     }
@@ -153,10 +153,11 @@ impl Game {
                 PlayerTurnDecision::Trade {
                     opponent,
                     animal,
+                    animal_count,
                     amount,
                 } => {
                     let opponent = Rc::clone(&self.players.borrow().get_by_id(&opponent).unwrap());
-                    self.trade(player, opponent, amount, animal);
+                    self.trade(player, opponent, amount, animal, animal_count);
                 }
             };
             current_player_idx = (current_player_idx + 1) % players.borrow().len();

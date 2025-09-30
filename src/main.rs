@@ -7,7 +7,6 @@ use axum::{Router, routing};
 use model::animals::AnimalSet;
 use model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
 use model::game_logic::Game;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;
@@ -19,7 +18,6 @@ use model::player::player_actions::websocket_actions::WebsocketActions;
 use std::net::SocketAddr;
 
 use crate::model::player::player_actions;
-use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 // todos:
 // done - 1. change to dyn PlayerActions

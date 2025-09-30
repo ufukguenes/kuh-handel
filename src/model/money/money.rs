@@ -1,10 +1,11 @@
-use std::env::var;
 use std::fmt;
 use std::fmt::Display;
 
+use serde::{Deserialize, Serialize};
+
 use crate::model::money::value::Value;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Money {
     value: Value,
 }

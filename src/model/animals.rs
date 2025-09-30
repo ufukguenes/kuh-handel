@@ -1,4 +1,6 @@
-use super::money::{money::Money, value::Value};
+use serde::{Deserialize, Serialize};
+
+use super::money::value::Value;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -90,7 +92,7 @@ impl AnimalSet {
     }
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Animal {
     value: Value,
 }

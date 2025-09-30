@@ -1,12 +1,8 @@
 use super::game_logic::Game;
 use crate::model::{
-    animals::{Animal, AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
+    animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
     money::{money::Money, value::Value, wallet::Wallet},
-    player::{
-        base_player::Player,
-        player_actions::{base_player_actions::PlayerActions, random_actions::RandomPlayerActions},
-        player_group::PlayerGroup,
-    },
+    player::{player_actions::base_player_actions::PlayerActions, player_group::PlayerGroup},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

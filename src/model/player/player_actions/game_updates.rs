@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::model::{
     animals::{Animal, AnimalSet},
     money::{money::Money, value::Value, wallet::Wallet},
-    player::base_player::{Player, PlayerId},
+    player::base_player::PlayerId,
 };
 
 type Points = usize;
@@ -36,6 +38,10 @@ pub enum GameUpdate {
     End {
         ranking: Vec<(PlayerId, Points)>,
     },
+    ExposePlayer {
+        player: PlayerId,
+        wallet: Wallet,
+    },
 }
 
 pub struct MoneyTransfer {
@@ -50,6 +56,7 @@ pub enum Bidding {
     Bid(Money),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[repr(usize)]
 pub enum AnimalTradeCount {
     One = 1,

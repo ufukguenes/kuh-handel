@@ -1,10 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 use crate::model::{
-    animals::Animal,
-    money::{money::Money, value::Value},
-    player::base_player::{Player, PlayerId},
+    animals::Animal, money::money::Money, player::base_player::PlayerId,
     player::player_actions::game_updates::AnimalTradeCount,
 };
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerTurnDecision {
     Draw,
     Trade {
@@ -22,7 +23,7 @@ pub struct TradeOffer {
     challenger_card_offer: usize,
 }
 
-pub enum AuctionAction {
+pub enum AuctionDecision {
     Buy,
     Sell,
 }

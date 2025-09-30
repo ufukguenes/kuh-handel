@@ -1,17 +1,14 @@
+use crate::model::money::money::Money;
+use crate::model::money::value::Value;
+use crate::model::player::base_player::PlayerId;
+use crate::model::player::player_actions::actions::{TradeOffer, TradeOpponentDecision};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
+use crate::model::player::player_actions::game_updates::Bidding;
+use crate::player_actions::actions::{AuctionDecision, PlayerTurnDecision};
 use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
-use axum::Json;
-use axum::{
-    extract::{
-        State,
-        ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade},
-    },
-    response::IntoResponse,
-};
-use std::sync::Arc;
+use axum::extract::ws::{Message, Utf8Bytes};
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::sync::{Mutex, mpsc};
 
 pub struct WebsocketActions {
     // for each bot, create two channels
@@ -45,7 +42,7 @@ impl WebsocketActions {
 }
 
 impl PlayerActions for WebsocketActions {
-    fn provide_bidding(&mut self, state: AuctionRound) -> AuctionValue {
+    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws bidding state message")));
         let msg = self.action_receiver.blocking_recv();
@@ -54,7 +51,7 @@ impl PlayerActions for WebsocketActions {
             None => println!("ws: provide bidding None"),
         }
 
-        AuctionValue::Pass
+        Bidding::Pass
     }
 
     fn draw_or_trade(&mut self) -> PlayerTurnDecision {
@@ -72,7 +69,7 @@ impl PlayerActions for WebsocketActions {
         PlayerTurnDecision::Draw
     }
 
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionAction {
+    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws buy_or_sell state")));
         let msg = self.action_receiver.blocking_recv();
@@ -80,10 +77,22 @@ impl PlayerActions for WebsocketActions {
             Some(msg) => println!("ws: buy_or_sell {}", msg.to_text().unwrap()),
             None => println!("ws: buy_or_sell None"),
         }
-        AuctionAction::Buy
+        AuctionDecision::Buy
     }
 
-    fn receive_game_update(&mut self, update: super::game_updates::GameUpdate) {
+    fn receive_game_update(&mut self, update: GameUpdate) {
+        todo!()
+    }
+
+    fn send_money_to_player(&mut self, player: PlayerId, amount: Value) -> Vec<Money> {
+        todo!()
+    }
+
+    fn receive_from_player(&mut self, player: PlayerId, money: Vec<Money>) {
+        todo!()
+    }
+
+    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         todo!()
     }
 }

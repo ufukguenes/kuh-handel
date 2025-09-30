@@ -1,11 +1,14 @@
+use serde::{Deserialize, Serialize};
+
 use crate::model::animals::Animal;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
-use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
+use crate::player_actions::actions::{AuctionDecision, PlayerTurnDecision};
+use crate::player_actions::game_updates::{AuctionRound, Bidding, GameUpdate};
 use std::fmt;
 use std::fmt::Display;
-#[derive(PartialEq, Eq)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlayerId {
     name: String,
 }
@@ -57,7 +60,7 @@ impl Display for Player {
 }
 
 impl PlayerActions for Player {
-    fn provide_bidding(&mut self, state: AuctionRound) -> AuctionValue {
+    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         self.player_actions.provide_bidding(state)
     }
 
@@ -65,11 +68,34 @@ impl PlayerActions for Player {
         self.player_actions.draw_or_trade()
     }
 
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionAction {
+    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         self.player_actions.buy_or_sell(state)
     }
 
     fn receive_game_update(&mut self, update: GameUpdate) {
         self.player_actions.receive_game_update(update)
+    }
+
+    fn send_money_to_player(
+        &mut self,
+        player: PlayerId,
+        amount: crate::model::money::value::Value,
+    ) -> Vec<crate::model::money::money::Money> {
+        self.player_actions.send_money_to_player(player, amount)
+    }
+
+    fn receive_from_player(
+        &mut self,
+        player: PlayerId,
+        money: Vec<crate::model::money::money::Money>,
+    ) {
+        self.player_actions.receive_from_player(player, money)
+    }
+
+    fn respond_to_trade(
+        &mut self,
+        offer: super::player_actions::actions::TradeOffer,
+    ) -> super::player_actions::actions::TradeOpponentDecision {
+        self.player_actions.respond_to_trade(offer)
     }
 }

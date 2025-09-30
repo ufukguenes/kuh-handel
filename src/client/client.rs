@@ -1,4 +1,4 @@
-use crate::client::MyBot::MyBot;
+use crate::client::my_bot::MyBot;
 
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use futures_util::{SinkExt, StreamExt};
@@ -20,16 +20,19 @@ async fn main() {
         match msg {
             Ok(Message::Text(text)) => {
                 println!("Received: {}", text);
-                let which_action: bool;
+                let which_action = true; // dummy value for compilation
 
                 match which_action {
-                    True => {
+                    true => {
                         let action = my_bot.draw_or_trade();
-                        write.send(action).await.unwrap();
+                        write
+                            .send(Message::Text(serde_json::to_string(&action).unwrap()))
+                            .await
+                            .unwrap();
                     }
 
-                    False => {
-                        my_bot.receive_game_update(update);
+                    false => {
+                        // my_bot.receive_game_update(update);
                     }
                 }
             }

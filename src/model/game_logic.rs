@@ -5,7 +5,7 @@ use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::Player;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_group::PlayerGroup;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
 use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
@@ -145,12 +145,12 @@ impl Game {
 
             let action = player.borrow_mut().draw_or_trade();
             match action {
-                FirstPhaseAction::Draw => {
+                PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
                     println!("Player {} drew card: {}", player.borrow().id(), card);
                     self.auction(&mut *player.borrow_mut(), &card)
                 }
-                FirstPhaseAction::Trade {
+                PlayerTurnDecision::Trade {
                     opponent,
                     animal,
                     amount,

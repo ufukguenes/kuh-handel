@@ -1,5 +1,6 @@
-mod backend_api;
-mod model;
+pub(crate) mod backend_api;
+pub(crate) mod client;
+pub(crate) mod model;
 
 use axum::extract::ws::Message;
 use axum::{Router, routing};
@@ -20,7 +21,6 @@ use std::net::SocketAddr;
 use crate::model::player::player_actions;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_actions::random_actions::RandomPlayerActions;
-
 // todos:
 // done - 1. change to dyn PlayerActions
 // 2. make game non async

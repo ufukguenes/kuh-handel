@@ -1,7 +1,7 @@
 use crate::model::animals::Animal;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
 use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use std::fmt;
 use std::fmt::Display;
@@ -61,7 +61,7 @@ impl PlayerActions for Player {
         self.player_actions.provide_bidding(state)
     }
 
-    fn draw_or_trade(&mut self) -> FirstPhaseAction {
+    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
         self.player_actions.draw_or_trade()
     }
 

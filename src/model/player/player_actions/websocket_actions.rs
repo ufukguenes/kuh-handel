@@ -1,5 +1,5 @@
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::actions::{AuctionAction, AuctionValue, PlayerTurnDecision};
 use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use axum::Json;
 use axum::{
@@ -57,7 +57,7 @@ impl PlayerActions for WebsocketActions {
         AuctionValue::Pass
     }
 
-    fn draw_or_trade(&mut self) -> FirstPhaseAction {
+    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
         println!("Trying to send draw or trade");
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws draw_or_trade state")));
@@ -69,7 +69,7 @@ impl PlayerActions for WebsocketActions {
             Some(msg) => println!("ws: draw_or_trade {}", msg.to_text().unwrap()),
             None => println!("ws: draw_or_trade None"),
         }
-        FirstPhaseAction::Draw
+        PlayerTurnDecision::Draw
     }
 
     fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionAction {

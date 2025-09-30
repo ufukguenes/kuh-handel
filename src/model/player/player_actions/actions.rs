@@ -2,15 +2,24 @@ use crate::model::{
     animals::Animal,
     money::{money::Money, value::Value},
     player::base_player::{Player, PlayerId},
+    player::player_actions::game_updates::AnimalTradeCount,
 };
 
-pub enum FirstPhaseAction {
+pub enum PlayerTurnDecision {
     Draw,
     Trade {
         opponent: PlayerId,
         animal: Animal,
+        animal_count: AnimalTradeCount,
         amount: Vec<Money>,
     },
+}
+
+pub struct TradeOffer {
+    challenger: PlayerId,
+    animal: Animal,
+    animal_count: AnimalTradeCount,
+    challenger_card_offer: usize,
 }
 
 pub enum AuctionAction {
@@ -18,7 +27,7 @@ pub enum AuctionAction {
     Sell,
 }
 
-pub enum AuctionValue {
-    Bidding(Money),
-    Pass,
+pub enum TradeOpponentDecision {
+    Accept,
+    CounterOffer { amount: Vec<Money> },
 }

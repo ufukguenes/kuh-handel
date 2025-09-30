@@ -47,7 +47,7 @@ pub struct MoneyTransfer {
 
 pub enum Bidding {
     Pass,
-    Bid { value: Money },
+    Bid(Money),
 }
 
 #[repr(usize)]

@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 use crate::model::game_errors::GameError;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {
     bank_notes: HashMap<Money, u32>,
 }

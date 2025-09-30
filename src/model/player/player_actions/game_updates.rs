@@ -8,6 +8,7 @@ use crate::model::{
 
 type Points = usize;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
     host: PlayerId,
     animal: Animal,
@@ -15,6 +16,7 @@ pub struct AuctionRound {
 }
 
 /// After each game event, all players are informed about what happened.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GameUpdate {
     /// The action update is sent after an auction has finished.
     Auction {
@@ -44,6 +46,7 @@ pub enum GameUpdate {
     },
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MoneyTransfer {
     from: PlayerId,
     to: PlayerId,
@@ -51,6 +54,7 @@ pub struct MoneyTransfer {
     min_value: Value,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Bidding {
     Pass,
     Bid(Money),

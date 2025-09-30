@@ -60,7 +60,7 @@ pub trait AnimalSetFactory {
     fn new_from_value(value: u32, inflation: Vec<Value>) -> AnimalSet;
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
     animal: Animal,
     inflation: Vec<Value>,

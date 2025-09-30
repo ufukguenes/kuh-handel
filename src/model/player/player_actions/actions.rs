@@ -16,6 +16,7 @@ pub enum PlayerTurnDecision {
     },
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradeOffer {
     challenger: PlayerId,
     animal: Animal,
@@ -23,11 +24,13 @@ pub struct TradeOffer {
     challenger_card_offer: usize,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionDecision {
     Buy,
     Sell,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TradeOpponentDecision {
     Accept,
     CounterOffer { amount: Vec<Money> },

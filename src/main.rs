@@ -32,28 +32,30 @@ async fn main() {
     let gregor_ws_action = RandomPlayerActions {};
     let (leon_ws_action, leon_channel) = WebsocketActions::new();
     let seed: u64 = 0;
+    let game_handle = tokio::task::spawn_blocking(move || {
+        println!("-------Default game--------\n");
+        let mut game = Game::new_default_game(
+            vec![
+                String::from("ufuk"),
+                String::from("leon"),
+                String::from("gregor"),
+            ],
+            vec![
+                Box::new(ufuk_ws_action),
+                Box::new(leon_ws_action),
+                Box::new(gregor_ws_action),
+            ],
+            seed,
+        );
 
-    println!("-------Default game--------\n");
-    let mut game = Game::new_default_game(
-        vec![
-            String::from("ufuk"),
-            String::from("leon"),
-            String::from("gregor"),
-        ],
-        vec![
-            Box::new(ufuk_ws_action),
-            Box::new(leon_ws_action),
-            Box::new(gregor_ws_action),
-        ],
-        seed,
-    );
+        game.num_players();
+        println!("{}", game);
 
-    game.num_players();
-    println!("{}", game);
+        game.num_players();
 
-    game.num_players();
-    //game.play().unwrap();
-    println!("{}", game);
+        game.play().unwrap();
+        println!("{}", game);
+    });
 
     let websocket_channels_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)> =
         HashMap::from([

@@ -1,14 +1,16 @@
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
+use crate::model::money::money::Money;
 use crate::model::money::wallet::Wallet;
-use crate::model::player::base_player::{FirstPhaseAction, Player, TradeAmount};
+use crate::model::player::base_player::Player;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_group::PlayerGroup;
+use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 
-use std::cell::Ref;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -124,7 +126,7 @@ impl Game {
         &mut self,
         challenger: Rc<RefCell<Player>>,
         opponent: Rc<RefCell<Player>>,
-        amount: TradeAmount,
+        amount: Vec<Money>,
         animal: Animal,
     ) {
         // Trigger the trade between challenger and opponent

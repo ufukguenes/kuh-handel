@@ -1,18 +1,10 @@
 use crate::model::animals::Animal;
-use crate::model::game_logic::Game;
-use crate::model::money::value::Value;
 use crate::model::money::wallet::Wallet;
-
-use crate::model::money::money::Money;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::f32::consts::E;
+use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use std::fmt;
 use std::fmt::Display;
-use std::io::empty;
-use std::rc::Rc;
-
 #[derive(PartialEq, Eq)]
 pub struct PlayerId {
     name: String,
@@ -28,35 +20,6 @@ impl Display for PlayerId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
-}
-
-pub enum FirstPhaseAction {
-    Draw,
-    Trade {
-        opponent: PlayerId,
-        animal: Animal,
-        amount: TradeAmount,
-    },
-}
-
-pub enum AuctionAction {
-    Buy,
-    Sell,
-}
-
-pub struct AuctionState {
-    animal: Animal,
-    mapping: HashMap<PlayerId, AuctionValue>,
-}
-
-pub enum AuctionValue {
-    Bidding(Money),
-    Pass,
-}
-
-// ToDo: we need the number of cards to be visible for the opponent -> based on the amount he has to decide whether to take the deal or place a counter bid
-pub struct TradeAmount {
-    amount: Vec<Money>,
 }
 
 pub struct Player {
@@ -94,7 +57,7 @@ impl Display for Player {
 }
 
 impl PlayerActions for Player {
-    fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
+    fn provide_bidding(&mut self, state: AuctionRound) -> AuctionValue {
         self.player_actions.provide_bidding(state)
     }
 
@@ -102,7 +65,11 @@ impl PlayerActions for Player {
         self.player_actions.draw_or_trade()
     }
 
-    fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction {
+    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionAction {
         self.player_actions.buy_or_sell(state)
+    }
+
+    fn receive_game_update(&mut self, update: GameUpdate) {
+        self.player_actions.receive_game_update(update)
     }
 }

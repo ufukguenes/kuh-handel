@@ -6,6 +6,7 @@ use axum::{Router, routing};
 use model::animals::AnimalSet;
 use model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
 use model::game_logic::Game;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;

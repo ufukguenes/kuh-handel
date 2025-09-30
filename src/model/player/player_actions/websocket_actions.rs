@@ -1,7 +1,6 @@
-use crate::model::player::base_player::{
-    AuctionAction, AuctionState, AuctionValue, FirstPhaseAction,
-};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::player_actions::actions::{AuctionAction, AuctionValue, FirstPhaseAction};
+use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 use axum::Json;
 use axum::{
     extract::{
@@ -46,7 +45,7 @@ impl WebsocketActions {
 }
 
 impl PlayerActions for WebsocketActions {
-    fn provide_bidding(&mut self, state: AuctionState) -> AuctionValue {
+    fn provide_bidding(&mut self, state: AuctionRound) -> AuctionValue {
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws bidding state message")));
         let msg = self.action_receiver.blocking_recv();
@@ -73,7 +72,7 @@ impl PlayerActions for WebsocketActions {
         FirstPhaseAction::Draw
     }
 
-    fn buy_or_sell(&mut self, state: AuctionState) -> AuctionAction {
+    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionAction {
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from("ws buy_or_sell state")));
         let msg = self.action_receiver.blocking_recv();
@@ -82,5 +81,9 @@ impl PlayerActions for WebsocketActions {
             None => println!("ws: buy_or_sell None"),
         }
         AuctionAction::Buy
+    }
+
+    fn receive_game_update(&mut self, update: super::game_updates::GameUpdate) {
+        todo!()
     }
 }

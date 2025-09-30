@@ -2,11 +2,11 @@ use crate::model::game_errors::GameError;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::{Player, PlayerId};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct PlayerGroup {
-    players: Vec<Arc<Mutex<Player>>>,
+    players: Vec<Rc<RefCell<Player>>>,
 }
 
 impl PlayerGroup {
@@ -20,7 +20,7 @@ impl PlayerGroup {
                 .iter()
                 .zip(player_actions)
                 .map(|(id, player_action)| {
-                    Arc::new(Mutex::new(Player::new(
+                    Rc::new(RefCell::new(Player::new(
                         id.clone(),
                         wallet.clone(),
                         player_action,
@@ -30,25 +30,25 @@ impl PlayerGroup {
         }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Arc<Mutex<Player>>> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Rc<RefCell<Player>>> {
         self.players.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Arc<Mutex<Player>>> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Rc<RefCell<Player>>> {
         self.players.iter_mut()
     }
 
-    pub fn get(&self, index: usize) -> Result<Arc<Mutex<Player>>, GameError> {
+    pub fn get(&self, index: usize) -> Result<Rc<RefCell<Player>>, GameError> {
         self.players
             .get(index)
             .ok_or(GameError::PlayerNotFound)
             .cloned()
     }
 
-    pub async fn get_by_id_mut(&mut self, id: &PlayerId) -> Result<Arc<Mutex<Player>>, GameError> {
+    pub fn get_by_id(&self, id: &PlayerId) -> Result<Rc<RefCell<Player>>, GameError> {
         for player in self.players.iter() {
-            if player.lock().await.id() == id.name() {
-                return Ok(Arc::clone(&player));
+            if player.borrow().id() == id.name() {
+                return Ok(Rc::clone(&player));
             }
         }
         Err(GameError::PlayerNotFound)

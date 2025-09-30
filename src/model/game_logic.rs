@@ -7,21 +7,20 @@ use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
-use tokio::sync::MutexGuard;
 
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use tokio::sync::Mutex;
 
 use std::fmt;
 use std::fmt::Display;
-
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub struct Game {
-    players: Arc<Mutex<PlayerGroup>>,
-    game_stack: Vec<Arc<Animal>>,
-    animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>>,
-    animal_sets: Vec<Arc<AnimalSet>>,
+    players: Rc<RefCell<PlayerGroup>>,
+    game_stack: Vec<Rc<Animal>>,
+    animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
+    animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
 }
 
@@ -55,22 +54,22 @@ impl Display for Game {
 }
 
 impl Game {
-    pub fn new(players: PlayerGroup, animal_sets: Vec<Arc<AnimalSet>>, seed: u64) -> Self {
-        let mut animal_usage: HashMap<Arc<Animal>, Arc<AnimalSet>> = HashMap::new();
-        let mut game_stack: Vec<Arc<Animal>> = Vec::new();
+    pub fn new(players: PlayerGroup, animal_sets: Vec<Rc<AnimalSet>>, seed: u64) -> Self {
+        let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
+        let mut game_stack: Vec<Rc<Animal>> = Vec::new();
         let num_players = players.len();
 
         for set in animal_sets.iter() {
             for animal in set.animals() {
-                animal_usage.insert(Arc::clone(animal), Arc::clone(set));
-                game_stack.push(Arc::clone(animal));
+                animal_usage.insert(Rc::clone(animal), Rc::clone(set));
+                game_stack.push(Rc::clone(animal));
             }
         }
 
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
         Game {
-            players: Arc::new(Mutex::new(players)),
+            players: Rc::new(RefCell::new(players)),
             game_stack: game_stack,
             animal_usage: animal_usage,
             animal_sets: animal_sets,
@@ -85,31 +84,31 @@ impl Game {
         Ok(())
     }
 
-    pub async fn num_players(&mut self) -> usize {
-        self.num_players = self.players.lock().await.len();
+    pub fn num_players(&mut self) -> usize {
+        self.num_players = self.players.borrow().len();
         self.num_players
     }
 
-    pub async fn get_all_ids(&self) -> Vec<String> {
+    pub fn get_all_ids(&self) -> Vec<String> {
         let mut all_ids = Vec::new();
-        for player in self.players.lock().await.iter() {
-            all_ids.push(player.lock().await.id().to_string());
+        for player in self.players.borrow().iter() {
+            all_ids.push(player.borrow().id().to_string());
         }
         return all_ids;
     }
 
-    pub async fn get_player_by_id(&self, id: String) -> Option<Arc<Mutex<Player>>> {
-        for player in self.players.lock().await.iter() {
-            if player.lock().await.id() == id {
-                return Some(Arc::clone(player));
+    pub fn get_player_by_id(&self, id: String) -> Option<Rc<RefCell<Player>>> {
+        for player in self.players.borrow().iter() {
+            if player.borrow().id() == id {
+                return Some(Rc::clone(player));
             }
         }
 
         return None;
     }
 
-    pub async fn get_player_for_current_turn(&self) -> Arc<Mutex<Player>> {
-        self.players.lock().await.get(0).unwrap() // todo
+    pub fn get_player_for_current_turn(&self) -> Rc<RefCell<Player>> {
+        self.players.borrow().get(0).unwrap() // todo
     }
 
     pub fn remove_player(&mut self, id: String) {}
@@ -123,15 +122,15 @@ impl Game {
 
     fn trade(
         &mut self,
-        challenger: MutexGuard<Player>,
-        opponent: Arc<Mutex<Player>>,
+        challenger: Rc<RefCell<Player>>,
+        opponent: Rc<RefCell<Player>>,
         amount: TradeAmount,
         animal: Animal,
     ) {
         // Trigger the trade between challenger and opponent
     }
 
-    async fn draw_phase(&mut self) {
+    fn draw_phase(&mut self) {
         let mut current_player_idx = 0usize;
         // get player order and iterate over them
         // draw a card and trigger the auction
@@ -139,26 +138,26 @@ impl Game {
         //
         while !self.game_stack.is_empty() {
             println!("--- New turn ---");
-            let players = self.players.clone();
-            let mut players = players.lock().await;
-            let player = players.get(current_player_idx).unwrap();
-            let mut player = player.lock().await;
-            match player.draw_or_trade() {
+            let players = Rc::clone(&self.players);
+            let player = Rc::clone(&players.borrow().get(current_player_idx).unwrap());
+
+            let action = player.borrow_mut().draw_or_trade();
+            match action {
                 FirstPhaseAction::Draw => {
                     let card = self.game_stack.pop().unwrap();
-                    println!("Player {} drew card: {}", player.id(), card);
-                    self.auction(&mut *player, &card)
+                    println!("Player {} drew card: {}", player.borrow().id(), card);
+                    self.auction(&mut *player.borrow_mut(), &card)
                 }
                 FirstPhaseAction::Trade {
                     opponent,
                     animal,
                     amount,
                 } => {
-                    let opponent = players.get_by_id_mut(&opponent).await.unwrap();
+                    let opponent = Rc::clone(&self.players.borrow().get_by_id(&opponent).unwrap());
                     self.trade(player, opponent, amount, animal);
                 }
             };
-            current_player_idx = (current_player_idx + 1) % players.len();
+            current_player_idx = (current_player_idx + 1) % players.borrow().len();
             println!("");
 
             // ToDo: a lot of stuff to do here

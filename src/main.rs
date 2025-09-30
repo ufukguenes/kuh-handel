@@ -48,10 +48,10 @@ async fn main() {
         seed,
     );
 
-    game.num_players().await;
+    game.num_players();
     println!("{}", game);
 
-    game.num_players().await;
+    game.num_players();
     //game.play().unwrap();
     println!("{}", game);
 
@@ -62,12 +62,9 @@ async fn main() {
         ]);
 
     let ws_game = Arc::new(Mutex::new(
-        WebsocketGame::new(
-            Arc::new(Mutex::new(game)),
-            Arc::new(Mutex::new(websocket_channels_per_player)),
-        )
-        .await
-        .unwrap(),
+        WebsocketGame::new(Arc::new(Mutex::new(websocket_channels_per_player)))
+            .await
+            .unwrap(),
     ));
     // start the game in a seperate thread, so that server can handle connections
     tokio::spawn(organize_new_game(Arc::clone(&ws_game)));

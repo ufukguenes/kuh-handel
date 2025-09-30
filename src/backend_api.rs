@@ -38,14 +38,12 @@ pub struct AuthParams {
 }
 
 pub struct WebsocketGame {
-    game: Arc<Mutex<Game>>,
     connected_players: Arc<Mutex<HashMap<String, bool>>>,
     channel_per_player: Arc<Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>>,
 }
 
 impl WebsocketGame {
     pub async fn new(
-        game: Arc<Mutex<Game>>,
         websocket_channels_per_player: Arc<
             Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>,
         >,
@@ -61,7 +59,6 @@ impl WebsocketGame {
         }
 
         Result::Ok(WebsocketGame {
-            game: game,
             connected_players: connected_players,
             channel_per_player: websocket_channels_per_player,
         })
@@ -177,27 +174,13 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
     loop {
         missing_players = state.lock().await.get_missing_players().await;
         if missing_players.len() > 0 {
-            print!("removing players: {:?}", missing_players);
-            stream::iter(missing_players)
-                .for_each(|id| {
-                    let state_arc = Arc::clone(&state);
-                    async move {
-                        let mut game_state = state_arc.lock().await;
-                        game_state.game.lock().await.remove_player(id);
-                    }
-                })
-                .await;
+            println!(
+                "The game should be interrupted and the following players removed: {:?}",
+                missing_players
+            );
         }
 
-        let current_player = state
-            .lock()
-            .await
-            .game
-            .lock()
-            .await
-            .get_player_for_current_turn()
-            .await;
-        println!("\nIt's bot ID {}'s turn.", current_player.lock().await);
+        println!("\nIt's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();
 
         // todo should we send the game state for each round to each player,

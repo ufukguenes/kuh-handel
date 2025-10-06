@@ -1,13 +1,18 @@
 use crate::messages::actions::AuctionDecision;
 use crate::messages::actions::Bidding;
+use crate::messages::actions::FromActionMessage;
 use crate::messages::actions::InitialTrade;
+use crate::messages::actions::NoAction;
 use crate::messages::actions::PlayerTurnDecision;
+use crate::messages::actions::SendMoney;
 use crate::messages::actions::TradeOffer;
 use crate::messages::actions::TradeOpponentDecision;
 use crate::messages::game_updates::AnimalTradeCount;
 use crate::messages::game_updates::AuctionRound;
 use crate::messages::game_updates::GameUpdate;
 use crate::messages::game_updates::MoneyTransfer;
+use crate::messages::message_protocol::ActionMessage;
+use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::Animal;
 use crate::model::animals::AnimalSet;
 use crate::model::money::money::Money;
@@ -131,26 +136,31 @@ impl Game {
         let players = Rc::clone(&self.players);
         let auction_players = players.borrow().get_auction_players(player.id());
 
-        let host_id = player.id();
+        let host_id = player.id().clone();
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
         let mut pass_count = 0usize;
 
         for bidder in auction_players.iter() {
-            let bidding = bidder.borrow_mut().provide_bidding(AuctionRound {
+            let auction_round = AuctionRound {
                 animal: animal.clone(),
                 host: host_id.clone(),
                 bids: bids.clone(),
-            });
-            bids.push((bidder.borrow().id().clone(), bidding.clone()));
+            };
+            let state_msg = StateMessage::ProvideBidding {
+                state: auction_round,
+            };
+            let player_decision: Bidding = player.map_to_action_inner(state_msg);
+
+            bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
             println!(
                 "Player {} bids {:?} in auction for animal {}",
                 bidder.borrow().id(),
-                bidding,
+                player_decision,
                 animal
             );
 
-            if let Bidding::Pass = bidding {
+            if let Bidding::Pass = player_decision {
                 pass_count += 1;
             }
 
@@ -164,7 +174,10 @@ impl Game {
             animal: animal.clone(),
             bids: bids.clone(),
         };
-        let player_decision = player.buy_or_sell(final_auction_round.clone());
+        let state_msg = StateMessage::BuyOrSell {
+            state: final_auction_round.clone(),
+        };
+        let player_decision: AuctionDecision = player.map_to_action_inner(state_msg);
 
         // ToDo: if no one has bidden, what will happen?
 
@@ -203,7 +216,10 @@ impl Game {
         );
 
         for p in players.borrow().iter() {
-            p.borrow_mut().receive_game_update(auction_result.clone());
+            let state_msg = StateMessage::GameUpdate {
+                update: auction_result.clone(),
+            };
+            let _: NoAction = p.borrow_mut().map_to_action_inner(state_msg);
         }
     }
 
@@ -213,15 +229,24 @@ impl Game {
         max_bid: Value,
         final_auction_round: AuctionRound,
     ) -> GameUpdate {
-        let bid_money = sender.send_money_to_player(receiver.id(), max_bid);
-        receiver.receive_from_player(sender.id(), bid_money.clone());
+        let state_msg = StateMessage::SendMoney {
+            player_id: receiver.id().clone(),
+            amount: max_bid,
+        };
+        let player_decision: SendMoney = sender.map_to_action_inner(state_msg);
+        let pay_amount = player_decision.amount;
+        let state_msg = StateMessage::ReceiveFromPlayer {
+            player_id: receiver.id().clone(),
+            money: pay_amount.clone(),
+        };
+        let _: NoAction = receiver.map_to_action_inner(state_msg);
 
         let update = GameUpdate::Auction {
             rounds: final_auction_round,
             transfer: MoneyTransfer {
                 from: sender.id().clone(),
                 to: receiver.id().clone(),
-                card_amount: bid_money.len(),
+                card_amount: pay_amount.len(),
                 min_value: max_bid, // ToDo: calculate the min value
             },
         };
@@ -244,8 +269,11 @@ impl Game {
             animal_count,
             challenger_card_offer: amount.len(),
         };
-        let decision = opponent.respond_to_trade(offer);
-        match decision {
+
+        let state_msg = StateMessage::RespondToTrade { offer: offer };
+        let player_decision: TradeOpponentDecision = opponent.map_to_action_inner(state_msg);
+
+        match player_decision {
             TradeOpponentDecision::Accept => {
                 println!("Trade accepted by {}", opponent.id());
             }
@@ -261,15 +289,21 @@ impl Game {
     }
 
     fn player_must_trade(&mut self, player: &mut Player) {
-        let trade = player.trade();
-        let opponent = self.players.borrow().get_by_id(&trade.opponent).unwrap();
+        let state_msg = StateMessage::Trade;
+        let player_decision: InitialTrade = player.map_to_action_inner(state_msg);
+
+        let opponent = self
+            .players
+            .borrow()
+            .get_by_id(&player_decision.opponent)
+            .unwrap();
 
         self.offer_trade_to_opponent(
             player,
             &mut *opponent.borrow_mut(),
-            trade.amount,
-            trade.animal,
-            trade.animal_count,
+            player_decision.amount,
+            player_decision.animal,
+            player_decision.animal_count,
         );
     }
 
@@ -284,8 +318,11 @@ impl Game {
             let players = Rc::clone(&self.players);
             let player = Rc::clone(&players.borrow().get(current_player_idx).unwrap());
 
-            let action = player.borrow_mut().draw_or_trade();
-            match action {
+            let state_msg = StateMessage::DrawOrTrade;
+            let player_decision: PlayerTurnDecision =
+                player.borrow_mut().map_to_action_inner(state_msg);
+
+            match player_decision {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
                     println!("Player {} drew card: {}", player.borrow().id(), card);

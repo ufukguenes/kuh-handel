@@ -1,44 +1,75 @@
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    TradeOpponentDecision,
 };
 
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
+use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
 
 pub trait PlayerActions: Send + Sync {
+    fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
+        match state_msg {
+            StateMessage::DrawOrTrade => ActionMessage::PlayerTurnDecision {
+                decision: self._draw_or_trade(),
+            },
+            StateMessage::Trade => ActionMessage::InitialTrade {
+                decision: self._trade(),
+            },
+            StateMessage::ProvideBidding { state } => ActionMessage::Bidding {
+                decision: self._provide_bidding(state),
+            },
+            StateMessage::BuyOrSell { state } => ActionMessage::AuctionDecision {
+                decision: self._buy_or_sell(state),
+            },
+            StateMessage::SendMoney { player_id, amount } => ActionMessage::SendMoney {
+                decision: self._send_money_to_player(&player_id, amount),
+            },
+            StateMessage::ReceiveFromPlayer { player_id, money } => ActionMessage::NoAction {
+                decision: self._receive_from_player(&player_id, money),
+            },
+            StateMessage::RespondToTrade { offer } => ActionMessage::TradeOpponentDecision {
+                decision: self._respond_to_trade(offer),
+            },
+            StateMessage::GameUpdate { update } => ActionMessage::NoAction {
+                decision: self._receive_game_update(update),
+            },
+        }
+    }
+
     /// If it is a players turn, it must decide whether to draw a card or to trade with an other player.
     /// In the latter case it must provide all the information necessary for the trade.
-    fn draw_or_trade(&mut self) -> PlayerTurnDecision;
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision;
 
     /// In the trading phase the player that is at turn must provide the trade details.
-    fn trade(&mut self) -> InitialTrade;
+    fn _trade(&mut self) -> InitialTrade;
 
     /// Each player receives the current state of the auction and must provide a bid or pass.
     /// If all players have bid pass, the auction is over.
     /// The game will inform all players about the result of the auction.
-    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding;
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding;
 
     /// After an auction, the player that was at turn must decide whether to buy or to sell the animal.
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision;
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision;
 
     /// After a bid, the player must send the bidden amount to the game, such that the transfer can be handled.
     /// If the player does not send enough money, the game will expose the players wallet if necessary.
-    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money>;
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney;
 
     /// After bidding or trade, a player can receive money from another player.
     /// Trade: The opponent will receive at least on money card from the challenger.
     ///        The challenger can receive money card from the opponent.
     ///        If the opponent accepts, the challenger receives an empty vector.
-    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>);
+    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction;
 
     /// the opponent receives the trade offer and can decide to accept it or to make a counter offer
-    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision;
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision;
 
     /// At the begin and end of the game, after an auction and after trades, each player receives an update of the game.
     /// The game itself will not store all the events. They have to be collected by the entity that implements this trait.
-    fn receive_game_update(&mut self, update: GameUpdate);
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction;
 
     // Implemented workflow
     //     - 1. players turn -> decided to a) draw or b) trade

@@ -23,7 +23,7 @@ async fn main() {
                 let state_msg: StateMessage = serde_json::from_str(&text).unwrap();
                 println!("client received message: {}", text);
 
-                let action_msg: ActionMessage = state_msg.call_action(&mut my_bot);
+                let action_msg: ActionMessage = my_bot.map_to_action(state_msg);
 
                 let _ = send.send(Message::Text(serde_json::to_string(&action_msg).unwrap()));
             }

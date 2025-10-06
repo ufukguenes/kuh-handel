@@ -1,6 +1,6 @@
 use crate::messages::actions::{
-    self, AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer,
-    TradeOpponentDecision,
+    self, AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
+    SendMoney, TradeOffer, TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
@@ -45,7 +45,7 @@ impl WebsocketActions {
         self.action_receiver.close();
     }
 
-    pub fn send_and_recv(&mut self, msg: StateMessage) -> ActionMessage {
+    pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> T {
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from(
                 serde_json::to_string(&msg).unwrap().as_str(),
@@ -58,106 +58,54 @@ impl WebsocketActions {
             Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),
             None => todo!("channel closed"),
         };
-        action_msg
+        T::extract(action_msg)
     }
 }
 
 impl PlayerActions for WebsocketActions {
-    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         let msg: StateMessage = StateMessage::ProvideBidding { state: state };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::Bidding { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         let msg: StateMessage = StateMessage::DrawOrTrade;
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::PlayerTurnDecision { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         let msg: StateMessage = StateMessage::BuyOrSell { state: state };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::AuctionDecision { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn receive_game_update(&mut self, update: GameUpdate) {
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         let msg: StateMessage = StateMessage::GameUpdate { update: update };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::NoAction => {}
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
         let msg: StateMessage = StateMessage::SendMoney {
             player_id: player.clone(),
             amount: amount,
         };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::SendMoney { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
+    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
         let msg: StateMessage = StateMessage::ReceiveFromPlayer {
             player_id: player.clone(),
             money: money,
         };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::NoAction => {}
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         let msg: StateMessage = StateMessage::RespondToTrade { offer: offer };
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::TradeOpponentDecision { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 
-    fn trade(&mut self) -> InitialTrade {
+    fn _trade(&mut self) -> InitialTrade {
         let msg: StateMessage = StateMessage::Trade;
-        let action_msg = self.send_and_recv(msg);
-
-        match action_msg {
-            ActionMessage::InitialTrade { decision } => {
-                return decision;
-            }
-            _ => todo!("wrong action type"),
-        }
+        self.send_and_recv(msg)
     }
 }

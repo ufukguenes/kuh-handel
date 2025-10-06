@@ -1,11 +1,38 @@
 use crate::messages::game_updates::AnimalTradeCount;
+use crate::messages::message_protocol::ActionMessage;
 use crate::model::{animals::Animal, money::money::Money, player::base_player::PlayerId};
 use serde::{Deserialize, Serialize};
+
+pub trait FromActionMessage: Sized {
+    fn extract(action: ActionMessage) -> Self;
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum NoAction {
+    Ok,
+}
+impl FromActionMessage for NoAction {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::NoAction { decision } => decision,
+            _ => panic!("Expected ActionMessage::NoAction"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerTurnDecision {
     Draw,
     Trade(InitialTrade),
+}
+
+impl FromActionMessage for PlayerTurnDecision {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::PlayerTurnDecision { decision } => decision,
+            _ => panic!("Expected ActionMessage::PlayerTurnDecision"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -14,6 +41,15 @@ pub struct InitialTrade {
     pub animal: Animal,
     pub animal_count: AnimalTradeCount,
     pub amount: Vec<Money>,
+}
+
+impl FromActionMessage for InitialTrade {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::InitialTrade { decision } => decision,
+            _ => panic!("Expected ActionMessage::InitialTrade"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,11 +65,41 @@ pub enum AuctionDecision {
     Buy,
     Sell,
 }
+impl FromActionMessage for AuctionDecision {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::AuctionDecision { decision } => decision,
+            _ => panic!("Expected ActionMessage::AuctionDecision"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TradeOpponentDecision {
     Accept,
     CounterOffer { amount: Vec<Money> },
+}
+
+impl FromActionMessage for TradeOpponentDecision {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::TradeOpponentDecision { decision } => decision,
+            _ => panic!("Expected ActionMessage::TradeOpponentDecision"),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SendMoney {
+    pub amount: Vec<Money>,
+}
+impl FromActionMessage for SendMoney {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::SendMoney { decision } => decision,
+            _ => panic!("Expected ActionMessage::SendMoney"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
@@ -67,5 +133,14 @@ impl Ord for Bidding {
 impl PartialOrd for Bidding {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl FromActionMessage for Bidding {
+    fn extract(action: ActionMessage) -> Self {
+        match action {
+            ActionMessage::Bidding { decision } => decision,
+            _ => panic!("Expected ActionMessage::Bidding"),
+        }
     }
 }

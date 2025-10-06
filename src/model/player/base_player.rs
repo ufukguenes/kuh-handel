@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::messages::actions::{AuctionDecision, PlayerTurnDecision};
+use crate::messages::actions::{AuctionDecision, FromActionMessage, PlayerTurnDecision};
 use crate::messages::actions::{Bidding, InitialTrade, TradeOffer, TradeOpponentDecision};
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
+use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
@@ -32,7 +33,7 @@ pub struct Player {
     id: PlayerId,
     wallet: Wallet,
     owned_animals: Vec<Animal>,
-    pub player_actions: Box<dyn PlayerActions>,
+    player_actions: Box<dyn PlayerActions>,
 }
 
 impl Player {
@@ -58,44 +59,19 @@ impl Player {
     pub fn can_trade(&self) -> bool {
         todo!()
     }
+
+    pub fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
+        self.player_actions.map_to_action(state_msg)
+    }
+
+    pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
+        let action_msg = self.player_actions.map_to_action(state_msg);
+        T::extract(action_msg)
+    }
 }
 
 impl Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)
-    }
-}
-
-impl PlayerActions for Player {
-    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        self.player_actions.provide_bidding(state)
-    }
-
-    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
-        self.player_actions.draw_or_trade()
-    }
-
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        self.player_actions.buy_or_sell(state)
-    }
-
-    fn receive_game_update(&mut self, update: GameUpdate) {
-        self.player_actions.receive_game_update(update)
-    }
-
-    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
-        self.player_actions.send_money_to_player(player, amount)
-    }
-
-    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
-        self.player_actions.receive_from_player(player, money)
-    }
-
-    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        self.player_actions.respond_to_trade(offer)
-    }
-
-    fn trade(&mut self) -> InitialTrade {
-        todo!()
     }
 }

@@ -1,5 +1,6 @@
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::{
@@ -15,9 +16,9 @@ pub enum ActionMessage {
     InitialTrade { decision: InitialTrade },
     Bidding { decision: Bidding },
     AuctionDecision { decision: AuctionDecision },
-    SendMoney { decision: Vec<Money> },
+    SendMoney { decision: SendMoney },
     TradeOpponentDecision { decision: TradeOpponentDecision },
-    NoAction,
+    NoAction { decision: NoAction },
 }
 
 //todo: make the base_player an enum, so that it is always ensured that each action type also has a message
@@ -46,37 +47,4 @@ pub enum StateMessage {
     GameUpdate {
         update: GameUpdate,
     },
-}
-
-impl StateMessage {
-    pub fn call_action(self, player: &mut dyn PlayerActions) -> ActionMessage {
-        match self {
-            StateMessage::DrawOrTrade => ActionMessage::PlayerTurnDecision {
-                decision: player.draw_or_trade(),
-            },
-            StateMessage::Trade => ActionMessage::InitialTrade {
-                decision: player.trade(),
-            },
-            StateMessage::ProvideBidding { state } => ActionMessage::Bidding {
-                decision: player.provide_bidding(state),
-            },
-            StateMessage::BuyOrSell { state } => ActionMessage::AuctionDecision {
-                decision: player.buy_or_sell(state),
-            },
-            StateMessage::SendMoney { player_id, amount } => ActionMessage::SendMoney {
-                decision: player.send_money_to_player(&player_id, amount),
-            },
-            StateMessage::ReceiveFromPlayer { player_id, money } => {
-                player.receive_from_player(&player_id, money);
-                ActionMessage::NoAction
-            }
-            StateMessage::RespondToTrade { offer } => ActionMessage::TradeOpponentDecision {
-                decision: player.respond_to_trade(offer),
-            },
-            StateMessage::GameUpdate { update } => {
-                player.receive_game_update(update);
-                ActionMessage::NoAction
-            }
-        }
-    }
 }

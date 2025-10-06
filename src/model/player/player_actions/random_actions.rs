@@ -1,5 +1,6 @@
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::money::money::Money;
@@ -9,35 +10,35 @@ use crate::model::player::player_actions::base_player_actions::PlayerActions;
 pub struct RandomPlayerActions {}
 
 impl PlayerActions for RandomPlayerActions {
-    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         Bidding::Pass
     }
 
-    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         PlayerTurnDecision::Draw
     }
 
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         AuctionDecision::Buy
     }
 
-    fn receive_game_update(&mut self, update: GameUpdate) {
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         todo!()
     }
 
-    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
         todo!()
     }
 
-    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {
+    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
         todo!()
     }
 
-    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         todo!()
     }
 
-    fn trade(&mut self) -> InitialTrade {
+    fn _trade(&mut self) -> InitialTrade {
         todo!()
     }
 

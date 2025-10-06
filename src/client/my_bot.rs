@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::{
@@ -11,33 +12,35 @@ use crate::model::{
 pub struct MyBot {}
 
 impl PlayerActions for MyBot {
-    fn draw_or_trade(&mut self) -> PlayerTurnDecision {
-        PlayerTurnDecision::Draw
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
+        todo!()
     }
 
-    fn provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        Bidding::Pass
+    fn _trade(&mut self) -> InitialTrade {
+        todo!()
     }
 
-    fn buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        AuctionDecision::Buy
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        todo!()
     }
 
-    fn receive_game_update(&mut self, update: GameUpdate) {
-        println!("received game update");
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        todo!()
     }
 
-    fn send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> Vec<Money> {
-        vec![Money::new_u32(0)]
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
+        todo!()
     }
 
-    fn receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) {}
-
-    fn respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        TradeOpponentDecision::Accept
+    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
+        todo!()
     }
 
-    fn trade(&mut self) -> InitialTrade {
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        todo!()
+    }
+
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         todo!()
     }
 }

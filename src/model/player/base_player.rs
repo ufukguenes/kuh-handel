@@ -14,7 +14,7 @@ use std::fmt::Display;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlayerId {
-    name: String,
+    pub name: String,
 }
 
 impl PlayerId {
@@ -58,10 +58,6 @@ impl Player {
 
     pub fn can_trade(&self) -> bool {
         todo!()
-    }
-
-    pub fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
-        self.player_actions.map_to_action(state_msg)
     }
 
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {

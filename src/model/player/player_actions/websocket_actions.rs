@@ -1,5 +1,5 @@
 use crate::messages::actions::{
-    self, AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
+    AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
     SendMoney, TradeOffer, TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
@@ -12,7 +12,6 @@ use crate::model::player::player_actions::base_player_actions::PlayerActions;
 
 use axum::extract::ws::{Message, Utf8Bytes};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct WebsocketActions {

@@ -1,15 +1,16 @@
-use crate::client::my_bot::MyBot;
-use crate::messages::message_protocol::{ActionMessage, StateMessage};
-use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use axum::extract::ws::Utf8Bytes;
 use futures_util::{SinkExt, StreamExt};
+use kuh_handel::messages::message_protocol::{ActionMessage, StateMessage};
+use kuh_handel::model::player::player_actions::base_player_actions::PlayerActions;
+use kuh_handel::my_bot::MyBot;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
 #[tokio::main]
 async fn main() {
-    let mut my_bot = MyBot {};
-    let (ws_stream, _) = connect_async("ws://127.0.0.1:3000/game?player_id=ufuk")
+    let my_name = "ufuk".to_string();
+    let mut my_bot = MyBot::new(my_name.clone());
+    let (ws_stream, _) = connect_async(format!("ws://127.0.0.1:3000/game?player_id={}", my_name))
         .await
         .expect("Failed to connect");
     println!("Connected to server!");

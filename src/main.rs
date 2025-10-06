@@ -1,25 +1,20 @@
-pub(crate) mod backend_api;
-pub(crate) mod client;
-pub(crate) mod messages;
-pub(crate) mod model;
-
 use axum::extract::ws::Message;
 use axum::{Router, routing};
-use model::animals::AnimalSet;
-use model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
-use model::game_logic::Game;
+use kuh_handel::model::animals::AnimalSet;
+use kuh_handel::model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
+use kuh_handel::model::game_logic::Game;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::vec;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use backend_api::{WebsocketGame, organize_new_game, websocket_handler};
-use model::player::player_actions::websocket_actions::WebsocketActions;
+use kuh_handel::backend_api::{WebsocketGame, organize_new_game, websocket_handler};
+use kuh_handel::model::player::player_actions::websocket_actions::WebsocketActions;
 use std::net::SocketAddr;
 
-use crate::model::player::player_actions;
-use crate::model::player::player_actions::random_actions::RandomPlayerActions;
+use kuh_handel::model::player::player_actions;
+use kuh_handel::model::player::player_actions::random_actions::RandomPlayerActions;
 // todos:
 // done - 1. change to dyn PlayerActions
 // 2. make game non async

@@ -1,13 +1,11 @@
+use crate::messages::actions::{
+    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+};
+use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
-use crate::model::player::player_actions::actions::{
-    InitialTrade, TradeOffer, TradeOpponentDecision,
-};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::model::player::player_actions::game_updates::Bidding;
-use crate::player_actions::actions::{AuctionDecision, PlayerTurnDecision};
-use crate::player_actions::game_updates::{AuctionRound, GameUpdate};
 pub struct RandomPlayerActions {}
 
 impl PlayerActions for RandomPlayerActions {

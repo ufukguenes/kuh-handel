@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
 use url::ParseOptions;
 
-use crate::model::{
-    animals::{Animal, AnimalSet},
-    money::{money::Money, value::Value, wallet::Wallet},
-    player::base_player::PlayerId,
+use crate::{
+    messages::actions::Bidding,
+    model::{
+        animals::{Animal, AnimalSet},
+        money::{money::Money, value::Value, wallet::Wallet},
+        player::base_player::PlayerId,
+    },
 };
 
 type Points = usize;
@@ -53,40 +56,6 @@ pub struct MoneyTransfer {
     pub to: PlayerId,
     pub card_amount: usize,
     pub min_value: Value,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
-pub enum Bidding {
-    Pass,
-    Bid(Money),
-}
-
-impl PartialEq for Bidding {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Bidding::Pass, Bidding::Pass) => true,
-            (Bidding::Pass, _) => false,
-            (_, Bidding::Pass) => false,
-            (Bidding::Bid(a), Bidding::Bid(b)) => a == b,
-        }
-    }
-}
-
-impl Ord for Bidding {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self, other) {
-            (Bidding::Pass, Bidding::Pass) => std::cmp::Ordering::Equal,
-            (Bidding::Pass, _) => std::cmp::Ordering::Less,
-            (_, Bidding::Pass) => std::cmp::Ordering::Greater,
-            (Bidding::Bid(a), Bidding::Bid(b)) => a.cmp(b),
-        }
-    }
-}
-
-impl PartialOrd for Bidding {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

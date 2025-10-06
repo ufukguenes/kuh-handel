@@ -1,6 +1,7 @@
 use crate::client::my_bot::MyBot;
-
+use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use axum::extract::ws::Utf8Bytes;
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::Message;
@@ -13,28 +14,18 @@ async fn main() {
         .expect("Failed to connect");
     println!("Connected to server!");
 
-    let (mut write, mut read) = ws_stream.split();
+    let (mut send, mut recv) = ws_stream.split();
 
     // Spawn a task to listen for incoming messages
-    while let Some(msg) = read.next().await {
+    while let Some(msg) = recv.next().await {
         match msg {
             Ok(Message::Text(text)) => {
-                println!("Received: {}", text);
-                let which_action = true; // dummy value for compilation
+                let state_msg: StateMessage = serde_json::from_str(&text).unwrap();
+                println!("client received message: {}", text);
 
-                match which_action {
-                    true => {
-                        let action = my_bot.draw_or_trade();
-                        write
-                            .send(Message::Text(serde_json::to_string(&action).unwrap()))
-                            .await
-                            .unwrap();
-                    }
+                let action_msg: ActionMessage = state_msg.call_action(&mut my_bot);
 
-                    false => {
-                        // my_bot.receive_game_update(update);
-                    }
-                }
+                let _ = send.send(Message::Text(serde_json::to_string(&action_msg).unwrap()));
             }
 
             Ok(Message::Close(_)) => {

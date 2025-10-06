@@ -1,11 +1,11 @@
+use crate::messages::actions::{
+    AuctionDecision, Bidding, InitialTrade, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
+};
+
+use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
-use crate::model::player::player_actions::actions::InitialTrade;
-use crate::player_actions::actions::{
-    AuctionDecision, PlayerTurnDecision, TradeOffer, TradeOpponentDecision,
-};
-use crate::player_actions::game_updates::{AuctionRound, Bidding, GameUpdate};
 
 pub trait PlayerActions: Send + Sync {
     /// If it is a players turn, it must decide whether to draw a card or to trade with an other player.

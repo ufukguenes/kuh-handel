@@ -1,5 +1,6 @@
 pub(crate) mod backend_api;
 pub(crate) mod client;
+pub(crate) mod messages;
 pub(crate) mod model;
 
 use axum::extract::ws::Message;

@@ -22,11 +22,19 @@ async fn main() {
         match msg {
             Ok(Message::Text(text)) => {
                 let state_msg: StateMessage = serde_json::from_str(&text).unwrap();
-                println!("client received message: {}", text);
+                println!("bot {} received message: {}", my_name, text);
 
                 let action_msg: ActionMessage = my_bot.map_to_action(state_msg);
 
-                let _ = send.send(Message::Text(serde_json::to_string(&action_msg).unwrap()));
+                println!(
+                    "bot {} picked action: {}",
+                    my_name,
+                    serde_json::to_string(&action_msg).unwrap()
+                );
+                let _ = send
+                    .send(Message::Text(serde_json::to_string(&action_msg).unwrap()))
+                    .await;
+                println!("bot {}, finished sending action", my_name)
             }
 
             Ok(Message::Close(_)) => {
@@ -41,5 +49,6 @@ async fn main() {
                 break;
             }
         }
+        println!("waiting for next action request");
     }
 }

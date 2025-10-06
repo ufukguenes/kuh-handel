@@ -154,7 +154,7 @@ impl Game {
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
             println!(
-                "Player {} bids {:?} in auction for animal {}",
+                "gl | Player {} bids {:?} in auction for animal {}",
                 bidder.borrow().id(),
                 player_decision,
                 animal
@@ -195,13 +195,13 @@ impl Game {
 
         let (sender, receiver) = match player_decision {
             AuctionDecision::Buy => {
-                println!("Player {} buys animal {}", player.id(), animal);
+                println!("gl | Player {} buys animal {}", player.id(), animal);
                 player.consume_animal(animal);
 
                 (player, &mut *auction_winner)
             }
             AuctionDecision::Sell => {
-                println!("Player {} sells animal {}", player.id(), animal);
+                println!("gl | Player {} sells animal {}", player.id(), animal);
                 auction_winner.consume_animal(animal);
 
                 (&mut *auction_winner, player)
@@ -275,11 +275,11 @@ impl Game {
 
         match player_decision {
             TradeOpponentDecision::Accept => {
-                println!("Trade accepted by {}", opponent.id());
+                println!("gl | Trade accepted by {}", opponent.id());
             }
             TradeOpponentDecision::CounterOffer { amount } => {
                 println!(
-                    "Trade countered by {} with amount {:?}",
+                    "gl | Trade countered by {} with amount {:?}",
                     opponent.id(),
                     amount
                 );
@@ -314,7 +314,7 @@ impl Game {
         //   in the auction ask each player to bid, and provide the current transaction state = tuple of player and his/her current/highest bid
         //
         while !self.game_stack.is_empty() {
-            println!("--- New turn ---");
+            println!("gl | --- New turn ---");
             let players = Rc::clone(&self.players);
             let player = Rc::clone(&players.borrow().get(current_player_idx).unwrap());
 
@@ -325,7 +325,7 @@ impl Game {
             match player_decision {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
-                    println!("Player {} drew card: {}", player.borrow().id(), card);
+                    println!("gl | Player {} drew card: {}", player.borrow().id(), card);
                     self.auction(&mut *player.borrow_mut(), &card)
                 }
                 PlayerTurnDecision::Trade(InitialTrade {

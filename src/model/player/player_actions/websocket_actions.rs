@@ -45,13 +45,17 @@ impl WebsocketActions {
     }
 
     pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> T {
+        println!("wsp | going to send state from game to backend");
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from(
                 serde_json::to_string(&msg).unwrap().as_str(),
             )))
             .unwrap();
+        println!("wsp | finished, sending state to backend");
 
+        println!("wsp | waiting for action from backend for game");
         let msg: Option<Message> = self.action_receiver.blocking_recv();
+        println!("wsp | finished, receiving action from backend");
 
         let action_msg: ActionMessage = match msg {
             Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),

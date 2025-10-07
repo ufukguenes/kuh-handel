@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::{Deserialize, Serialize};
 use url::ParseOptions;
 
@@ -15,7 +17,7 @@ type Points = usize;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
     pub host: PlayerId,
-    pub animal: Animal,
+    pub animal: Rc<Animal>,
     pub bids: Vec<(PlayerId, Bidding)>,
 }
 

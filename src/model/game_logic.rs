@@ -132,24 +132,25 @@ impl Game {
 
     pub fn play_one_round(&mut self) {}
 
-    fn auction(&mut self, player: &mut Player, animal: &Animal) {
+    fn auction(&mut self, player_ref: Rc<RefCell<Player>>, animal: &Rc<Animal>) {
+        let host_id = player_ref.borrow().id().clone();
         let players = Rc::clone(&self.players);
-        let auction_players = players.borrow().get_auction_players(player.id());
 
-        let host_id = player.id().clone();
+        let auction_players = players.borrow().get_auction_players(&host_id);
+
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
         let mut pass_count = 0usize;
 
         for bidder in auction_players.iter() {
             let auction_round = AuctionRound {
-                animal: animal.clone(),
+                animal: Rc::clone(&animal),
                 host: host_id.clone(),
                 bids: bids.clone(),
             };
             let state_msg = StateMessage::ProvideBidding {
                 state: auction_round,
             };
-            let player_decision: Bidding = player.map_to_action_inner(state_msg);
+            let player_decision: Bidding = player_ref.borrow_mut().map_to_action_inner(state_msg);
 
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
@@ -177,7 +178,8 @@ impl Game {
         let state_msg = StateMessage::BuyOrSell {
             state: final_auction_round.clone(),
         };
-        let player_decision: AuctionDecision = player.map_to_action_inner(state_msg);
+        let player_decision: AuctionDecision =
+            player_ref.borrow_mut().map_to_action_inner(state_msg);
 
         // ToDo: if no one has bidden, what will happen?
 
@@ -193,18 +195,18 @@ impl Game {
             Bidding::Bid(v) => v.get_value(),
         };
 
-        let (sender, receiver) = match player_decision {
+        let (sender, receiver): (&mut Player, &mut Player) = match player_decision {
             AuctionDecision::Buy => {
-                println!("gl | Player {} buys animal {}", player.id(), animal);
-                player.consume_animal(animal);
+                println!("gl | Player {} buys animal {}", host_id, animal);
+                player_ref.borrow_mut().consume_animal(animal);
 
-                (player, &mut *auction_winner)
+                (&mut *player_ref.borrow_mut(), &mut *auction_winner)
             }
             AuctionDecision::Sell => {
-                println!("gl | Player {} sells animal {}", player.id(), animal);
+                println!("gl | Player {} sells animal {}", host_id, animal);
                 auction_winner.consume_animal(animal);
 
-                (&mut *auction_winner, player)
+                (&mut *auction_winner, &mut *player_ref.borrow_mut())
             }
         };
 
@@ -326,7 +328,7 @@ impl Game {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
                     println!("gl | Player {} drew card: {}", player.borrow().id(), card);
-                    self.auction(&mut *player.borrow_mut(), &card)
+                    self.auction(player, &card)
                 }
                 PlayerTurnDecision::Trade(InitialTrade {
                     opponent,

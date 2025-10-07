@@ -1,13 +1,12 @@
 use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
-use url::ParseOptions;
 
 use crate::{
     messages::actions::Bidding,
     model::{
         animals::{Animal, AnimalSet},
-        money::{money::Money, value::Value, wallet::Wallet},
+        money::{value::Value, wallet::Wallet},
         player::base_player::PlayerId,
     },
 };

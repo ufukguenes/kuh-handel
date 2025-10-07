@@ -1,25 +1,15 @@
-use crate::messages::actions::AuctionDecision;
-use crate::messages::actions::Bidding;
-use crate::messages::actions::FromActionMessage;
-use crate::messages::actions::InitialTrade;
-use crate::messages::actions::NoAction;
-use crate::messages::actions::PlayerTurnDecision;
-use crate::messages::actions::SendMoney;
-use crate::messages::actions::TradeOffer;
-use crate::messages::actions::TradeOpponentDecision;
-use crate::messages::game_updates::AnimalTradeCount;
-use crate::messages::game_updates::AuctionRound;
-use crate::messages::game_updates::GameUpdate;
-use crate::messages::game_updates::MoneyTransfer;
-use crate::messages::message_protocol::ActionMessage;
+use crate::messages::actions::{
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    TradeOpponentDecision,
+};
+use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate, MoneyTransfer};
+
 use crate::messages::message_protocol::StateMessage;
-use crate::model::animals::Animal;
-use crate::model::animals::AnimalSet;
+use crate::model::animals::{Animal, AnimalSet};
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
-use crate::model::player::base_player::Player;
-use crate::model::player::base_player::PlayerId;
-use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::base_player::{Player, PlayerId};
+
 use crate::model::player::player_group::PlayerGroup;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
@@ -30,9 +20,6 @@ use std::collections::HashMap;
 
 use std::fmt;
 use std::fmt::Display;
-use std::ops::Deref;
-use std::os::unix::process;
-use std::rc;
 use std::rc::Rc;
 
 pub struct Game {

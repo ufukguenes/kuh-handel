@@ -1,5 +1,5 @@
 use crate::model::game_errors::GameError;
-use crate::model::money::wallet::{self, Wallet};
+use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::{Player, PlayerId};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::cell::RefCell;

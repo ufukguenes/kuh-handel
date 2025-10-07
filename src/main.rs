@@ -1,7 +1,6 @@
 use axum::extract::ws::Message;
 use axum::{Router, routing};
-use kuh_handel::model::animals::AnimalSet;
-use kuh_handel::model::animals::{AnimalSetFactory, DefaultAnimalSetFactory};
+use kuh_handel::model::animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory};
 use kuh_handel::model::game_logic::Game;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +12,6 @@ use kuh_handel::backend_api::{WebsocketGame, organize_new_game, websocket_handle
 use kuh_handel::model::player::player_actions::websocket_actions::WebsocketActions;
 use std::net::SocketAddr;
 
-use kuh_handel::model::player::player_actions;
 use kuh_handel::model::player::player_actions::random_actions::RandomPlayerActions;
 // todos:
 // done - 1. change to dyn PlayerActions

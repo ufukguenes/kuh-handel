@@ -1,14 +1,13 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate};
-use crate::model::animals::Animal;
-use crate::model::money::wallet::Wallet;
 use crate::model::{
+    animals::Animal,
+    money::wallet::Wallet,
     money::{money::Money, value::Value},
     player::{base_player::PlayerId, player_actions::base_player_actions::PlayerActions},
 };

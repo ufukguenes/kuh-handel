@@ -1,11 +1,5 @@
-use axum::extract::ws::Utf8Bytes;
-use futures_util::{SinkExt, StreamExt};
 use kuh_handel::client_side::client::Client;
 use kuh_handel::client_side::my_bot::MyBot;
-use kuh_handel::messages::message_protocol::{ActionMessage, StateMessage};
-use kuh_handel::model::player::player_actions::base_player_actions::PlayerActions;
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::protocol::Message;
 
 #[tokio::main]
 async fn main() {

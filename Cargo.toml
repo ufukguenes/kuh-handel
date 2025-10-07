@@ -18,7 +18,4 @@ url = "2"
 tokio-tungstenite = "0.21"
 
 [[bin]]
-name = "client_ufuk"
-
-[[bin]]
-name = "client_leon"
+name = "all_clients"

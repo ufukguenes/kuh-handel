@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 use crate::model::game_errors::GameError;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use std::collections::HashMap;
 
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {
+    #[serde_as(as = "Vec<(_, _)>")]
     bank_notes: HashMap<Money, u32>,
 }
 

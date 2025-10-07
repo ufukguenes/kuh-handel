@@ -30,7 +30,9 @@ use std::collections::HashMap;
 
 use std::fmt;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::os::unix::process;
+use std::rc;
 use std::rc::Rc;
 
 pub struct Game {
@@ -84,6 +86,24 @@ impl Game {
         }
 
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
+
+        for player in players.iter() {
+            let state_msg = StateMessage::GameUpdate {
+                update: GameUpdate::Start {
+                    wallet: players.start_wallet.clone(),
+                    players_in_turn_order: players
+                        .iter()
+                        .map(|ref_player| ref_player.borrow().id().clone())
+                        .collect(),
+                    animals: animal_sets
+                        .clone()
+                        .into_iter()
+                        .map(|rc_animal| (*rc_animal).clone())
+                        .collect(),
+                },
+            };
+            let _: NoAction = player.borrow_mut().map_to_action_inner(state_msg);
+        }
 
         Game {
             players: Rc::new(RefCell::new(players)),

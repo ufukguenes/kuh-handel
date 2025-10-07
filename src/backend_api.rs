@@ -32,7 +32,7 @@ impl WebsocketGame {
             Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>,
         >,
     ) -> Result<WebsocketGame, GameError> {
-        let mut connected_players: Arc<Mutex<HashMap<String, bool>>> =
+        let connected_players: Arc<Mutex<HashMap<String, bool>>> =
             Arc::new(Mutex::new(HashMap::new()));
 
         for player_id in websocket_channels_per_player.lock().await.keys() {

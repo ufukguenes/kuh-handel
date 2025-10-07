@@ -137,6 +137,11 @@ impl Game {
         let players = Rc::clone(&self.players);
 
         let auction_players = players.borrow().get_auction_players(&host_id);
+        print!("gl | host {}, auction_player: ", host_id);
+        for p in auction_players.clone() {
+            print!("{}, ", p.borrow().id().name);
+        }
+        println!();
 
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
         let mut pass_count = 0usize;
@@ -150,7 +155,7 @@ impl Game {
             let state_msg = StateMessage::ProvideBidding {
                 state: auction_round,
             };
-            let player_decision: Bidding = player_ref.borrow_mut().map_to_action_inner(state_msg);
+            let player_decision: Bidding = bidder.borrow_mut().map_to_action_inner(state_msg);
 
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
@@ -47,4 +49,19 @@ pub enum StateMessage {
     GameUpdate {
         update: GameUpdate,
     },
+}
+
+impl Display for StateMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StateMessage::DrawOrTrade => write!(f, "DrawOrTrade"),
+            StateMessage::Trade => write!(f, "Trade"),
+            StateMessage::ProvideBidding { .. } => write!(f, "ProvideBidding"),
+            StateMessage::BuyOrSell { .. } => write!(f, "BuyOrSell"),
+            StateMessage::SendMoney { .. } => write!(f, "SendMoney"),
+            StateMessage::ReceiveFromPlayer { .. } => write!(f, "ReceiveFromPlayer"),
+            StateMessage::RespondToTrade { .. } => write!(f, "RespondToTrade"),
+            StateMessage::GameUpdate { .. } => write!(f, "GameUpdate"),
+        }
+    }
 }

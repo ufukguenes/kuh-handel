@@ -83,7 +83,11 @@ impl PlayerActions for MyBot {
                 players_in_turn_order,
                 animals,
             } => {
+                players_in_turn_order
+                    .clone()
+                    .retain(|p| p.name != self.my_id.name);
                 self.opponents = players_in_turn_order;
+                println!("opponents{:?}", self.opponents);
                 self.my_money = wallet;
                 self.my_animals = Vec::new();
             }

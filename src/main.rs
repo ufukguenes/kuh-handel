@@ -23,9 +23,9 @@ use kuh_handel::model::player::player_actions::random_actions::RandomPlayerActio
 #[tokio::main]
 async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new();
-    let gregor_ws_action = RandomPlayerActions {};
-    let (leon_ws_action, leon_channel) = WebsocketActions::new();
+    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new("ufuk".to_string());
+    let (leon_ws_action, leon_channel) = WebsocketActions::new("leon".to_string());
+    let gregor_random_action = RandomPlayerActions {};
     let seed: u64 = 0;
     let game_handle = tokio::task::spawn_blocking(move || {
         println!("-------Default game--------\n");
@@ -38,7 +38,7 @@ async fn main() {
             vec![
                 Box::new(ufuk_ws_action),
                 Box::new(leon_ws_action),
-                Box::new(gregor_ws_action),
+                Box::new(gregor_random_action),
             ],
             seed,
         );

@@ -23,10 +23,11 @@ pub struct WebsocketActions {
     // used by the player
     state_sender: Sender<Message>,
     action_receiver: Receiver<Message>,
+    id: String,
 }
 
 impl WebsocketActions {
-    pub fn new() -> (WebsocketActions, (Receiver<Message>, Sender<Message>)) {
+    pub fn new(id: String) -> (WebsocketActions, (Receiver<Message>, Sender<Message>)) {
         let (state_sender, state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
         let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) =
             mpsc::channel(1);
@@ -35,6 +36,7 @@ impl WebsocketActions {
             WebsocketActions {
                 state_sender: state_sender,
                 action_receiver: action_receiver,
+                id: id,
             },
             (state_receiver, action_sender),
         )
@@ -45,21 +47,30 @@ impl WebsocketActions {
     }
 
     pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> T {
-        println!("wsp | going to send state from game to backend");
+        println!(
+            "wsp | going to send state from game to backend {}, {}",
+            self.id, msg
+        );
         self.state_sender
             .blocking_send(Message::Text(Utf8Bytes::from(
                 serde_json::to_string(&msg).unwrap().as_str(),
             )))
             .unwrap();
-        println!("wsp | finished, sending state to backend");
+        println!(
+            "wsp | finished, sending state to backend {}, {}",
+            self.id, msg
+        );
 
-        println!("wsp | waiting for action from backend for game");
+        println!(
+            "wsp | waiting for action from backend for game {}, {}",
+            self.id, msg
+        );
         let msg: Option<Message> = self.action_receiver.blocking_recv();
-        println!("wsp | finished, receiving action from backend");
+        println!("wsp | finished, receiving action from backend {}", self.id,);
 
         let action_msg: ActionMessage = match msg {
             Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),
-            None => todo!("channel closed"),
+            None => todo!("channel closed {}", self.id),
         };
         T::extract(action_msg)
     }

@@ -47,7 +47,7 @@ impl Player {
     }
 
     pub fn consume_animal(&mut self, animal: &Animal) {
-        println!("Player {} consumes animal {}", self.id(), animal,);
+        println!("bp | Player {} consumes animal {}", self.id(), animal,);
         self.owned_animals.push(*animal);
         self.wallet.withdraw(animal.value()).unwrap();
     }

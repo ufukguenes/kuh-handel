@@ -19,23 +19,25 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        AuctionDecision::Buy
+        AuctionDecision::Sell
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        todo!()
+        NoAction::Ok
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
-        todo!()
+        SendMoney {
+            amount: vec![Money::new(amount)],
+        }
     }
 
     fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
-        todo!()
+        NoAction::Ok
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        todo!()
+        TradeOpponentDecision::Accept
     }
 
     fn _trade(&mut self) -> InitialTrade {

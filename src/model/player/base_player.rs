@@ -62,6 +62,18 @@ impl Player {
         let action_msg = self.player_actions.map_to_action(state_msg);
         T::extract(action_msg)
     }
+
+    pub fn player_actions(&mut self) -> &mut dyn PlayerActions {
+        self.player_actions.as_mut()
+    }
+
+    pub fn wallet(&self) -> &Wallet {
+        &self.wallet
+    }
+
+    pub fn owned_animals(&self) -> &Vec<Animal> {
+        &self.owned_animals
+    }
 }
 
 impl Display for Player {

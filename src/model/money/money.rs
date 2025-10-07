@@ -21,8 +21,12 @@ impl Money {
         }
     }
 
-    pub fn get_value(self) -> Value {
+    pub fn value(self) -> Value {
         self.value
+    }
+
+    pub fn as_u32(self) -> u32 {
+        self.value.value()
     }
 }
 

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::value};
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Value {
@@ -11,6 +11,10 @@ pub struct Value {
 impl Value {
     pub fn new(value: u32) -> Self {
         Value { value: value }
+    }
+
+    pub fn value(&self) -> u32 {
+        self.value
     }
 }
 

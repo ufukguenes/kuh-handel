@@ -4,7 +4,7 @@ use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
-use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate};
+use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::{
     animals::Animal,
     money::wallet::Wallet,
@@ -38,7 +38,7 @@ impl PlayerActions for MyBot {
         InitialTrade {
             opponent: self.opponents.get(0).unwrap().clone(),
             animal: self.my_animals.keys().next().unwrap().clone(),
-            animal_count: AnimalTradeCount::One,
+            animal_count: 1,
             amount: vec![Money::new_usize(100), Money::new_usize(100)],
         }
     }
@@ -75,12 +75,7 @@ impl PlayerActions for MyBot {
             }
             GameUpdate::End { ranking } => {}
             GameUpdate::ExposePlayer { player, wallet } => {}
-            GameUpdate::Auction {
-                rounds,
-                from,
-                to,
-                money_transfer,
-            } => {}
+            GameUpdate::Auction(_) => {}
             GameUpdate::Trade {
                 challenger,
                 opponent,

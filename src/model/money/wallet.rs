@@ -27,6 +27,8 @@ impl Wallet {
                 Some(count) => {
                     if *count > 0 {
                         *count -= 1;
+                    } else if *count == 0 {
+                        self.bank_notes.remove(money);
                     } else {
                         return Result::Err(GameError::MoneyNotAvailable);
                     }

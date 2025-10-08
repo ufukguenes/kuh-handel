@@ -58,20 +58,20 @@ impl Player {
         &self.id
     }
 
-    pub fn can_trade(&self) -> bool {
-        for (animal, animal_count) in self.owned_animals.iter() {
-            if *animal_count
+    pub fn can_trade(&self) -> (Option<(Animal, usize)>, bool) {
+        for (&animal, &animal_count) in self.owned_animals.iter() {
+            if animal_count
                 < self
                     .game_stack
                     .iter()
-                    .find(|set| set.animal() == animal)
+                    .find(|set| set.animal() == &animal)
                     .map(|set| set.occurrences())
                     .unwrap()
             {
-                return true;
+                return (Some((animal, animal_count)), true);
             }
         }
-        false
+        (None, false)
     }
 
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
@@ -108,6 +108,8 @@ impl Player {
             Some(current_count) => {
                 if *current_count - count > 0 {
                     *current_count -= count;
+                } else if *current_count - count > 0 {
+                    self.owned_animals.remove(animal);
                 } else {
                     return Result::Err(GameError::AnimalsNotAvailable);
                 }

@@ -295,7 +295,7 @@ impl Game {
             TradeOpponentDecision::Accept => {
                 println!("gl | Trade accepted by {}", opponent.id());
             }
-            TradeOpponentDecision::CounterOffer { amount } => {
+            TradeOpponentDecision::CounterOffer(amount) => {
                 println!(
                     "gl | Trade countered by {} with amount {:?}",
                     opponent.id(),

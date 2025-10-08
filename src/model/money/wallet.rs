@@ -39,6 +39,16 @@ impl Wallet {
         Ok(())
     }
 
+    pub fn to_vec(&self) -> Vec<Money> {
+        let all_bills = Vec::new();
+        for (money, count) in self.bank_notes {
+            let current_bills = vec![money; count];
+            all_bills.extend(current_bills);
+        }
+
+        all_bills
+    }
+
     pub fn total_money(&self) -> Value {
         let mut total: u32 = 0;
         for (money, amount) in &self.bank_notes {
@@ -47,7 +57,33 @@ impl Wallet {
         Value::new(total)
     }
 
-    pub fn propose_bill_combinations(&self, amount: Value) -> Vec<(Value, Vec<Money>)> {
+    pub fn check_if_exact(&self, bill_combination: &Vec<Money>) -> bool {
+        let mut mut_wallet = self.bank_notes.clone();
+        let mut fits_exact = true;
+        for money in bill_combination {
+            let count = mut_wallet.get_mut(&money);
+            match count {
+                Some(count) => {
+                    if *count > 0 {
+                        *count -= 1;
+                    } else {
+                        fits_exact = false;
+                    }
+                }
+                None => {
+                    fits_exact = false;
+                }
+            }
+        }
+
+        fits_exact
+    }
+
+    pub fn propose_bill_combinations(
+        &self,
+        amount: Value,
+        also_suggest_smaller_values: bool,
+    ) -> Vec<(Value, Vec<Money>)> {
         //todo test this
         let mut available_bills: Vec<&Money> = self.bank_notes.keys().clone().collect();
         available_bills.sort();
@@ -83,7 +119,7 @@ impl Wallet {
 
         let mut out: Vec<(Value, Vec<Money>)> = possible_payments
             .into_iter()
-            .filter(|(val, _)| *val >= amount.value())
+            .filter(|(val, _)| also_suggest_smaller_values || *val >= amount.value())
             .map(|(val, combination)| (Value::new(val), combination))
             .collect();
         out.sort_by(|(a, _), (b, _)| a.cmp(b));
@@ -99,31 +135,20 @@ impl Wallet {
             return Affordability::CannotAfford;
         };
 
-        let mut mut_wallet = self.bank_notes.clone();
-        for money in payment_amount {
-            let count = mut_wallet.get_mut(&money);
-            match count {
-                Some(count) => {
-                    if *count > 0 {
-                        *count -= 1;
-                    } else {
-                        break;
-                    }
-                }
-                None => break,
-            }
+        let fits_exact = self.check_if_exact(&payment_amount);
 
+        if fits_exact {
             return Affordability::Exact;
         }
 
         // just pick the bill combination with the smallest overhead
         let alternative = self
-            .propose_bill_combinations(Value::new(total_payed))
+            .propose_bill_combinations(Value::new(total_payed), false)
             .get(0)
             .unwrap()
             .1
             .clone();
-        Affordability::Alternative(alternative)
+        return Affordability::Alternative(alternative);
     }
 }
 

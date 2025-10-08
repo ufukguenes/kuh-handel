@@ -1,15 +1,11 @@
-use rand::seq::IndexedRandom;
-use serde::de;
-
 use crate::messages::actions::*;
 use crate::messages::game_updates::*;
-use crate::model::animals::Animal;
 use crate::model::money::money::Money;
+use crate::model::money::value::Value;
 use crate::model::money::wallet::Affordability::*;
-use crate::model::money::wallet::Wallet;
-use crate::model::player;
 use crate::model::player::{
-    base_player::Player, player_actions::base_player_actions::PlayerActions,
+    base_player::{Player, PlayerId},
+    player_actions::base_player_actions::PlayerActions,
 };
 
 /// This changes an action based on the deepest nested thing that breaks the action
@@ -26,9 +22,18 @@ pub struct SupervisedPlayer {
 /// todo, what to do when invalid decision?
 ///  maybe notify the bot and just pick a random valid action
 ///
-///
+/// todo: should the player actions be not be &mut self, but only &self, except for game update,
+/// as you might for example only withdraw the amount of money that you actually payed, and not if you only thought you payed?
 
 impl SupervisedPlayer {
+    fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
+        match self.player.wallet().can_afford(combination) {
+            Exact => combination.clone(),
+            Alternative(alternative) => alternative,
+            CannotAfford => self.player.wallet().to_vec(),
+        }
+    }
+
     fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
@@ -47,8 +52,19 @@ impl SupervisedPlayer {
             None => opponent_has_enough_animals = false,
         }
 
-        if !self_has_enough_animals {}
-        if !opponent_has_enough_animals {}
+        let mut new_trade = trade.clone();
+        if !self_has_enough_animals {
+            todo!()
+        }
+        if !opponent_has_enough_animals {
+            todo!()
+        }
+
+        let new_combination = self.rectify_money_combination(&trade.amount);
+
+        new_trade.amount = new_combination;
+
+        new_trade
     }
 
     fn rectify_payment(&self, send_money: &SendMoney) -> SendMoney {
@@ -79,7 +95,7 @@ impl PlayerActions for SupervisedPlayer {
             }
         }
 
-        //todo check if the player even has that money to make the hidden
+        //todo check if the player even has that money to make the hidden offer
     }
 
     fn _trade(&mut self) -> InitialTrade {
@@ -95,11 +111,7 @@ impl PlayerActions for SupervisedPlayer {
         self.player.player_actions()._buy_or_sell(state)
     }
 
-    fn _send_money_to_player(
-        &mut self,
-        player: &super::base_player::PlayerId,
-        amount: crate::model::money::value::Value,
-    ) -> SendMoney {
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
         let decision = self
             .player
             .player_actions()
@@ -107,18 +119,21 @@ impl PlayerActions for SupervisedPlayer {
         self.rectify_payment(&decision)
     }
 
-    fn _receive_from_player(
-        &mut self,
-        player: &super::base_player::PlayerId,
-        money: Vec<crate::model::money::money::Money>,
-    ) -> NoAction {
+    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
         self.player
             .player_actions()
             ._receive_from_player(player, money)
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        self.player.player_actions()._respond_to_trade(offer)
+        let decision = self.player.player_actions()._respond_to_trade(offer);
+        match decision {
+            TradeOpponentDecision::Accept => decision,
+            TradeOpponentDecision::CounterOffer(amount) => {
+                TradeOpponentDecision::CounterOffer(self.rectify_money_combination(&amount))
+            }
+        }
+
         //todo check if the player even has that money to make the hidden
     }
 

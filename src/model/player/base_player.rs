@@ -47,6 +47,10 @@ impl Player {
     pub fn consume_animal(&mut self, animal: &Animal) {
         println!("bp | Player {} consumes animal {}", self.id(), animal,);
         self.owned_animals.push(*animal);
+
+        todo!(
+            "you don't necessarily pay the amount the animal is valued at, so why withdraw that?"
+        );
         self.wallet.withdraw(animal.value()).unwrap();
     }
 

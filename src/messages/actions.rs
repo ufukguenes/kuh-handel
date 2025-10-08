@@ -77,7 +77,7 @@ impl FromActionMessage for AuctionDecision {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TradeOpponentDecision {
     Accept,
-    CounterOffer { amount: Vec<Money> },
+    CounterOffer(Vec<Money>),
 }
 
 impl FromActionMessage for TradeOpponentDecision {

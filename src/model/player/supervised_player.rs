@@ -5,6 +5,7 @@ use std::rc::Rc;
 use crate::messages::actions::*;
 use crate::messages::game_updates::*;
 use crate::messages::message_protocol::StateMessage;
+use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::money::wallet::Affordability::*;
@@ -49,7 +50,7 @@ impl SupervisedPlayer {
         self.player.borrow().id().clone()
     }
 
-    pub fn can_trade(&self) -> bool {
+    pub fn can_trade(&self) -> (Option<(Animal, usize)>, bool) {
         self.player.borrow().can_trade()
     }
 
@@ -61,43 +62,68 @@ impl SupervisedPlayer {
         }
     }
 
+    fn find_new_trade(&self, current_trade: &mut InitialTrade) -> InitialTrade {
+        let mut new_trade = current_trade.clone();
+        let (animal, _) = self.can_trade().0.unwrap();
+        for opponent in self.opponents.iter() {
+            if opponent.borrow().owned_animals().contains_key(&animal) {
+                new_trade.opponent = opponent.borrow().id().clone();
+                new_trade.animal = animal;
+                new_trade.animal_count = 1;
+            }
+        }
+        new_trade
+    }
+
     fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
+        let mut new_trade = trade.clone();
+
+        let new_combination = self.rectify_money_combination(&trade.amount);
+        new_trade.amount = new_combination;
+
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
 
-        let self_has_enough_animals = match self.player.borrow().owned_animals().get(&trade_animal)
-        {
-            Some(&count) => count >= animal_count,
-            None => false,
+        let player_animal_count = match self.player.borrow().owned_animals().get(&trade_animal) {
+            Some(&count) => {
+                if count >= animal_count {
+                    count
+                } else if count > 0 {
+                    1
+                } else {
+                    panic!(
+                        "animal was in hashmap, but amount was set to zero, this should/ can not happen"
+                    )
+                }
+            }
+            None => return self.find_new_trade(&mut new_trade), // player does not have animal
         };
 
-        if !self_has_enough_animals {
-            todo!()
-        }
-
-        let opponent = self
+        let opponent: Option<&Rc<RefCell<Player>>> = self
             .opponents
             .iter()
             .find(|player| player.borrow().id() == &trade.opponent);
 
-        match opponent {
-            Some(opponent) => {
-                let opponent_has_enough_animals =
-                    match opponent.borrow().owned_animals().get(&trade_animal) {
-                        Some(&count) => count >= animal_count,
-                        None => false,
-                    };
-                if !opponent_has_enough_animals {
-                    todo!()
+        let opponent = match opponent {
+            Some(opponent) => opponent,
+            None => return self.find_new_trade(&mut new_trade), // opponent does not exist
+        };
+
+        let opponent_animal_count = match opponent.borrow().owned_animals().get(&trade_animal) {
+            Some(&count) => {
+                if count >= animal_count {
+                    count
+                } else if count > 0 {
+                    1
+                } else {
+                    panic!(
+                        "animal was in hashmap, but amount was set to zero, this should/ can not happen"
+                    )
                 }
             }
-            None => todo!(),
-        }
-
-        let mut new_trade = trade.clone();
-        let new_combination = self.rectify_money_combination(&trade.amount);
-        new_trade.amount = new_combination;
-
+            None => return self.find_new_trade(&mut new_trade), // opponent does not have animal
+        };
+        new_trade.animal_count = std::cmp::min(opponent_animal_count, player_animal_count); // is never 0
         new_trade
     }
 
@@ -238,7 +264,7 @@ impl PlayerActions for SupervisedPlayer {
                 receiver,
                 money_trade,
             } => {
-                let animal_count: usize = animal_count.clone() as usize;
+                let animal_count: usize = animal_count.clone();
                 let mut player = self.player.borrow_mut();
                 let player_id = player.id().clone();
                 if (player_id == challenger || player_id == opponent) && player_id == receiver {

@@ -1,6 +1,5 @@
-use std::rc::Rc;
-
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
 
 use crate::{
     messages::actions::Bidding,
@@ -29,7 +28,7 @@ pub enum GameUpdate {
         challenger: PlayerId,
         opponent: PlayerId,
         animal: Animal,
-        animal_count: AnimalTradeCount,
+        animal_count: usize,
         receiver: PlayerId,
         money_trade: MoneyTrade,
     },
@@ -82,10 +81,4 @@ pub enum MoneyTrade {
         challenger_card_offer: Vec<Money>,
         opponent_card_offer: Option<Vec<Money>>,
     },
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum AnimalTradeCount {
-    One = 1,
-    Two = 2,
 }

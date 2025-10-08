@@ -3,7 +3,7 @@ use crate::messages::actions::{
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{
-    AnimalTradeCount, AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer,
+    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer,
 };
 
 use crate::messages::message_protocol::StateMessage;
@@ -329,7 +329,7 @@ impl Game {
         opponent: Rc<RefCell<SupervisedPlayer>>,
         amount: Vec<Money>,
         animal: Animal,
-        animal_count: AnimalTradeCount,
+        animal_count: usize,
     ) {
         let challenger_total_value: usize = amount.iter().map(|money| money.as_usize()).sum();
         let challenger_card_count = amount.len();
@@ -466,7 +466,7 @@ impl Game {
 
     fn trading_phase(&mut self) {
         for player in self.players.iter().cycle() {
-            if player.borrow().can_trade() {
+            if player.borrow().can_trade().1 {
                 self.player_must_trade(Rc::clone(player));
             }
         }

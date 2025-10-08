@@ -1,4 +1,3 @@
-use crate::messages::game_updates::AnimalTradeCount;
 use crate::messages::message_protocol::ActionMessage;
 use crate::model::money::value::Value;
 use crate::model::{animals::Animal, money::money::Money, player::base_player::PlayerId};
@@ -40,7 +39,7 @@ impl FromActionMessage for PlayerTurnDecision {
 pub struct InitialTrade {
     pub opponent: PlayerId,
     pub animal: Animal,
-    pub animal_count: AnimalTradeCount,
+    pub animal_count: usize,
     pub amount: Vec<Money>,
 }
 
@@ -57,7 +56,7 @@ impl FromActionMessage for InitialTrade {
 pub struct TradeOffer {
     pub challenger: PlayerId,
     pub animal: Animal,
-    pub animal_count: AnimalTradeCount,
+    pub animal_count: usize,
     pub challenger_card_offer: usize,
 }
 

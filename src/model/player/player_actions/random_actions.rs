@@ -2,7 +2,7 @@ use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
-use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate};
+use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
@@ -42,7 +42,7 @@ impl PlayerActions for RandomPlayerActions {
                 name: "".to_string(),
             },
             animal: Animal::new(Value::new(0)),
-            animal_count: AnimalTradeCount::One,
+            animal_count: 1,
             amount: vec![Money::new_usize(0)],
         }
     }

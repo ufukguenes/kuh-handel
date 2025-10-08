@@ -40,9 +40,9 @@ impl Wallet {
     }
 
     pub fn to_vec(&self) -> Vec<Money> {
-        let all_bills = Vec::new();
-        for (money, count) in self.bank_notes {
-            let current_bills = vec![money; count];
+        let mut all_bills = Vec::new();
+        for (money, count) in &self.bank_notes {
+            let current_bills = vec![money; count.clone()];
             all_bills.extend(current_bills);
         }
 

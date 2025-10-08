@@ -26,7 +26,7 @@ impl Wallet {
         let key = self
             .bank_notes
             .iter()
-            .find(|(key, _)| key.get_value() >= amount)
+            .find(|(key, _)| key.value() >= amount)
             .map(|(key, _)| *key);
         match key {
             Some(k) => {
@@ -91,12 +91,12 @@ impl Wallet {
         out
     }
 
-    pub fn can_afford(&self, payment_amount: Vec<Money>) -> (bool, Option<Vec<Money>>) {
+    pub fn can_afford(&self, payment_amount: &Vec<Money>) -> Affordability {
         let total_payed: u32 = payment_amount.iter().map(|money| money.as_u32()).sum();
         let total_owned = self.total_money();
 
         if total_owned.value() < total_payed {
-            return (false, None);
+            return Affordability::CannotAfford;
         };
 
         let mut mut_wallet = self.bank_notes.clone();
@@ -113,19 +113,22 @@ impl Wallet {
                 None => break,
             }
 
-            return (true, None);
+            return Affordability::Exact;
         }
 
         // just pick the bill combination with the smallest overhead
-        (
-            true,
-            Some(
-                self.propose_bill_combinations(Value::new(total_payed))
-                    .get(0)
-                    .unwrap()
-                    .1
-                    .clone(),
-            ),
-        )
+        let alternative = self
+            .propose_bill_combinations(Value::new(total_payed))
+            .get(0)
+            .unwrap()
+            .1
+            .clone();
+        Affordability::Alternative(alternative)
     }
+}
+
+pub enum Affordability {
+    Exact,
+    Alternative(Vec<Money>),
+    CannotAfford,
 }

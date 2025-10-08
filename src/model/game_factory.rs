@@ -91,7 +91,7 @@ impl Game {
                 if use_inflation {
                     for i in 0..count_of_animal {
                         let random_inflation_idx = rng.random_range(0..all_notes.len());
-                        inflation[i] = all_notes[random_inflation_idx].get_value();
+                        inflation[i] = all_notes[random_inflation_idx].value();
                     }
                     inflation.sort();
                 }

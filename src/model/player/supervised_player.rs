@@ -1,0 +1,128 @@
+use rand::seq::IndexedRandom;
+use serde::de;
+
+use crate::messages::actions::*;
+use crate::messages::game_updates::*;
+use crate::model::animals::Animal;
+use crate::model::money::money::Money;
+use crate::model::money::wallet::Affordability::*;
+use crate::model::money::wallet::Wallet;
+use crate::model::player;
+use crate::model::player::{
+    base_player::Player, player_actions::base_player_actions::PlayerActions,
+};
+
+/// This changes an action based on the deepest nested thing that breaks the action
+/// example:
+/// 1. player is called to do draw_or_trade
+/// 2. if player wants to trade, player picks it opponent, animals to trade, money to trade
+/// 3. if for example the opponent exists but it doesn't have the animals,
+/// the alternative would not be to switch from trade to draw, but to find a fitting alternative trade
+pub struct SupervisedPlayer {
+    player: Player,
+    opponents: Vec<Player>,
+}
+
+/// todo, what to do when invalid decision?
+///  maybe notify the bot and just pick a random valid action
+///
+///
+
+impl SupervisedPlayer {
+    fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
+        let trade_animal = trade.animal;
+        let animal_count: usize = trade.animal_count.clone() as usize;
+
+        let self_has_enough_animals = self.player.count_animal(&trade_animal) >= animal_count;
+        let mut opponent_has_enough_animals;
+
+        let opponent = self
+            .opponents
+            .iter()
+            .find(|player| *player.id() == trade.opponent);
+        match opponent {
+            Some(opponent) => {
+                opponent_has_enough_animals = opponent.count_animal(&trade_animal) >= animal_count;
+            }
+            None => opponent_has_enough_animals = false,
+        }
+
+        if !self_has_enough_animals {}
+        if !opponent_has_enough_animals {}
+    }
+
+    fn rectify_payment(&self, send_money: &SendMoney) -> SendMoney {
+        match send_money {
+            SendMoney::WasBluff => return send_money.clone(),
+            SendMoney::Amount(amount) => {
+                let has_enough_money = self.player.wallet().can_afford(amount);
+                match has_enough_money {
+                    Exact => return send_money.clone(),
+                    Alternative(alternative_payment) => {
+                        return SendMoney::Amount(alternative_payment);
+                    }
+
+                    CannotAfford => return SendMoney::WasBluff,
+                }
+            }
+        }
+    }
+}
+
+impl PlayerActions for SupervisedPlayer {
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
+        let decision: PlayerTurnDecision = self.player.player_actions()._draw_or_trade();
+        match decision {
+            PlayerTurnDecision::Draw => decision,
+            PlayerTurnDecision::Trade(initial_trade) => {
+                PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade))
+            }
+        }
+
+        //todo check if the player even has that money to make the hidden
+    }
+
+    fn _trade(&mut self) -> InitialTrade {
+        let decision: InitialTrade = self.player.player_actions()._trade();
+        self.rectify_initial_trade(&decision)
+    }
+
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        self.player.player_actions()._provide_bidding(state)
+    }
+
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        self.player.player_actions()._buy_or_sell(state)
+    }
+
+    fn _send_money_to_player(
+        &mut self,
+        player: &super::base_player::PlayerId,
+        amount: crate::model::money::value::Value,
+    ) -> SendMoney {
+        let decision = self
+            .player
+            .player_actions()
+            ._send_money_to_player(player, amount);
+        self.rectify_payment(&decision)
+    }
+
+    fn _receive_from_player(
+        &mut self,
+        player: &super::base_player::PlayerId,
+        money: Vec<crate::model::money::money::Money>,
+    ) -> NoAction {
+        self.player
+            .player_actions()
+            ._receive_from_player(player, money)
+    }
+
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        self.player.player_actions()._respond_to_trade(offer)
+        //todo check if the player even has that money to make the hidden
+    }
+
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        self.player.player_actions()._receive_game_update(update)
+    }
+}

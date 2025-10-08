@@ -74,6 +74,13 @@ impl Player {
     pub fn owned_animals(&self) -> &Vec<Animal> {
         &self.owned_animals
     }
+
+    pub fn count_animal(&self, animal_to_count: &Animal) -> usize {
+        self.owned_animals()
+            .iter()
+            .filter(|animal| animal.value() == animal_to_count.value())
+            .count()
+    }
 }
 
 impl Display for Player {

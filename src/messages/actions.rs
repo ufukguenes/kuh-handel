@@ -90,9 +90,11 @@ impl FromActionMessage for TradeOpponentDecision {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SendMoney {
-    pub amount: Vec<Money>,
+pub enum SendMoney {
+    WasBluff,
+    Amount(Vec<Money>),
 }
+
 impl FromActionMessage for SendMoney {
     fn extract(action: ActionMessage) -> Self {
         match action {

@@ -27,9 +27,7 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
-        SendMoney {
-            amount: vec![Money::new(amount)],
-        }
+        SendMoney::Amount(vec![Money::new(amount)])
     }
 
     fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {

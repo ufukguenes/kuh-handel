@@ -204,7 +204,7 @@ impl Game {
 
         let max_bid = match max_bid {
             Bidding::Pass => Value::new(0),
-            Bidding::Bid(v) => v.get_value(),
+            Bidding::Bid(v) => v.value(),
         };
 
         let (sender, receiver): (&mut Player, &mut Player) = match player_decision {
@@ -248,24 +248,28 @@ impl Game {
             amount: max_bid,
         };
         let player_decision: SendMoney = sender.map_to_action_inner(state_msg);
-        let pay_amount = player_decision.amount;
-        let state_msg = StateMessage::ReceiveFromPlayer {
-            player_id: receiver.id().clone(),
-            money: pay_amount.clone(),
-        };
-        let _: NoAction = receiver.map_to_action_inner(state_msg);
+        match player_decision {
+            SendMoney::WasBluff => todo!(),
+            SendMoney::Amount(amount) => {
+                let state_msg = StateMessage::ReceiveFromPlayer {
+                    player_id: receiver.id().clone(),
+                    money: amount.clone(),
+                };
+                let _: NoAction = receiver.map_to_action_inner(state_msg);
 
-        let update = GameUpdate::Auction {
-            rounds: final_auction_round,
-            transfer: MoneyTransfer {
-                from: sender.id().clone(),
-                to: receiver.id().clone(),
-                card_amount: pay_amount.len(),
-                min_value: max_bid, // ToDo: calculate the min value
-            },
-        };
+                let update = GameUpdate::Auction {
+                    rounds: final_auction_round,
+                    transfer: MoneyTransfer {
+                        from: sender.id().clone(),
+                        to: receiver.id().clone(),
+                        card_amount: amount.len(),
+                        min_value: max_bid, // ToDo: calculate the min value
+                    },
+                };
 
-        todo!("implement the money transfer");
+                todo!("implement the money transfer");
+            }
+        }
         update
     }
 

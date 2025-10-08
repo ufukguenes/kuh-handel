@@ -1,15 +1,14 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+
 use std::rc::Rc;
 
 use crate::messages::actions::*;
 use crate::messages::game_updates::*;
 use crate::messages::message_protocol::StateMessage;
-use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::money::wallet::Affordability::*;
-use crate::model::player;
+use crate::model::money::wallet::Wallet;
 use crate::model::player::{
     base_player::{Player, PlayerId},
     player_actions::base_player_actions::PlayerActions,
@@ -24,6 +23,7 @@ use crate::model::player::{
 pub struct SupervisedPlayer {
     pub player: Rc<RefCell<Player>>,
     opponents: Vec<Rc<RefCell<Player>>>,
+    limit_bidding_until_next_auction: bool,
 }
 
 /// todo, what to do when invalid decision?
@@ -37,7 +37,12 @@ impl SupervisedPlayer {
         SupervisedPlayer {
             player: player,
             opponents: opponents,
+            limit_bidding_until_next_auction: false,
         }
+    }
+
+    pub fn clone_wallet(&self) -> Wallet {
+        self.player.borrow().wallet().clone()
     }
 
     pub fn id(&self) -> PlayerId {
@@ -137,10 +142,29 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        self.player
+        let decision = self
+            .player
             .borrow_mut()
             .player_actions()
-            ._provide_bidding(state)
+            ._provide_bidding(state);
+
+        if self.limit_bidding_until_next_auction {
+            let limit = self.player.borrow().wallet().total_money();
+
+            match decision {
+                Bidding::Pass => {
+                    return decision;
+                }
+                Bidding::Bid(value) => {
+                    if value > limit {
+                        return Bidding::Bid(limit);
+                    } else {
+                        return decision;
+                    };
+                }
+            }
+        }
+        decision
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
@@ -176,33 +200,36 @@ impl PlayerActions for SupervisedPlayer {
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
         match update.clone() {
-            GameUpdate::Auction(auction_kind) => match auction_kind {
-                AuctionKind::NoBiddings { host_id, animal } => {
-                    if &host_id == self.player.borrow().id() {
-                        self.player.borrow_mut().add_animals(&animal, 1);
-                    }
-                }
-                AuctionKind::NormalAuction {
-                    rounds,
-                    from,
-                    to,
-                    money_transfer,
-                } => {
-                    match money_transfer {
-                        // check if what animal, not necessary to check if host, because is checked with from to
-                        MoneyTransfer::Private { amount } => {
-                            let mut player = self.player.borrow_mut();
-                            if player.id() == &from {
-                                player.wallet_mut().withdraw(&amount);
-                                player.add_animals(&rounds.animal, 1);
-                            } else if player.id() == &to {
-                                player.wallet_mut().deposit(&amount);
-                            }
+            GameUpdate::Auction(auction_kind) => {
+                self.limit_bidding_until_next_auction = false;
+                match auction_kind {
+                    AuctionKind::NoBiddings { host_id, animal } => {
+                        if &host_id == self.player.borrow().id() {
+                            self.player.borrow_mut().add_animals(&animal, 1);
                         }
-                        _ => {}
+                    }
+                    AuctionKind::NormalAuction {
+                        rounds,
+                        from,
+                        to,
+                        money_transfer,
+                    } => {
+                        match money_transfer {
+                            // check if what animal, not necessary to check if host, because is checked with from to
+                            MoneyTransfer::Private { amount } => {
+                                let mut player = self.player.borrow_mut();
+                                if player.id() == &from {
+                                    player.wallet_mut().withdraw(&amount);
+                                    player.add_animals(&rounds.animal, 1);
+                                } else if player.id() == &to {
+                                    player.wallet_mut().deposit(&amount);
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                 }
-            },
+            }
             GameUpdate::Trade {
                 challenger,
                 opponent,
@@ -235,6 +262,12 @@ impl PlayerActions for SupervisedPlayer {
                         }
                     }
                     _ => {}
+                }
+            }
+
+            GameUpdate::ExposePlayer { player, wallet } => {
+                if &player == self.player.borrow().id() {
+                    self.limit_bidding_until_next_auction = true;
                 }
             }
 

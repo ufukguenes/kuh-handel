@@ -1,5 +1,6 @@
 use crate::messages::game_updates::AnimalTradeCount;
 use crate::messages::message_protocol::ActionMessage;
+use crate::model::money::value::Value;
 use crate::model::{animals::Animal, money::money::Money, player::base_player::PlayerId};
 use serde::{Deserialize, Serialize};
 
@@ -107,7 +108,7 @@ impl FromActionMessage for SendMoney {
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub enum Bidding {
     Pass,
-    Bid(Money),
+    Bid(Value),
 }
 
 impl PartialEq for Bidding {

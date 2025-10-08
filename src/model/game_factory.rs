@@ -48,7 +48,14 @@ impl Game {
         let players = player_ids
             .iter()
             .zip(player_actions)
-            .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
+            .map(|(id, player_action)| {
+                Player::new(
+                    id.clone(),
+                    wallet.clone(),
+                    game_stack.clone(),
+                    player_action,
+                )
+            })
             .collect();
 
         Game::new(players, wallet, game_stack, seed)
@@ -111,7 +118,14 @@ impl Game {
         let players = player_ids
             .iter()
             .zip(player_actions)
-            .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
+            .map(|(id, player_action)| {
+                Player::new(
+                    id.clone(),
+                    wallet.clone(),
+                    game_stack.clone(),
+                    player_action,
+                )
+            })
             .collect();
 
         Game::new(players, wallet, game_stack, seed)

@@ -143,8 +143,8 @@ impl Game {
 
     pub fn remove_player(&mut self, id: String) {}
 
-    fn auction(&mut self, player_ref: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
-        let host_id = player_ref.borrow().id().clone();
+    fn auction(&mut self, player: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
+        let host_id = player.borrow().id().clone();
 
         let auction_players = self.get_players_excluding(vec![&host_id]);
         print!("gl | host {}, auction_player: ", host_id);
@@ -193,8 +193,7 @@ impl Game {
         let state_msg = StateMessage::BuyOrSell {
             state: final_auction_round.clone(),
         };
-        let player_decision: AuctionDecision =
-            player_ref.borrow_mut().map_to_action_inner(state_msg);
+        let player_decision: AuctionDecision = player.borrow_mut().map_to_action_inner(state_msg);
 
         match bids.iter().max_by_key(|(_, bid)| bid) {
             Some((max_bidder_id, max_bid)) => {
@@ -206,19 +205,19 @@ impl Game {
 
                 let max_bid = match max_bid {
                     Bidding::Pass => Value::new(0),
-                    Bidding::Bid(v) => v.value(),
+                    Bidding::Bid(value) => *value,
                 };
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy => {
                         println!("gl | Player {} buys animal {}", host_id, animal);
 
-                        (player_ref, Rc::clone(auction_winner))
+                        (player, Rc::clone(auction_winner))
                     }
                     AuctionDecision::Sell => {
                         println!("gl | Player {} sells animal {}", host_id, animal);
 
-                        (Rc::clone(auction_winner), player_ref)
+                        (Rc::clone(auction_winner), player)
                     }
                 };
 
@@ -248,9 +247,16 @@ impl Game {
         };
         let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
         match player_decision {
-            SendMoney::WasBluff => todo!(
-                "expose player and repeat (but not infinitely, a player can only bluff once, afterwards we cap it at its max money "
-            ),
+            SendMoney::WasBluff => {
+                let update = GameUpdate::ExposePlayer {
+                    player: sender.borrow().id(),
+                    wallet: sender.borrow().clone_wallet(),
+                };
+                // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
+                Self::update_multiple_players(&self.players, update);
+                let host = self.get_by_id(&final_auction_round.host).unwrap();
+                self.auction(host, &final_auction_round.animal);
+            }
             SendMoney::Amount(amount) => {
                 let sender_id = sender.borrow().id().clone();
                 let receiver_id = receiver.borrow().id().clone();

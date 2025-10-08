@@ -138,14 +138,8 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
         match update.clone() {
-            GameUpdate::Start {
-                wallet,
-                players_in_turn_order,
-                animals,
-            } => todo!(),
-            GameUpdate::End { ranking } => todo!(),
-            GameUpdate::ExposePlayer { player, wallet } => todo!(),
             GameUpdate::Auction {
                 rounds,
                 from,
@@ -153,10 +147,6 @@ impl PlayerActions for SupervisedPlayer {
                 money_transfer,
             } => match money_transfer {
                 // check if what animal, not necessary to check if host, because is checked with from to
-                MoneyTransfer::Public {
-                    card_amount,
-                    min_value,
-                } => {}
                 MoneyTransfer::Private { amount } => {
                     if self.player.id() == &from {
                         self.player.wallet_mut().withdraw(&amount);
@@ -164,6 +154,7 @@ impl PlayerActions for SupervisedPlayer {
                         self.player.wallet_mut().withdraw(&amount);
                     }
                 }
+                _ => {}
             },
             GameUpdate::Trade {
                 challenger,
@@ -183,10 +174,6 @@ impl PlayerActions for SupervisedPlayer {
                     self.player.remove_animals(&animal, animal_count);
                 }
                 match money_trade {
-                    MoneyTrade::Public {
-                        challenger_card_offer,
-                        opponent_card_offer,
-                    } => {}
                     MoneyTrade::Private {
                         challenger_card_offer,
                         opponent_card_offer,
@@ -201,8 +188,11 @@ impl PlayerActions for SupervisedPlayer {
                             self.player.wallet_mut().deposit(&challenger_card_offer);
                         }
                     }
+                    _ => {}
                 }
             }
+
+            _ => {}
         }
 
         self.player.player_actions()._receive_game_update(update)

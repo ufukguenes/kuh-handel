@@ -80,7 +80,7 @@ impl PlayerActions for MyBot {
                 from,
                 to,
                 money_transfer,
-            } => todo!(),
+            } => {}
             GameUpdate::Trade {
                 challenger,
                 opponent,
@@ -88,7 +88,7 @@ impl PlayerActions for MyBot {
                 animal_count,
                 receiver,
                 money_trade,
-            } => todo!(),
+            } => {}
         }
 
         NoAction::Ok

@@ -202,42 +202,41 @@ impl Game {
             .iter()
             .find(|p| p.borrow().id() == *max_bidder_id)
             .unwrap();
-        let mut auction_winner = auction_winner.borrow_mut();
+        let mut auction_winner = auction_winner;
 
         let max_bid = match max_bid {
             Bidding::Pass => Value::new(0),
             Bidding::Bid(v) => v.value(),
         };
 
-        let (sender, receiver): (&mut SupervisedPlayer, &mut SupervisedPlayer) =
-            match player_decision {
-                AuctionDecision::Buy => {
-                    println!("gl | Player {} buys animal {}", host_id, animal);
+        let (sender, receiver) = match player_decision {
+            AuctionDecision::Buy => {
+                println!("gl | Player {} buys animal {}", host_id, animal);
 
-                    (&mut *player_ref.borrow_mut(), &mut *auction_winner)
-                }
-                AuctionDecision::Sell => {
-                    println!("gl | Player {} sells animal {}", host_id, animal);
+                (player_ref, Rc::clone(auction_winner))
+            }
+            AuctionDecision::Sell => {
+                println!("gl | Player {} sells animal {}", host_id, animal);
 
-                    (&mut *auction_winner, &mut *player_ref.borrow_mut())
-                }
-            };
+                (Rc::clone(auction_winner), player_ref)
+            }
+        };
 
         let auction_result = self.process_auction(sender, receiver, max_bid, final_auction_round);
     }
 
     fn process_auction(
         &mut self,
-        sender: &mut SupervisedPlayer,
-        receiver: &mut SupervisedPlayer,
+        sender: Rc<RefCell<SupervisedPlayer>>,
+        receiver: Rc<RefCell<SupervisedPlayer>>,
         max_bid: Value,
         final_auction_round: AuctionRound,
     ) {
         let state_msg = StateMessage::SendMoney {
-            player_id: receiver.id().clone(),
+            player_id: receiver.borrow().id().clone(),
             amount: max_bid,
         };
-        let player_decision: SendMoney = sender.map_to_action_inner(state_msg);
+        let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
         match player_decision {
             SendMoney::WasBluff => todo!(),
             SendMoney::Amount(amount) => {
@@ -247,8 +246,8 @@ impl Game {
                 };
 
                 let public_update = GameUpdate::Auction {
-                    from: sender.id().clone(),
-                    to: receiver.id().clone(),
+                    from: sender.borrow().id().clone(),
+                    to: receiver.borrow().id().clone(),
                     rounds: final_auction_round.clone(),
                     money_transfer: public_kind,
                 };
@@ -256,8 +255,8 @@ impl Game {
                 let private_kind = MoneyTransfer::Private { amount: amount };
 
                 let private_update = GameUpdate::Auction {
-                    from: sender.id().clone(),
-                    to: receiver.id().clone(),
+                    from: sender.borrow().id().clone(),
+                    to: receiver.borrow().id().clone(),
                     rounds: final_auction_round,
                     money_transfer: private_kind,
                 };
@@ -269,31 +268,41 @@ impl Game {
 
     fn public_private_update(
         &mut self,
-        player_a: &mut SupervisedPlayer,
-        player_b: &mut SupervisedPlayer,
+        player_a: Rc<RefCell<SupervisedPlayer>>,
+        player_b: Rc<RefCell<SupervisedPlayer>>,
         public_update: GameUpdate,
         private_update: GameUpdate,
     ) {
-        for other_player in self.players.iter() {
-            if other_player.borrow().id() != player_a.id()
-                && other_player.borrow().id() != player_b.id()
-            {
-                let _: NoAction =
-                    other_player
-                        .borrow_mut()
-                        .map_to_action_inner(StateMessage::GameUpdate {
-                            update: public_update.clone(),
-                        });
-            }
+        let other_players: Vec<Rc<RefCell<SupervisedPlayer>>> = self
+            .players
+            .iter()
+            .filter(|p| {
+                p.borrow().id() != player_a.borrow().id()
+                    && p.borrow().id() != player_b.borrow().id()
+            })
+            .cloned()
+            .collect();
+
+        for other_player in other_players {
+            let _: NoAction =
+                other_player
+                    .borrow_mut()
+                    .map_to_action_inner(StateMessage::GameUpdate {
+                        update: public_update.clone(),
+                    });
         }
 
-        let _: NoAction = player_a.map_to_action_inner(StateMessage::GameUpdate {
-            update: private_update.clone(),
-        });
+        let _: NoAction = player_a
+            .borrow_mut()
+            .map_to_action_inner(StateMessage::GameUpdate {
+                update: private_update.clone(),
+            });
 
-        let _: NoAction = player_b.map_to_action_inner(StateMessage::GameUpdate {
-            update: private_update,
-        });
+        let _: NoAction = player_b
+            .borrow_mut()
+            .map_to_action_inner(StateMessage::GameUpdate {
+                update: private_update,
+            });
     }
 
     fn offer_trade_to_opponent(

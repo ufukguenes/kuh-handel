@@ -39,7 +39,7 @@ impl PlayerActions for MyBot {
             opponent: self.opponents.get(0).unwrap().clone(),
             animal: self.my_animals.get(0).unwrap().clone(),
             animal_count: AnimalTradeCount::One,
-            amount: vec![Money::new_u32(100), Money::new_u32(100)],
+            amount: vec![Money::new_usize(100), Money::new_usize(100)],
         }
     }
 

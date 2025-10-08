@@ -14,7 +14,7 @@ impl Game {
         players_actions: Vec<Box<dyn PlayerActions>>,
         seed: u64,
     ) -> Self {
-        let mut bank_notes: HashMap<Money, u32> = HashMap::new();
+        let mut bank_notes: HashMap<Money, usize> = HashMap::new();
         bank_notes.insert(Money::new(Value::new(0)), 2);
         bank_notes.insert(Money::new(Value::new(10)), 4);
         bank_notes.insert(Money::new(Value::new(50)), 1);
@@ -55,17 +55,17 @@ impl Game {
         seed: u64,
     ) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
-        let ratio_player_money: u32 = rng.random_range(1..=3).try_into().unwrap();
-        let animals_per_player: u32 = rng.random_range(2..=4).try_into().unwrap();
+        let ratio_player_money: usize = rng.random_range(1..=3).try_into().unwrap();
+        let animals_per_player: usize = rng.random_range(2..=4).try_into().unwrap();
 
-        let mut bank_notes: HashMap<Money, u32> = HashMap::new();
+        let mut bank_notes: HashMap<Money, usize> = HashMap::new();
 
-        let zero = Money::new_u32(0);
-        let ten = Money::new_u32(10);
-        let fifty = Money::new_u32(50);
-        let hundred = Money::new_u32(100);
-        let twohundred = Money::new_u32(200);
-        let fivehundred = Money::new_u32(500);
+        let zero = Money::new_usize(0);
+        let ten = Money::new_usize(10);
+        let fifty = Money::new_usize(50);
+        let hundred = Money::new_usize(100);
+        let twohundred = Money::new_usize(200);
+        let fivehundred = Money::new_usize(500);
 
         let all_notes = [zero, ten, fifty, hundred, twohundred, fivehundred];
 
@@ -75,9 +75,10 @@ impl Game {
 
         let mut game_stack: Vec<Rc<AnimalSet>> = Vec::new();
 
-        let min_animal_value: u32 = 10;
-        let max_animal_value: u32 = 500;
-        let possible_values: Vec<u32> = (min_animal_value..=max_animal_value).step_by(10).collect();
+        let min_animal_value: usize = 10;
+        let max_animal_value: usize = 500;
+        let possible_values: Vec<usize> =
+            (min_animal_value..=max_animal_value).step_by(10).collect();
 
         for _ in &player_ids {
             let use_inflation = rng.random::<f32>() <= 0.1;

@@ -15,7 +15,7 @@ impl Money {
         Money { value }
     }
 
-    pub fn new_u32(value: u32) -> Self {
+    pub fn new_usize(value: usize) -> Self {
         Money {
             value: Value::new(value),
         }
@@ -25,7 +25,7 @@ impl Money {
         self.value
     }
 
-    pub fn as_u32(self) -> u32 {
+    pub fn as_usize(self) -> usize {
         self.value.value()
     }
 }

@@ -5,15 +5,15 @@ use serde::{Deserialize, Serialize, de::value};
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Value {
-    value: u32,
+    value: usize,
 }
 
 impl Value {
-    pub fn new(value: u32) -> Self {
+    pub fn new(value: usize) -> Self {
         Value { value: value }
     }
 
-    pub fn value(&self) -> u32 {
+    pub fn value(&self) -> usize {
         self.value
     }
 }

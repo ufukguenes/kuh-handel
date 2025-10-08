@@ -17,7 +17,7 @@ type AnimalResult<T> = Result<T, AnimalError>;
 pub struct DefaultAnimalSetFactory {}
 
 impl AnimalSetFactory for DefaultAnimalSetFactory {
-    fn new(value_number: u32, inflation_numbers: Vec<u32>) -> AnimalSet {
+    fn new(value_number: usize, inflation_numbers: Vec<usize>) -> AnimalSet {
         let inflation: Vec<Value> = inflation_numbers.iter().map(|e| Value::new(*e)).collect();
         let value = Value::new(value_number);
 
@@ -36,7 +36,7 @@ impl AnimalSetFactory for DefaultAnimalSetFactory {
         }
     }
 
-    fn new_from_value(value_number: u32, inflation: Vec<Value>) -> AnimalSet {
+    fn new_from_value(value_number: usize, inflation: Vec<Value>) -> AnimalSet {
         let value = Value::new(value_number);
 
         let animal = Animal::new(value);
@@ -56,8 +56,8 @@ impl AnimalSetFactory for DefaultAnimalSetFactory {
 }
 
 pub trait AnimalSetFactory {
-    fn new(value: u32, inflation: Vec<u32>) -> AnimalSet;
-    fn new_from_value(value: u32, inflation: Vec<Value>) -> AnimalSet;
+    fn new(value: usize, inflation: Vec<usize>) -> AnimalSet;
+    fn new_from_value(value: usize, inflation: Vec<Value>) -> AnimalSet;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

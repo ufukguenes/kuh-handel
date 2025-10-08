@@ -10,11 +10,11 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {
     #[serde_as(as = "Vec<(_, _)>")]
-    bank_notes: HashMap<Money, u32>,
+    bank_notes: HashMap<Money, usize>,
 }
 
 impl Wallet {
-    pub fn new(bank_notes: HashMap<Money, u32>) -> Self {
+    pub fn new(bank_notes: HashMap<Money, usize>) -> Self {
         Wallet {
             bank_notes: bank_notes,
         }
@@ -50,9 +50,9 @@ impl Wallet {
     }
 
     pub fn total_money(&self) -> Value {
-        let mut total: u32 = 0;
+        let mut total: usize = 0;
         for (money, amount) in &self.bank_notes {
-            total += money.as_u32() * amount;
+            total += money.as_usize() * amount;
         }
         Value::new(total)
     }
@@ -88,22 +88,22 @@ impl Wallet {
         let mut available_bills: Vec<&Money> = self.bank_notes.keys().clone().collect();
         available_bills.sort();
 
-        let mut possible_payments: Vec<(u32, Vec<Money>)> = vec![(0, Vec::new())];
+        let mut possible_payments: Vec<(usize, Vec<Money>)> = vec![(0, Vec::new())];
 
         for (bill, count) in &self.bank_notes {
             if bill.value() >= amount {
-                possible_payments.push((bill.as_u32(), vec![bill.clone()]));
+                possible_payments.push((bill.as_usize(), vec![bill.clone()]));
                 break;
             }
 
             let mut check_against_these_combinations = possible_payments.clone();
             for _ in 0..count.clone() {
-                let mut new_combinations: Vec<(u32, Vec<Money>)> = Vec::new();
+                let mut new_combinations: Vec<(usize, Vec<Money>)> = Vec::new();
                 for (old_value, combination) in &check_against_these_combinations {
                     let mut new_bills = combination.clone();
                     new_bills.push(bill.clone());
 
-                    let new_value = old_value + bill.as_u32();
+                    let new_value = old_value + bill.as_usize();
 
                     new_combinations.push((new_value, new_bills));
 
@@ -128,7 +128,7 @@ impl Wallet {
     }
 
     pub fn can_afford(&self, payment_amount: &Vec<Money>) -> Affordability {
-        let total_payed: u32 = payment_amount.iter().map(|money| money.as_u32()).sum();
+        let total_payed: usize = payment_amount.iter().map(|money| money.as_usize()).sum();
         let total_owned = self.total_money();
 
         if total_owned.value() < total_payed {

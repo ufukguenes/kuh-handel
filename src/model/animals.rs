@@ -79,6 +79,10 @@ impl AnimalSet {
         self.inflation.len()
     }
 
+    pub fn animal(&self) -> &Animal {
+        &self.animal
+    }
+
     pub fn animals(&self) -> &Vec<Rc<Animal>> {
         &self.animals
     }

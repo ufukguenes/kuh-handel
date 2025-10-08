@@ -24,12 +24,7 @@ pub struct AuctionRound {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GameUpdate {
     /// The action update is sent after an auction has finished.
-    Auction {
-        rounds: AuctionRound,
-        from: PlayerId,
-        to: PlayerId,
-        money_transfer: MoneyTransfer,
-    },
+    Auction(AuctionKind),
     Trade {
         challenger: PlayerId,
         opponent: PlayerId,
@@ -49,6 +44,20 @@ pub enum GameUpdate {
     ExposePlayer {
         player: PlayerId,
         wallet: Wallet,
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum AuctionKind {
+    NoBiddings {
+        host_id: PlayerId,
+        animal: Animal,
+    },
+    NormalAuction {
+        rounds: AuctionRound,
+        from: PlayerId,
+        to: PlayerId,
+        money_transfer: MoneyTransfer,
     },
 }
 

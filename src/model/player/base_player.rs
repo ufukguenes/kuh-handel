@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::messages::actions::FromActionMessage;
 
 use crate::messages::message_protocol::StateMessage;
-use crate::model::animals::Animal;
+use crate::model::animals::{Animal, AnimalSet};
 
 use crate::model::game_errors::GameError;
 use crate::model::money::wallet::Wallet;
@@ -11,6 +11,7 @@ use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
+use std::rc::Rc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlayerId {
@@ -33,14 +34,21 @@ pub struct Player {
     id: PlayerId,
     wallet: Wallet,
     owned_animals: HashMap<Animal, usize>,
+    game_stack: Vec<Rc<AnimalSet>>,
     player_actions: Box<dyn PlayerActions>,
 }
 
 impl Player {
-    pub fn new(id: String, wallet: Wallet, player_actions: Box<dyn PlayerActions>) -> Self {
+    pub fn new(
+        id: String,
+        wallet: Wallet,
+        game_stack: Vec<Rc<AnimalSet>>,
+        player_actions: Box<dyn PlayerActions>,
+    ) -> Self {
         Player {
             id: PlayerId { name: id },
             wallet: wallet,
+            game_stack: game_stack,
             owned_animals: HashMap::new(),
             player_actions,
         }
@@ -51,7 +59,19 @@ impl Player {
     }
 
     pub fn can_trade(&self) -> bool {
-        todo!()
+        for (animal, animal_count) in self.owned_animals.iter() {
+            if *animal_count
+                < self
+                    .game_stack
+                    .iter()
+                    .find(|set| set.animal() == animal)
+                    .map(|set| set.occurrences())
+                    .unwrap()
+            {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {

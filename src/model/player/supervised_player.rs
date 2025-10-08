@@ -176,22 +176,32 @@ impl PlayerActions for SupervisedPlayer {
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
         match update.clone() {
-            GameUpdate::Auction {
-                rounds,
-                from,
-                to,
-                money_transfer,
-            } => match money_transfer {
-                // check if what animal, not necessary to check if host, because is checked with from to
-                MoneyTransfer::Private { amount } => {
-                    let mut player = self.player.borrow_mut();
-                    if player.id() == &from {
-                        player.wallet_mut().withdraw(&amount);
-                    } else if player.id() == &to {
-                        player.wallet_mut().withdraw(&amount);
+            GameUpdate::Auction(auction_kind) => match auction_kind {
+                AuctionKind::NoBiddings { host_id, animal } => {
+                    if &host_id == self.player.borrow().id() {
+                        self.player.borrow_mut().add_animals(&animal, 1);
                     }
                 }
-                _ => {}
+                AuctionKind::NormalAuction {
+                    rounds,
+                    from,
+                    to,
+                    money_transfer,
+                } => {
+                    match money_transfer {
+                        // check if what animal, not necessary to check if host, because is checked with from to
+                        MoneyTransfer::Private { amount } => {
+                            let mut player = self.player.borrow_mut();
+                            if player.id() == &from {
+                                player.wallet_mut().withdraw(&amount);
+                                player.add_animals(&rounds.animal, 1);
+                            } else if player.id() == &to {
+                                player.wallet_mut().deposit(&amount);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             },
             GameUpdate::Trade {
                 challenger,

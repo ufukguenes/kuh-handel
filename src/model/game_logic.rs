@@ -2,7 +2,9 @@ use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
-use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate, MoneyTransfer};
+use crate::messages::game_updates::{
+    AnimalTradeCount, AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer,
+};
 
 use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::{Animal, AnimalSet};
@@ -12,8 +14,7 @@ use crate::model::money::value::Value;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::{Player, PlayerId};
 
-use crate::model::player::player_actions::base_player_actions::PlayerActions;
-use crate::model::player::supervised_player::{self, SupervisedPlayer};
+use crate::model::player::supervised_player::SupervisedPlayer;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
@@ -145,7 +146,7 @@ impl Game {
     fn auction(&mut self, player_ref: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
         let host_id = player_ref.borrow().id().clone();
 
-        let auction_players = self.get_players_excluding(&host_id);
+        let auction_players = self.get_players_excluding(vec![&host_id]);
         print!("gl | host {}, auction_player: ", host_id);
         for p in auction_players.clone() {
             print!("{}, ", p.borrow().id().name);
@@ -195,34 +196,43 @@ impl Game {
         let player_decision: AuctionDecision =
             player_ref.borrow_mut().map_to_action_inner(state_msg);
 
-        // ToDo: if no one has bidden, what will happen?
+        match bids.iter().max_by_key(|(_, bid)| bid) {
+            Some((max_bidder_id, max_bid)) => {
+                let auction_winner = auction_players
+                    .iter()
+                    .find(|p| p.borrow().id() == *max_bidder_id)
+                    .unwrap();
+                let mut auction_winner = auction_winner;
 
-        let (max_bidder_id, max_bid) = bids.iter().max_by_key(|(_, bid)| bid).unwrap();
-        let auction_winner = auction_players
-            .iter()
-            .find(|p| p.borrow().id() == *max_bidder_id)
-            .unwrap();
-        let mut auction_winner = auction_winner;
+                let max_bid = match max_bid {
+                    Bidding::Pass => Value::new(0),
+                    Bidding::Bid(v) => v.value(),
+                };
 
-        let max_bid = match max_bid {
-            Bidding::Pass => Value::new(0),
-            Bidding::Bid(v) => v.value(),
-        };
+                let (sender, receiver) = match player_decision {
+                    AuctionDecision::Buy => {
+                        println!("gl | Player {} buys animal {}", host_id, animal);
 
-        let (sender, receiver) = match player_decision {
-            AuctionDecision::Buy => {
-                println!("gl | Player {} buys animal {}", host_id, animal);
+                        (player_ref, Rc::clone(auction_winner))
+                    }
+                    AuctionDecision::Sell => {
+                        println!("gl | Player {} sells animal {}", host_id, animal);
 
-                (player_ref, Rc::clone(auction_winner))
+                        (Rc::clone(auction_winner), player_ref)
+                    }
+                };
+
+                self.process_auction(sender, receiver, max_bid, final_auction_round);
             }
-            AuctionDecision::Sell => {
-                println!("gl | Player {} sells animal {}", host_id, animal);
+            None => {
+                let update = GameUpdate::Auction(AuctionKind::NoBiddings {
+                    host_id: host_id,
+                    animal: **animal,
+                });
 
-                (Rc::clone(auction_winner), player_ref)
+                Self::update_multiple_players(&self.players, update);
             }
         };
-
-        let auction_result = self.process_auction(sender, receiver, max_bid, final_auction_round);
     }
 
     fn process_auction(
@@ -238,59 +248,61 @@ impl Game {
         };
         let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
         match player_decision {
-            SendMoney::WasBluff => todo!("expose player and repeat"),
+            SendMoney::WasBluff => todo!(
+                "expose player and repeat (but not infinitely, a player can only bluff once, afterwards we cap it at its max money "
+            ),
             SendMoney::Amount(amount) => {
+                let sender_id = sender.borrow().id().clone();
+                let receiver_id = receiver.borrow().id().clone();
+                let rounds = final_auction_round.clone();
                 let public_kind = MoneyTransfer::Public {
                     card_amount: amount.len(),
                     min_value: max_bid, // ToDo: calculate the min value
                 };
 
-                let public_update = GameUpdate::Auction {
-                    from: sender.borrow().id().clone(),
-                    to: receiver.borrow().id().clone(),
-                    rounds: final_auction_round.clone(),
-                    money_transfer: public_kind,
+                let update = |transfer_kind| {
+                    GameUpdate::Auction(AuctionKind::NormalAuction {
+                        from: sender_id.clone(),
+                        to: receiver_id.clone(),
+                        rounds: rounds.clone(),
+                        money_transfer: transfer_kind,
+                    })
                 };
 
                 let private_kind = MoneyTransfer::Private { amount: amount };
 
-                let private_update = GameUpdate::Auction {
-                    from: sender.borrow().id().clone(),
-                    to: receiver.borrow().id().clone(),
-                    rounds: final_auction_round,
-                    money_transfer: private_kind,
-                };
-
-                self.public_private_update(sender, receiver, public_update, private_update);
+                self.public_private_update(
+                    sender,
+                    receiver,
+                    update(public_kind),
+                    update(private_kind),
+                );
             }
         }
     }
 
+    fn update_multiple_players(players: &Vec<Rc<RefCell<SupervisedPlayer>>>, update: GameUpdate) {
+        for other_player in players {
+            let _: NoAction =
+                other_player
+                    .borrow_mut()
+                    .map_to_action_inner(StateMessage::GameUpdate {
+                        update: update.clone(),
+                    });
+        }
+    }
+
     fn public_private_update(
-        &mut self,
+        &self,
         player_a: Rc<RefCell<SupervisedPlayer>>,
         player_b: Rc<RefCell<SupervisedPlayer>>,
         public_update: GameUpdate,
         private_update: GameUpdate,
     ) {
-        let other_players: Vec<Rc<RefCell<SupervisedPlayer>>> = self
-            .players
-            .iter()
-            .filter(|p| {
-                p.borrow().id() != player_a.borrow().id()
-                    && p.borrow().id() != player_b.borrow().id()
-            })
-            .cloned()
-            .collect();
+        let other_player =
+            self.get_players_excluding(vec![&player_a.borrow().id(), &player_a.borrow().id()]);
 
-        for other_player in other_players {
-            let _: NoAction =
-                other_player
-                    .borrow_mut()
-                    .map_to_action_inner(StateMessage::GameUpdate {
-                        update: public_update.clone(),
-                    });
-        }
+        Self::update_multiple_players(&other_player, public_update);
 
         let _: NoAction = player_a
             .borrow_mut()
@@ -313,20 +325,25 @@ impl Game {
         animal: Animal,
         animal_count: AnimalTradeCount,
     ) {
-        let offer = TradeOffer {
+        let challenger_total_value: usize = amount.iter().map(|money| money.as_usize()).sum();
+        let challenger_card_count = amount.len();
+        let challenger_offer_vec = amount;
+        let offer: TradeOffer = TradeOffer {
             challenger: challenger.borrow().id().clone(),
-            animal,
-            animal_count,
-            challenger_card_offer: amount.len(),
+            animal: animal,
+            animal_count: animal_count.clone(),
+            challenger_card_offer: challenger_card_count,
         };
 
         let state_msg = StateMessage::RespondToTrade { offer: offer };
         let player_decision: TradeOpponentDecision =
             opponent.borrow_mut().map_to_action_inner(state_msg);
 
-        match player_decision {
+        let (opponent_total_value, opponent_card_count, opponent_offer_vec) = match player_decision
+        {
             TradeOpponentDecision::Accept => {
                 println!("gl | Trade accepted by {}", opponent.borrow().id());
+                (0, None, None)
             }
             TradeOpponentDecision::CounterOffer(amount) => {
                 println!(
@@ -334,10 +351,45 @@ impl Game {
                     opponent.borrow().id(),
                     amount
                 );
+                (
+                    amount.iter().map(|money| money.as_usize()).sum(),
+                    Some(amount.len()),
+                    Some(amount),
+                )
             }
-        }
-        todo!(
-            "calculate the winner of the trade and exchange the animals and money accordingly, with private_public_update"
+        };
+
+        let winner_id = if challenger_total_value >= opponent_total_value {
+            challenger.borrow().id().clone()
+        } else {
+            opponent.borrow().id().clone()
+        };
+
+        let challenger_id = challenger.borrow().id().clone();
+        let opponent_id = opponent.borrow().id().clone();
+        let update = |trade_kind| GameUpdate::Trade {
+            challenger: challenger_id,
+            opponent: opponent_id,
+            animal: animal,
+            animal_count: animal_count,
+            receiver: winner_id,
+            money_trade: trade_kind,
+        };
+
+        let public_kind = MoneyTrade::Public {
+            challenger_card_offer: challenger_card_count,
+            opponent_card_offer: opponent_card_count,
+        };
+        let private_kind = MoneyTrade::Private {
+            challenger_card_offer: challenger_offer_vec,
+            opponent_card_offer: opponent_offer_vec,
+        };
+
+        self.public_private_update(
+            challenger,
+            opponent,
+            update.clone()(public_kind),
+            update(private_kind),
         );
     }
 
@@ -416,11 +468,11 @@ impl Game {
 
     pub fn get_players_excluding(
         &self,
-        excluding: &PlayerId,
+        excluding: Vec<&PlayerId>,
     ) -> Vec<Rc<RefCell<SupervisedPlayer>>> {
         self.players
             .iter()
-            .filter(|p| p.borrow().id() != *excluding)
+            .filter(|p| excluding.contains(&&p.borrow().id()))
             .cloned()
             .collect()
     }

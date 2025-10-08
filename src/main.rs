@@ -13,10 +13,6 @@ use kuh_handel::model::player::player_actions::websocket_actions::WebsocketActio
 use std::net::SocketAddr;
 
 use kuh_handel::model::player::player_actions::random_actions::RandomPlayerActions;
-// todos:
-// done - 1. change to dyn PlayerActions
-// 2. make game non async
-// 3. dont use lock everywhere, specifically only lock attributes that need it instead of whole struct and follow async guidlines
 
 #[tokio::main]
 async fn main() {

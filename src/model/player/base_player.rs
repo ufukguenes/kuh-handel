@@ -32,7 +32,7 @@ impl Display for PlayerId {
 pub struct Player {
     id: PlayerId,
     wallet: Wallet,
-    owned_animals: HashMap<Animal, usize>, //todo this should be hashmap?
+    owned_animals: HashMap<Animal, usize>,
     player_actions: Box<dyn PlayerActions>,
 }
 

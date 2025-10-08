@@ -23,7 +23,6 @@ pub enum ActionMessage {
     NoAction { decision: NoAction },
 }
 
-//todo: make the base_player an enum, so that it is always ensured that each action type also has a message
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum StateMessage {

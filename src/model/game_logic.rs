@@ -238,7 +238,7 @@ impl Game {
         };
         let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
         match player_decision {
-            SendMoney::WasBluff => todo!(),
+            SendMoney::WasBluff => todo!("expose player and repeat"),
             SendMoney::Amount(amount) => {
                 let public_kind = MoneyTransfer::Public {
                     card_amount: amount.len(),

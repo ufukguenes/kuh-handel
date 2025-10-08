@@ -45,7 +45,7 @@ impl SupervisedPlayer {
     }
 
     pub fn can_trade(&self) -> bool {
-        todo!()
+        self.player.borrow().can_trade()
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
@@ -129,8 +129,6 @@ impl PlayerActions for SupervisedPlayer {
                 PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade))
             }
         }
-
-        //todo check if the player even has that money to make the hidden offer
     }
 
     fn _trade(&mut self) -> InitialTrade {

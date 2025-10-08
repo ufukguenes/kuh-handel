@@ -30,10 +30,6 @@ impl PlayerActions for RandomPlayerActions {
         SendMoney::Amount(vec![Money::new(amount)])
     }
 
-    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
-        NoAction::Ok
-    }
-
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         TradeOpponentDecision::Accept
     }

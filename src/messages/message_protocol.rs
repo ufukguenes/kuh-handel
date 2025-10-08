@@ -29,26 +29,11 @@ pub enum ActionMessage {
 pub enum StateMessage {
     DrawOrTrade,
     Trade,
-    ProvideBidding {
-        state: AuctionRound,
-    },
-    BuyOrSell {
-        state: AuctionRound,
-    },
-    SendMoney {
-        player_id: PlayerId,
-        amount: Value,
-    },
-    ReceiveFromPlayer {
-        player_id: PlayerId,
-        money: Vec<Money>,
-    },
-    RespondToTrade {
-        offer: TradeOffer,
-    },
-    GameUpdate {
-        update: GameUpdate,
-    },
+    ProvideBidding { state: AuctionRound },
+    BuyOrSell { state: AuctionRound },
+    SendMoney { player_id: PlayerId, amount: Value },
+    RespondToTrade { offer: TradeOffer },
+    GameUpdate { update: GameUpdate },
 }
 
 impl Display for StateMessage {
@@ -59,7 +44,6 @@ impl Display for StateMessage {
             StateMessage::ProvideBidding { .. } => write!(f, "ProvideBidding"),
             StateMessage::BuyOrSell { .. } => write!(f, "BuyOrSell"),
             StateMessage::SendMoney { .. } => write!(f, "SendMoney"),
-            StateMessage::ReceiveFromPlayer { .. } => write!(f, "ReceiveFromPlayer"),
             StateMessage::RespondToTrade { .. } => write!(f, "RespondToTrade"),
             StateMessage::GameUpdate { .. } => write!(f, "GameUpdate"),
         }

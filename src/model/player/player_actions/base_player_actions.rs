@@ -27,9 +27,6 @@ pub trait PlayerActions: Send + Sync {
             StateMessage::SendMoney { player_id, amount } => ActionMessage::SendMoney {
                 decision: self._send_money_to_player(&player_id, amount),
             },
-            StateMessage::ReceiveFromPlayer { player_id, money } => ActionMessage::NoAction {
-                decision: self._receive_from_player(&player_id, money),
-            },
             StateMessage::RespondToTrade { offer } => ActionMessage::TradeOpponentDecision {
                 decision: self._respond_to_trade(offer),
             },
@@ -57,12 +54,6 @@ pub trait PlayerActions: Send + Sync {
     /// After a bid, the player must send the bidden amount to the game, such that the transfer can be handled.
     /// If the player does not send enough money, the game will expose the players wallet if necessary.
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney;
-
-    /// After bidding or trade, a player can receive money from another player.
-    /// Trade: The opponent will receive at least on money card from the challenger.
-    ///        The challenger can receive money card from the opponent.
-    ///        If the opponent accepts, the challenger receives an empty vector.
-    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction;
 
     /// the opponent receives the trade offer and can decide to accept it or to make a counter offer
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision;

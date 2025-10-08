@@ -105,14 +105,6 @@ impl PlayerActions for WebsocketActions {
         self.send_and_recv(msg)
     }
 
-    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
-        let msg: StateMessage = StateMessage::ReceiveFromPlayer {
-            player_id: player.clone(),
-            money: money,
-        };
-        self.send_and_recv(msg)
-    }
-
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         let msg: StateMessage = StateMessage::RespondToTrade { offer: offer };
         self.send_and_recv(msg)

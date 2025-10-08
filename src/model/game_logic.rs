@@ -251,12 +251,6 @@ impl Game {
         match player_decision {
             SendMoney::WasBluff => todo!(),
             SendMoney::Amount(amount) => {
-                let state_msg = StateMessage::ReceiveFromPlayer {
-                    player_id: receiver.id().clone(),
-                    money: amount.clone(),
-                };
-                let _: NoAction = receiver.map_to_action_inner(state_msg);
-
                 let update = GameUpdate::Auction {
                     rounds: final_auction_round,
                     transfer: MoneyTransfer {

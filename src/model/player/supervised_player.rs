@@ -119,12 +119,6 @@ impl PlayerActions for SupervisedPlayer {
         self.rectify_payment(&decision)
     }
 
-    fn _receive_from_player(&mut self, player: &PlayerId, money: Vec<Money>) -> NoAction {
-        self.player
-            .player_actions()
-            ._receive_from_player(player, money)
-    }
-
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         let decision = self.player.player_actions()._respond_to_trade(offer);
         match decision {

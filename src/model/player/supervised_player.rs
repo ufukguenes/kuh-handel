@@ -39,7 +39,7 @@ impl SupervisedPlayer {
         let animal_count: usize = trade.animal_count.clone() as usize;
 
         let self_has_enough_animals = self.player.count_animal(&trade_animal) >= animal_count;
-        let mut opponent_has_enough_animals;
+        let opponent_has_enough_animals;
 
         let opponent = self
             .opponents

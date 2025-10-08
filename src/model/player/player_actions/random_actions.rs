@@ -2,13 +2,15 @@ use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
-use crate::messages::game_updates::{AuctionRound, GameUpdate};
+use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate};
+use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 pub struct RandomPlayerActions {}
 
+// todo make a more useful random player
 impl PlayerActions for RandomPlayerActions {
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         Bidding::Pass
@@ -35,7 +37,14 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        todo!()
+        InitialTrade {
+            opponent: PlayerId {
+                name: "".to_string(),
+            },
+            animal: Animal::new(Value::new(0)),
+            animal_count: AnimalTradeCount::One,
+            amount: vec![Money::new_usize(0)],
+        }
     }
 
     // ToDo: add the other actions -> the actual trade needs to be implemented (doing the attack as well as the counter bid)

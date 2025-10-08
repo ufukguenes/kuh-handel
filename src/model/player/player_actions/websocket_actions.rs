@@ -9,6 +9,7 @@ use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
 
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 
 use axum::extract::ws::{Message, Utf8Bytes};
 use tokio::sync::mpsc;
@@ -24,6 +25,7 @@ pub struct WebsocketActions {
     state_sender: Sender<Message>,
     action_receiver: Receiver<Message>,
     id: String,
+    backup_actions: RandomPlayerActions,
 }
 
 impl WebsocketActions {
@@ -37,6 +39,7 @@ impl WebsocketActions {
                 state_sender: state_sender,
                 action_receiver: action_receiver,
                 id: id,
+                backup_actions: RandomPlayerActions {},
             },
             (state_receiver, action_sender),
         )
@@ -46,7 +49,7 @@ impl WebsocketActions {
         self.action_receiver.close();
     }
 
-    pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> T {
+    pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> Option<T> {
         println!(
             "wsp | going to send state from game to backend {}, {}",
             self.id, msg
@@ -70,31 +73,54 @@ impl WebsocketActions {
 
         let action_msg: ActionMessage = match msg {
             Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),
-            None => todo!("channel closed {}", self.id),
+            None => return None,
         };
-        T::extract(action_msg)
+        Some(T::extract(action_msg))
     }
 }
 
 impl PlayerActions for WebsocketActions {
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        let msg: StateMessage = StateMessage::ProvideBidding { state: state };
-        self.send_and_recv(msg)
+        let msg: StateMessage = StateMessage::ProvideBidding {
+            state: state.clone(),
+        };
+
+        let decision: Option<Bidding> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._provide_bidding(state),
+        }
     }
 
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         let msg: StateMessage = StateMessage::DrawOrTrade;
-        self.send_and_recv(msg)
+        let decision: Option<PlayerTurnDecision> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._draw_or_trade(),
+        }
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        let msg: StateMessage = StateMessage::BuyOrSell { state: state };
-        self.send_and_recv(msg)
+        let msg: StateMessage = StateMessage::BuyOrSell {
+            state: state.clone(),
+        };
+        let decision: Option<AuctionDecision> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._buy_or_sell(state),
+        }
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        let msg: StateMessage = StateMessage::GameUpdate { update: update };
-        self.send_and_recv(msg)
+        let msg: StateMessage = StateMessage::GameUpdate {
+            update: update.clone(),
+        };
+        let decision: Option<NoAction> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._receive_game_update(update),
+        }
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
@@ -102,16 +128,30 @@ impl PlayerActions for WebsocketActions {
             player_id: player.clone(),
             amount: amount,
         };
-        self.send_and_recv(msg)
+        let decision: Option<SendMoney> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._send_money_to_player(player, amount),
+        }
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        let msg: StateMessage = StateMessage::RespondToTrade { offer: offer };
-        self.send_and_recv(msg)
+        let msg: StateMessage = StateMessage::RespondToTrade {
+            offer: offer.clone(),
+        };
+        let decision: Option<TradeOpponentDecision> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._respond_to_trade(offer),
+        }
     }
 
     fn _trade(&mut self) -> InitialTrade {
         let msg: StateMessage = StateMessage::Trade;
-        self.send_and_recv(msg)
+        let decision: Option<InitialTrade> = self.send_and_recv(msg);
+        match decision {
+            Some(decision) => decision,
+            None => self.backup_actions._trade(),
+        }
     }
 }

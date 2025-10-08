@@ -6,7 +6,7 @@ use crate::{
     messages::actions::Bidding,
     model::{
         animals::{Animal, AnimalSet},
-        money::{value::Value, wallet::Wallet},
+        money::{money::Money, value::Value, wallet::Wallet},
         player::base_player::PlayerId,
     },
 };
@@ -26,16 +26,17 @@ pub enum GameUpdate {
     /// The action update is sent after an auction has finished.
     Auction {
         rounds: AuctionRound,
-        transfer: MoneyTransfer,
+        from: PlayerId,
+        to: PlayerId,
+        money_transfer: MoneyTransfer,
     },
     Trade {
         challenger: PlayerId,
         opponent: PlayerId,
         animal: Animal,
         animal_count: AnimalTradeCount,
-        challenger_card_offer: usize,
-        opponent_card_offer: Option<usize>,
         receiver: PlayerId,
+        money_trade: MoneyTrade,
     },
     Start {
         wallet: Wallet,
@@ -52,15 +53,29 @@ pub enum GameUpdate {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MoneyTransfer {
-    pub from: PlayerId,
-    pub to: PlayerId,
-    pub card_amount: usize,
-    pub min_value: Value,
+pub enum MoneyTransfer {
+    Public {
+        card_amount: usize,
+        min_value: Value,
+    },
+    Private {
+        amount: Vec<Money>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[repr(usize)]
+pub enum MoneyTrade {
+    Public {
+        challenger_card_offer: usize,
+        opponent_card_offer: Option<usize>,
+    },
+    Private {
+        challenger_card_offer: Vec<Money>,
+        opponent_card_offer: Option<Vec<Money>>,
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AnimalTradeCount {
     One = 1,
     Two = 2,

@@ -210,39 +210,26 @@ impl Game {
         let (sender, receiver): (&mut Player, &mut Player) = match player_decision {
             AuctionDecision::Buy => {
                 println!("gl | Player {} buys animal {}", host_id, animal);
-                player_ref.borrow_mut().consume_animal(animal);
 
                 (&mut *player_ref.borrow_mut(), &mut *auction_winner)
             }
             AuctionDecision::Sell => {
                 println!("gl | Player {} sells animal {}", host_id, animal);
-                auction_winner.consume_animal(animal);
 
                 (&mut *auction_winner, &mut *player_ref.borrow_mut())
             }
         };
 
-        let auction_result = Self::process_auction_and_get_game_update(
-            sender,
-            receiver,
-            max_bid,
-            final_auction_round,
-        );
-
-        for p in players.borrow().iter() {
-            let state_msg = StateMessage::GameUpdate {
-                update: auction_result.clone(),
-            };
-            let _: NoAction = p.borrow_mut().map_to_action_inner(state_msg);
-        }
+        let auction_result = self.process_auction(sender, receiver, max_bid, final_auction_round);
     }
 
-    fn process_auction_and_get_game_update(
+    fn process_auction(
+        &mut self,
         sender: &mut Player,
         receiver: &mut Player,
         max_bid: Value,
         final_auction_round: AuctionRound,
-    ) -> GameUpdate {
+    ) {
         let state_msg = StateMessage::SendMoney {
             player_id: receiver.id().clone(),
             amount: max_bid,
@@ -251,20 +238,59 @@ impl Game {
         match player_decision {
             SendMoney::WasBluff => todo!(),
             SendMoney::Amount(amount) => {
-                let update = GameUpdate::Auction {
-                    rounds: final_auction_round,
-                    transfer: MoneyTransfer {
-                        from: sender.id().clone(),
-                        to: receiver.id().clone(),
-                        card_amount: amount.len(),
-                        min_value: max_bid, // ToDo: calculate the min value
-                    },
+                let public_kind = MoneyTransfer::Public {
+                    card_amount: amount.len(),
+                    min_value: max_bid, // ToDo: calculate the min value
                 };
 
-                todo!("implement the money transfer");
+                let public_update = GameUpdate::Auction {
+                    from: sender.id().clone(),
+                    to: receiver.id().clone(),
+                    rounds: final_auction_round.clone(),
+                    money_transfer: public_kind,
+                };
+
+                let private_kind = MoneyTransfer::Private { amount: amount };
+
+                let private_update = GameUpdate::Auction {
+                    from: sender.id().clone(),
+                    to: receiver.id().clone(),
+                    rounds: final_auction_round,
+                    money_transfer: private_kind,
+                };
+
+                self.public_private_update(sender, receiver, public_update, private_update);
             }
         }
-        update
+    }
+
+    fn public_private_update(
+        &mut self,
+        player_a: &mut Player,
+        player_b: &mut Player,
+        public_update: GameUpdate,
+        private_update: GameUpdate,
+    ) {
+        for other_player in self.players.borrow().iter() {
+            if other_player.borrow().id() != player_a.id()
+                && other_player.borrow().id() != player_b.id()
+            {
+                let _: NoAction =
+                    other_player
+                        .borrow_mut()
+                        .map_to_action_inner(StateMessage::GameUpdate {
+                            update: public_update.clone(),
+                        });
+            }
+        }
+
+        let _: NoAction = player_a.map_to_action_inner(StateMessage::GameUpdate {
+            update: private_update.clone(),
+        });
+
+        let _: NoAction = player_b.map_to_action_inner(StateMessage::GameUpdate {
+            update: private_update,
+        });
     }
 
     fn offer_trade_to_opponent(
@@ -297,7 +323,9 @@ impl Game {
                 );
             }
         }
-        todo!("calculate the winner of the trade and exchange the animals and money accordingly");
+        todo!(
+            "calculate the winner of the trade and exchange the animals and money accordingly, with private_public_update"
+        );
     }
 
     fn player_must_trade(&mut self, player: &mut Player) {
@@ -328,7 +356,8 @@ impl Game {
         while !self.game_stack.is_empty() {
             println!("gl | --- New turn ---");
             let players = Rc::clone(&self.players);
-            let player = Rc::clone(&players.borrow().get(current_player_idx).unwrap());
+            let player: Rc<RefCell<Player>> =
+                Rc::clone(&players.borrow().get(current_player_idx).unwrap());
 
             let state_msg = StateMessage::DrawOrTrade;
             let player_decision: PlayerTurnDecision =
@@ -346,7 +375,8 @@ impl Game {
                     animal_count,
                     amount,
                 }) => {
-                    let opponent = Rc::clone(&self.players.borrow().get_by_id(&opponent).unwrap());
+                    let opponent: Rc<RefCell<Player>> =
+                        Rc::clone(&self.players.borrow().get_by_id(&opponent).unwrap());
                     self.offer_trade_to_opponent(
                         &mut *player.borrow_mut(),
                         &mut *opponent.borrow_mut(),

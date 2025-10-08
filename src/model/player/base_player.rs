@@ -5,8 +5,10 @@ use crate::messages::actions::FromActionMessage;
 use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::Animal;
 
+use crate::model::game_errors::GameError;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
 
@@ -30,7 +32,7 @@ impl Display for PlayerId {
 pub struct Player {
     id: PlayerId,
     wallet: Wallet,
-    owned_animals: Vec<Animal>,
+    owned_animals: HashMap<Animal, usize>, //todo this should be hashmap?
     player_actions: Box<dyn PlayerActions>,
 }
 
@@ -39,19 +41,9 @@ impl Player {
         Player {
             id: PlayerId { name: id },
             wallet: wallet,
-            owned_animals: Vec::new(),
+            owned_animals: HashMap::new(),
             player_actions,
         }
-    }
-
-    pub fn consume_animal(&mut self, animal: &Animal) {
-        println!("bp | Player {} consumes animal {}", self.id(), animal,);
-        self.owned_animals.push(*animal);
-
-        todo!(
-            "you don't necessarily pay the amount the animal is valued at, so why withdraw that?"
-        );
-        self.wallet.withdraw(animal.value()).unwrap();
     }
 
     pub fn id(&self) -> &PlayerId {
@@ -75,15 +67,35 @@ impl Player {
         &self.wallet
     }
 
-    pub fn owned_animals(&self) -> &Vec<Animal> {
+    pub fn wallet_mut(&mut self) -> &mut Wallet {
+        &mut self.wallet
+    }
+
+    pub fn owned_animals(&self) -> &HashMap<Animal, usize> {
         &self.owned_animals
     }
 
-    pub fn count_animal(&self, animal_to_count: &Animal) -> usize {
-        self.owned_animals()
-            .iter()
-            .filter(|animal| animal.value() == animal_to_count.value())
-            .count()
+    pub fn add_animals(&mut self, animal: &Animal, count: usize) {
+        self.owned_animals
+            .entry(*animal)
+            .and_modify(|current| *current += count)
+            .or_insert(count);
+    }
+
+    pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), GameError> {
+        let current_count = self.owned_animals.get_mut(animal);
+        match current_count {
+            Some(current_count) => {
+                if *current_count - count > 0 {
+                    *current_count -= count;
+                } else {
+                    return Result::Err(GameError::AnimalsNotAvailable);
+                }
+            }
+            None => return Result::Err(GameError::AnimalsNotAvailable),
+        }
+
+        Ok(())
     }
 }
 

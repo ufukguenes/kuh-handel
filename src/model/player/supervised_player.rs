@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::messages::actions::*;
 use crate::messages::game_updates::*;
 use crate::model::money::money::Money;
@@ -16,7 +18,7 @@ use crate::model::player::{
 /// the alternative would not be to switch from trade to draw, but to find a fitting alternative trade
 pub struct SupervisedPlayer {
     player: Player,
-    opponents: Vec<Player>,
+    opponents: Rc<Vec<Player>>,
 }
 
 /// todo, what to do when invalid decision?
@@ -38,30 +40,36 @@ impl SupervisedPlayer {
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
 
-        let self_has_enough_animals = self.player.count_animal(&trade_animal) >= animal_count;
-        let opponent_has_enough_animals;
+        let self_has_enough_animals = match self.player.owned_animals().get(&trade_animal) {
+            Some(&count) => count >= animal_count,
+            None => false,
+        };
+
+        if !self_has_enough_animals {
+            todo!()
+        }
 
         let opponent = self
             .opponents
             .iter()
             .find(|player| *player.id() == trade.opponent);
+
         match opponent {
             Some(opponent) => {
-                opponent_has_enough_animals = opponent.count_animal(&trade_animal) >= animal_count;
+                let opponent_has_enough_animals = match opponent.owned_animals().get(&trade_animal)
+                {
+                    Some(&count) => count >= animal_count,
+                    None => false,
+                };
+                if !opponent_has_enough_animals {
+                    todo!()
+                }
             }
-            None => opponent_has_enough_animals = false,
+            None => todo!(),
         }
 
         let mut new_trade = trade.clone();
-        if !self_has_enough_animals {
-            todo!()
-        }
-        if !opponent_has_enough_animals {
-            todo!()
-        }
-
         let new_combination = self.rectify_money_combination(&trade.amount);
-
         new_trade.amount = new_combination;
 
         new_trade
@@ -127,11 +135,76 @@ impl PlayerActions for SupervisedPlayer {
                 TradeOpponentDecision::CounterOffer(self.rectify_money_combination(&amount))
             }
         }
-
-        //todo check if the player even has that money to make the hidden
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        match update.clone() {
+            GameUpdate::Start {
+                wallet,
+                players_in_turn_order,
+                animals,
+            } => todo!(),
+            GameUpdate::End { ranking } => todo!(),
+            GameUpdate::ExposePlayer { player, wallet } => todo!(),
+            GameUpdate::Auction {
+                rounds,
+                from,
+                to,
+                money_transfer,
+            } => match money_transfer {
+                // check if what animal, not necessary to check if host, because is checked with from to
+                MoneyTransfer::Public {
+                    card_amount,
+                    min_value,
+                } => {}
+                MoneyTransfer::Private { amount } => {
+                    if self.player.id() == &from {
+                        self.player.wallet_mut().withdraw(&amount);
+                    } else if self.player.id() == &to {
+                        self.player.wallet_mut().withdraw(&amount);
+                    }
+                }
+            },
+            GameUpdate::Trade {
+                challenger,
+                opponent,
+                animal,
+                animal_count,
+                receiver,
+                money_trade,
+            } => {
+                let animal_count: usize = animal_count.clone() as usize;
+                let player_id = self.player.id().clone();
+                if (player_id == challenger || player_id == opponent) && player_id == receiver {
+                    self.player.add_animals(&animal, animal_count);
+                } else if (player_id == challenger || player_id == opponent)
+                    && player_id != receiver
+                {
+                    self.player.remove_animals(&animal, animal_count);
+                }
+                match money_trade {
+                    MoneyTrade::Public {
+                        challenger_card_offer,
+                        opponent_card_offer,
+                    } => {}
+                    MoneyTrade::Private {
+                        challenger_card_offer,
+                        opponent_card_offer,
+                    } => {
+                        if player_id == challenger {
+                            self.player.wallet_mut().withdraw(&challenger_card_offer);
+                            opponent_card_offer
+                                .map(|amount| self.player.wallet_mut().deposit(&amount));
+                        } else {
+                            opponent_card_offer
+                                .map(|amount| self.player.wallet_mut().withdraw(&amount));
+                            self.player.wallet_mut().deposit(&challenger_card_offer);
+                        }
+                    }
+                }
+            }
+        }
+
         self.player.player_actions()._receive_game_update(update)
     }
 }

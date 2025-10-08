@@ -9,7 +9,7 @@ use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
 
-pub trait PlayerActions: Send + Sync {
+pub trait PlayerActions {
     fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
         match state_msg {
             StateMessage::DrawOrTrade => ActionMessage::PlayerTurnDecision {

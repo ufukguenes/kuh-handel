@@ -20,23 +20,33 @@ impl Wallet {
         }
     }
 
-    pub fn withdraw(&mut self, amount: Value) -> Result<(), GameError> {
-        // ToDo: implement the actual version of withdraw (check money and maybe receive not a value but a handful of money)
-
-        let key = self
-            .bank_notes
-            .iter()
-            .find(|(key, _)| key.value() >= amount)
-            .map(|(key, _)| *key);
-        match key {
-            Some(k) => {
-                self.bank_notes
-                    .entry(k)
-                    .and_modify(|e| *e = e.checked_sub(1).or(Some(0)).unwrap());
+    pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), GameError> {
+        for money in amount {
+            let count = self.bank_notes.get_mut(&money);
+            match count {
+                Some(count) => {
+                    if *count > 0 {
+                        *count -= 1;
+                    } else {
+                        return Result::Err(GameError::MoneyNotAvailable);
+                    }
+                }
+                None => {
+                    return Result::Err(GameError::MoneyNotAvailable);
+                }
             }
-            None => (),
-        };
+        }
+
         Ok(())
+    }
+
+    pub fn deposit(&mut self, amount: &Vec<Money>) {
+        for money in amount {
+            self.bank_notes
+                .entry(*money)
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
+        }
     }
 
     pub fn to_vec(&self) -> Vec<Money> {
@@ -58,25 +68,8 @@ impl Wallet {
     }
 
     pub fn check_if_exact(&self, bill_combination: &Vec<Money>) -> bool {
-        let mut mut_wallet = self.bank_notes.clone();
-        let mut fits_exact = true;
-        for money in bill_combination {
-            let count = mut_wallet.get_mut(&money);
-            match count {
-                Some(count) => {
-                    if *count > 0 {
-                        *count -= 1;
-                    } else {
-                        fits_exact = false;
-                    }
-                }
-                None => {
-                    fits_exact = false;
-                }
-            }
-        }
-
-        fits_exact
+        let mut temp_wallet = self.clone();
+        temp_wallet.withdraw(bill_combination).is_ok()
     }
 
     pub fn propose_bill_combinations(

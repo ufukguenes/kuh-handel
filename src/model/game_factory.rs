@@ -2,7 +2,7 @@ use super::game_logic::Game;
 use crate::model::{
     animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
     money::{money::Money, value::Value, wallet::Wallet},
-    player::{player_actions::base_player_actions::PlayerActions, player_group::PlayerGroup},
+    player::{base_player::Player, player_actions::base_player_actions::PlayerActions},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -11,7 +11,7 @@ use std::{collections::HashMap, rc::Rc, vec};
 impl Game {
     pub fn new_default_game(
         player_ids: Vec<String>,
-        players_actions: Vec<Box<dyn PlayerActions>>,
+        player_actions: Vec<Box<dyn PlayerActions>>,
         seed: u64,
     ) -> Self {
         let mut bank_notes: HashMap<Money, usize> = HashMap::new();
@@ -44,14 +44,19 @@ impl Game {
         ];
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
 
-        Game::new(players, game_stack, seed)
+        let players = player_ids
+            .iter()
+            .zip(player_actions)
+            .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
+            .collect();
+
+        Game::new(players, wallet, game_stack, seed)
     }
 
     pub fn new_random_game(
         player_ids: Vec<String>,
-        players_actions: Vec<Box<dyn PlayerActions>>,
+        player_actions: Vec<Box<dyn PlayerActions>>,
         seed: u64,
     ) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
@@ -103,8 +108,12 @@ impl Game {
         }
 
         let wallet: Wallet = Wallet::new(bank_notes);
-        let players: PlayerGroup = PlayerGroup::new(player_ids.clone(), players_actions, wallet);
+        let players = player_ids
+            .iter()
+            .zip(player_actions)
+            .map(|(id, player_action)| Player::new(id.clone(), wallet.clone(), player_action))
+            .collect();
 
-        Game::new(players, game_stack, seed)
+        Game::new(players, wallet, game_stack, seed)
     }
 }

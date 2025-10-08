@@ -1,10 +1,15 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::messages::actions::*;
 use crate::messages::game_updates::*;
+use crate::messages::message_protocol::StateMessage;
+use crate::model::animals::Animal;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::money::wallet::Affordability::*;
+use crate::model::player;
 use crate::model::player::{
     base_player::{Player, PlayerId},
     player_actions::base_player_actions::PlayerActions,
@@ -17,8 +22,8 @@ use crate::model::player::{
 /// 3. if for example the opponent exists but it doesn't have the animals,
 /// the alternative would not be to switch from trade to draw, but to find a fitting alternative trade
 pub struct SupervisedPlayer {
-    player: Player,
-    opponents: Rc<Vec<Player>>,
+    pub player: Rc<RefCell<Player>>,
+    opponents: Vec<Rc<RefCell<Player>>>,
 }
 
 /// todo, what to do when invalid decision?
@@ -28,11 +33,26 @@ pub struct SupervisedPlayer {
 /// as you might for example only withdraw the amount of money that you actually payed, and not if you only thought you payed?
 
 impl SupervisedPlayer {
+    pub fn new(player: Rc<RefCell<Player>>, opponents: Vec<Rc<RefCell<Player>>>) -> Self {
+        SupervisedPlayer {
+            player: player,
+            opponents: opponents,
+        }
+    }
+
+    pub fn id(&self) -> PlayerId {
+        self.player.borrow().id().clone()
+    }
+
+    pub fn can_trade(&self) -> bool {
+        todo!()
+    }
+
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
-        match self.player.wallet().can_afford(combination) {
+        match self.player.borrow_mut().wallet().can_afford(combination) {
             Exact => combination.clone(),
             Alternative(alternative) => alternative,
-            CannotAfford => self.player.wallet().to_vec(),
+            CannotAfford => self.player.borrow_mut().wallet().to_vec(),
         }
     }
 
@@ -40,7 +60,8 @@ impl SupervisedPlayer {
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
 
-        let self_has_enough_animals = match self.player.owned_animals().get(&trade_animal) {
+        let self_has_enough_animals = match self.player.borrow().owned_animals().get(&trade_animal)
+        {
             Some(&count) => count >= animal_count,
             None => false,
         };
@@ -52,15 +73,15 @@ impl SupervisedPlayer {
         let opponent = self
             .opponents
             .iter()
-            .find(|player| *player.id() == trade.opponent);
+            .find(|player| player.borrow().id() == &trade.opponent);
 
         match opponent {
             Some(opponent) => {
-                let opponent_has_enough_animals = match opponent.owned_animals().get(&trade_animal)
-                {
-                    Some(&count) => count >= animal_count,
-                    None => false,
-                };
+                let opponent_has_enough_animals =
+                    match opponent.borrow().owned_animals().get(&trade_animal) {
+                        Some(&count) => count >= animal_count,
+                        None => false,
+                    };
                 if !opponent_has_enough_animals {
                     todo!()
                 }
@@ -79,7 +100,7 @@ impl SupervisedPlayer {
         match send_money {
             SendMoney::WasBluff => return send_money.clone(),
             SendMoney::Amount(amount) => {
-                let has_enough_money = self.player.wallet().can_afford(amount);
+                let has_enough_money = self.player.borrow().wallet().can_afford(amount);
                 match has_enough_money {
                     Exact => return send_money.clone(),
                     Alternative(alternative_payment) => {
@@ -91,11 +112,17 @@ impl SupervisedPlayer {
             }
         }
     }
+
+    pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
+        let action_msg = self.map_to_action(state_msg);
+        T::extract(action_msg)
+    }
 }
 
 impl PlayerActions for SupervisedPlayer {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        let decision: PlayerTurnDecision = self.player.player_actions()._draw_or_trade();
+        let decision: PlayerTurnDecision =
+            self.player.borrow_mut().player_actions()._draw_or_trade();
         match decision {
             PlayerTurnDecision::Draw => decision,
             PlayerTurnDecision::Trade(initial_trade) => {
@@ -107,28 +134,39 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        let decision: InitialTrade = self.player.player_actions()._trade();
+        let decision: InitialTrade = self.player.borrow_mut().player_actions()._trade();
         self.rectify_initial_trade(&decision)
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        self.player.player_actions()._provide_bidding(state)
+        self.player
+            .borrow_mut()
+            .player_actions()
+            ._provide_bidding(state)
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        self.player.player_actions()._buy_or_sell(state)
+        self.player
+            .borrow_mut()
+            .player_actions()
+            ._buy_or_sell(state)
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
         let decision = self
             .player
+            .borrow_mut()
             .player_actions()
             ._send_money_to_player(player, amount);
         self.rectify_payment(&decision)
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        let decision = self.player.player_actions()._respond_to_trade(offer);
+        let decision = self
+            .player
+            .borrow_mut()
+            .player_actions()
+            ._respond_to_trade(offer);
         match decision {
             TradeOpponentDecision::Accept => decision,
             TradeOpponentDecision::CounterOffer(amount) => {
@@ -148,10 +186,11 @@ impl PlayerActions for SupervisedPlayer {
             } => match money_transfer {
                 // check if what animal, not necessary to check if host, because is checked with from to
                 MoneyTransfer::Private { amount } => {
-                    if self.player.id() == &from {
-                        self.player.wallet_mut().withdraw(&amount);
-                    } else if self.player.id() == &to {
-                        self.player.wallet_mut().withdraw(&amount);
+                    let mut player = self.player.borrow_mut();
+                    if player.id() == &from {
+                        player.wallet_mut().withdraw(&amount);
+                    } else if player.id() == &to {
+                        player.wallet_mut().withdraw(&amount);
                     }
                 }
                 _ => {}
@@ -165,13 +204,14 @@ impl PlayerActions for SupervisedPlayer {
                 money_trade,
             } => {
                 let animal_count: usize = animal_count.clone() as usize;
-                let player_id = self.player.id().clone();
+                let mut player = self.player.borrow_mut();
+                let player_id = player.id().clone();
                 if (player_id == challenger || player_id == opponent) && player_id == receiver {
-                    self.player.add_animals(&animal, animal_count);
+                    player.add_animals(&animal, animal_count);
                 } else if (player_id == challenger || player_id == opponent)
                     && player_id != receiver
                 {
-                    self.player.remove_animals(&animal, animal_count);
+                    player.remove_animals(&animal, animal_count);
                 }
                 match money_trade {
                     MoneyTrade::Private {
@@ -179,13 +219,11 @@ impl PlayerActions for SupervisedPlayer {
                         opponent_card_offer,
                     } => {
                         if player_id == challenger {
-                            self.player.wallet_mut().withdraw(&challenger_card_offer);
-                            opponent_card_offer
-                                .map(|amount| self.player.wallet_mut().deposit(&amount));
+                            player.wallet_mut().withdraw(&challenger_card_offer);
+                            opponent_card_offer.map(|amount| player.wallet_mut().deposit(&amount));
                         } else {
-                            opponent_card_offer
-                                .map(|amount| self.player.wallet_mut().withdraw(&amount));
-                            self.player.wallet_mut().deposit(&challenger_card_offer);
+                            opponent_card_offer.map(|amount| player.wallet_mut().withdraw(&amount));
+                            player.wallet_mut().deposit(&challenger_card_offer);
                         }
                     }
                     _ => {}
@@ -195,6 +233,9 @@ impl PlayerActions for SupervisedPlayer {
             _ => {}
         }
 
-        self.player.player_actions()._receive_game_update(update)
+        self.player
+            .borrow_mut()
+            .player_actions()
+            ._receive_game_update(update)
     }
 }

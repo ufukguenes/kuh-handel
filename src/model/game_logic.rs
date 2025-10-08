@@ -6,11 +6,14 @@ use crate::messages::game_updates::{AnimalTradeCount, AuctionRound, GameUpdate, 
 
 use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::{Animal, AnimalSet};
+use crate::model::game_errors::GameError;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
+use crate::model::money::wallet::Wallet;
 use crate::model::player::base_player::{Player, PlayerId};
 
-use crate::model::player::player_group::PlayerGroup;
+use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::supervised_player::{self, SupervisedPlayer};
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
@@ -23,20 +26,12 @@ use std::fmt::Display;
 use std::rc::Rc;
 
 pub struct Game {
-    players: Rc<RefCell<PlayerGroup>>,
+    players: Vec<Rc<RefCell<SupervisedPlayer>>>,
     game_stack: Vec<Rc<Animal>>,
     animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
     animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
 }
-
-#[derive(Debug)]
-pub enum GameError {
-    InvalidAction,
-    InvalidState,
-}
-
-type GameResult<T = ()> = Result<T, GameError>;
 
 impl Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -60,7 +55,12 @@ impl Display for Game {
 }
 
 impl Game {
-    pub fn new(players: PlayerGroup, animal_sets: Vec<Rc<AnimalSet>>, seed: u64) -> Self {
+    pub fn new(
+        players: Vec<Player>,
+        start_wallet: Wallet,
+        animal_sets: Vec<Rc<AnimalSet>>,
+        seed: u64,
+    ) -> Self {
         let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
         let num_players = players.len();
@@ -74,26 +74,45 @@ impl Game {
 
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
+        let players: Vec<Rc<RefCell<Player>>> = players
+            .into_iter()
+            .map(|p| Rc::new(RefCell::new(p)))
+            .collect();
+
+        let mut supervised_players = Vec::new();
         for player in players.iter() {
-            let state_msg = StateMessage::GameUpdate {
-                update: GameUpdate::Start {
-                    wallet: players.start_wallet.clone(),
-                    players_in_turn_order: players
-                        .iter()
-                        .map(|ref_player| ref_player.borrow().id().clone())
-                        .collect(),
-                    animals: animal_sets
-                        .clone()
-                        .into_iter()
-                        .map(|rc_animal| (*rc_animal).clone())
-                        .collect(),
-                },
-            };
-            let _: NoAction = player.borrow_mut().map_to_action_inner(state_msg);
+            let opponents: Vec<Rc<RefCell<Player>>> = players
+                .iter()
+                .filter(|p| p.borrow().id() != player.borrow().id())
+                .cloned()
+                .collect();
+            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents);
+            supervised_players.push(Rc::new(RefCell::new(new_supervised_player)));
+        }
+
+        let update = GameUpdate::Start {
+            wallet: start_wallet.clone(),
+            players_in_turn_order: supervised_players
+                .iter()
+                .map(|ref_player| ref_player.borrow().id().clone())
+                .collect(),
+            animals: animal_sets
+                .clone()
+                .into_iter()
+                .map(|rc_animal| (*rc_animal).clone())
+                .collect(),
+        };
+
+        for player in supervised_players.iter() {
+            let _: NoAction = player
+                .borrow_mut()
+                .map_to_action_inner(StateMessage::GameUpdate {
+                    update: update.clone(),
+                });
         }
 
         Game {
-            players: Rc::new(RefCell::new(players)),
+            players: supervised_players,
             game_stack: game_stack,
             animal_usage: animal_usage,
             animal_sets: animal_sets,
@@ -101,7 +120,7 @@ impl Game {
         }
     }
 
-    pub fn play(&mut self) -> GameResult {
+    pub fn play(&mut self) -> Result<(), GameError> {
         self.draw_phase();
         self.trading_phase();
 
@@ -109,41 +128,24 @@ impl Game {
     }
 
     pub fn num_players(&mut self) -> usize {
-        self.num_players = self.players.borrow().len();
+        self.num_players = self.players.len();
         self.num_players
     }
 
     pub fn get_all_ids(&self) -> Vec<String> {
         let mut all_ids = Vec::new();
-        for player in self.players.borrow().iter() {
+        for player in self.players.iter() {
             all_ids.push(player.borrow().id().to_string());
         }
         return all_ids;
     }
 
-    pub fn get_player_by_id(&self, id: &PlayerId) -> Option<Rc<RefCell<Player>>> {
-        for player in self.players.borrow().iter() {
-            if player.borrow().id() == id {
-                return Some(Rc::clone(player));
-            }
-        }
-
-        return None;
-    }
-
-    pub fn get_player_for_current_turn(&self) -> Rc<RefCell<Player>> {
-        self.players.borrow().get(0).unwrap() // todo
-    }
-
     pub fn remove_player(&mut self, id: String) {}
 
-    pub fn play_one_round(&mut self) {}
-
-    fn auction(&mut self, player_ref: Rc<RefCell<Player>>, animal: &Rc<Animal>) {
+    fn auction(&mut self, player_ref: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
         let host_id = player_ref.borrow().id().clone();
-        let players = Rc::clone(&self.players);
 
-        let auction_players = players.borrow().get_auction_players(&host_id);
+        let auction_players = self.get_players_excluding(&host_id);
         print!("gl | host {}, auction_player: ", host_id);
         for p in auction_players.clone() {
             print!("{}, ", p.borrow().id().name);
@@ -198,7 +200,7 @@ impl Game {
         let (max_bidder_id, max_bid) = bids.iter().max_by_key(|(_, bid)| bid).unwrap();
         let auction_winner = auction_players
             .iter()
-            .find(|p| p.borrow().id() == max_bidder_id)
+            .find(|p| p.borrow().id() == *max_bidder_id)
             .unwrap();
         let mut auction_winner = auction_winner.borrow_mut();
 
@@ -207,26 +209,27 @@ impl Game {
             Bidding::Bid(v) => v.value(),
         };
 
-        let (sender, receiver): (&mut Player, &mut Player) = match player_decision {
-            AuctionDecision::Buy => {
-                println!("gl | Player {} buys animal {}", host_id, animal);
+        let (sender, receiver): (&mut SupervisedPlayer, &mut SupervisedPlayer) =
+            match player_decision {
+                AuctionDecision::Buy => {
+                    println!("gl | Player {} buys animal {}", host_id, animal);
 
-                (&mut *player_ref.borrow_mut(), &mut *auction_winner)
-            }
-            AuctionDecision::Sell => {
-                println!("gl | Player {} sells animal {}", host_id, animal);
+                    (&mut *player_ref.borrow_mut(), &mut *auction_winner)
+                }
+                AuctionDecision::Sell => {
+                    println!("gl | Player {} sells animal {}", host_id, animal);
 
-                (&mut *auction_winner, &mut *player_ref.borrow_mut())
-            }
-        };
+                    (&mut *auction_winner, &mut *player_ref.borrow_mut())
+                }
+            };
 
         let auction_result = self.process_auction(sender, receiver, max_bid, final_auction_round);
     }
 
     fn process_auction(
         &mut self,
-        sender: &mut Player,
-        receiver: &mut Player,
+        sender: &mut SupervisedPlayer,
+        receiver: &mut SupervisedPlayer,
         max_bid: Value,
         final_auction_round: AuctionRound,
     ) {
@@ -266,12 +269,12 @@ impl Game {
 
     fn public_private_update(
         &mut self,
-        player_a: &mut Player,
-        player_b: &mut Player,
+        player_a: &mut SupervisedPlayer,
+        player_b: &mut SupervisedPlayer,
         public_update: GameUpdate,
         private_update: GameUpdate,
     ) {
-        for other_player in self.players.borrow().iter() {
+        for other_player in self.players.iter() {
             if other_player.borrow().id() != player_a.id()
                 && other_player.borrow().id() != player_b.id()
             {
@@ -294,31 +297,32 @@ impl Game {
     }
 
     fn offer_trade_to_opponent(
-        &mut self,
-        challenger: &mut Player,
-        opponent: &mut Player,
+        &self,
+        challenger: Rc<RefCell<SupervisedPlayer>>,
+        opponent: Rc<RefCell<SupervisedPlayer>>,
         amount: Vec<Money>,
         animal: Animal,
         animal_count: AnimalTradeCount,
     ) {
         let offer = TradeOffer {
-            challenger: challenger.id().clone(),
+            challenger: challenger.borrow().id().clone(),
             animal,
             animal_count,
             challenger_card_offer: amount.len(),
         };
 
         let state_msg = StateMessage::RespondToTrade { offer: offer };
-        let player_decision: TradeOpponentDecision = opponent.map_to_action_inner(state_msg);
+        let player_decision: TradeOpponentDecision =
+            opponent.borrow_mut().map_to_action_inner(state_msg);
 
         match player_decision {
             TradeOpponentDecision::Accept => {
-                println!("gl | Trade accepted by {}", opponent.id());
+                println!("gl | Trade accepted by {}", opponent.borrow().id());
             }
             TradeOpponentDecision::CounterOffer(amount) => {
                 println!(
                     "gl | Trade countered by {} with amount {:?}",
-                    opponent.id(),
+                    opponent.borrow().id(),
                     amount
                 );
             }
@@ -328,23 +332,21 @@ impl Game {
         );
     }
 
-    fn player_must_trade(&mut self, player: &mut Player) {
+    fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
         let state_msg = StateMessage::Trade;
-        let player_decision: InitialTrade = player.map_to_action_inner(state_msg);
+        let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
 
-        let opponent = self
-            .players
-            .borrow()
-            .get_by_id(&player_decision.opponent)
-            .unwrap();
-
-        self.offer_trade_to_opponent(
-            player,
-            &mut *opponent.borrow_mut(),
-            player_decision.amount,
-            player_decision.animal,
-            player_decision.animal_count,
-        );
+        let opponent = self.get_by_id(&player_decision.opponent);
+        match opponent {
+            Ok(opponent) => self.offer_trade_to_opponent(
+                player,
+                opponent,
+                player_decision.amount,
+                player_decision.animal,
+                player_decision.animal_count,
+            ),
+            Err(e) => panic!("{:?}", e),
+        }
     }
 
     fn draw_phase(&mut self) {
@@ -355,9 +357,9 @@ impl Game {
         //
         while !self.game_stack.is_empty() {
             println!("gl | --- New turn ---");
-            let players = Rc::clone(&self.players);
-            let player: Rc<RefCell<Player>> =
-                Rc::clone(&players.borrow().get(current_player_idx).unwrap());
+
+            let player: Rc<RefCell<SupervisedPlayer>> =
+                Rc::clone(self.players.get(current_player_idx).unwrap());
 
             let state_msg = StateMessage::DrawOrTrade;
             let player_decision: PlayerTurnDecision =
@@ -375,18 +377,20 @@ impl Game {
                     animal_count,
                     amount,
                 }) => {
-                    let opponent: Rc<RefCell<Player>> =
-                        Rc::clone(&self.players.borrow().get_by_id(&opponent).unwrap());
-                    self.offer_trade_to_opponent(
-                        &mut *player.borrow_mut(),
-                        &mut *opponent.borrow_mut(),
-                        amount,
-                        animal,
-                        animal_count,
-                    );
+                    let opponent = self.get_by_id(&opponent);
+                    match opponent {
+                        Ok(opponent) => self.offer_trade_to_opponent(
+                            player,
+                            opponent,
+                            amount,
+                            animal,
+                            animal_count,
+                        ),
+                        Err(e) => panic!("{:?}", e),
+                    }
                 }
             };
-            current_player_idx = (current_player_idx + 1) % players.borrow().len();
+            current_player_idx = (current_player_idx + 1) % self.players.len();
             println!("");
 
             // ToDo: a lot of stuff to do here
@@ -394,13 +398,36 @@ impl Game {
     }
 
     fn trading_phase(&mut self) {
-        let players = Rc::clone(&self.players);
-        for player in players.borrow().iter().cycle() {
-            let mut current_player = player.borrow_mut();
-
-            if current_player.can_trade() {
-                self.player_must_trade(&mut *current_player);
+        for player in self.players.iter().cycle() {
+            if player.borrow().can_trade() {
+                self.player_must_trade(Rc::clone(player));
             }
+        }
+    }
+
+    pub fn get_players_excluding(
+        &self,
+        excluding: &PlayerId,
+    ) -> Vec<Rc<RefCell<SupervisedPlayer>>> {
+        self.players
+            .iter()
+            .filter(|p| p.borrow().id() != *excluding)
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_by_id(
+        &self,
+        player_id: &PlayerId,
+    ) -> Result<Rc<RefCell<SupervisedPlayer>>, GameError> {
+        let player = self
+            .players
+            .iter()
+            .find(|player| player.borrow().id() == *player_id);
+
+        match player {
+            Some(player) => Ok(Rc::clone(player)),
+            None => Err(GameError::PlayerNotFound),
         }
     }
 }

@@ -171,7 +171,7 @@ impl Game {
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
             println!(
-                "gl | Player {} bids {:?} in auction for animal {}",
+                "gl | \t Player {} bids {:?} in auction for animal {}",
                 bidder.borrow().id(),
                 player_decision,
                 animal
@@ -211,12 +211,12 @@ impl Game {
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy => {
-                        println!("gl | Player {} buys animal {}", host_id, animal);
+                        println!("gl | \t Player {} buys animal {}", host_id, animal);
 
                         (player, Rc::clone(auction_winner))
                     }
                     AuctionDecision::Sell => {
-                        println!("gl | Player {} sells animal {}", host_id, animal);
+                        println!("gl | \t Player {} sells animal {}", host_id, animal);
 
                         (Rc::clone(auction_winner), player)
                     }
@@ -349,14 +349,14 @@ impl Game {
         let (opponent_total_value, opponent_card_count, opponent_offer_vec) = match player_decision
         {
             TradeOpponentDecision::Accept => {
-                println!("gl | Trade accepted by {}", opponent.borrow().id());
+                println!("gl | \t Trade accepted by {}", opponent.borrow().id());
                 (0, None, None)
             }
             TradeOpponentDecision::CounterOffer(amount) => {
                 println!(
-                    "gl | Trade countered by {} with amount {:?}",
+                    "gl | \t Trade countered by {} with amount {}",
                     opponent.borrow().id(),
-                    amount
+                    amount.iter().map(|m| m.as_usize()).sum::<usize>(),
                 );
                 (
                     amount.iter().map(|money| money.as_usize()).sum(),
@@ -401,19 +401,45 @@ impl Game {
     }
 
     fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
-        println!("gl | player_must_trade");
+        println!("gl | {} must trade", player.borrow().id());
+
         let state_msg = StateMessage::Trade;
         let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
 
         let opponent = self.get_by_id(&player_decision.opponent);
         match opponent {
-            Ok(opponent) => self.offer_trade_to_opponent(
-                player,
-                opponent,
-                player_decision.amount,
-                player_decision.animal,
-                player_decision.animal_count,
-            ),
+            Ok(opponent) => {
+                let opponent_count = opponent
+                    .borrow()
+                    .player
+                    .borrow()
+                    .owned_animals()
+                    .get(&player_decision.animal)
+                    .unwrap_or(&0)
+                    .clone();
+
+                println!(
+                    "gl | \t {} trades {}-{} for {}, against {} who has {} many",
+                    player.borrow().id(),
+                    player_decision.animal_count,
+                    player_decision.animal,
+                    player_decision
+                        .amount
+                        .iter()
+                        .map(|m| m.as_usize())
+                        .sum::<usize>(),
+                    player_decision.opponent,
+                    opponent_count
+                );
+
+                self.offer_trade_to_opponent(
+                    player,
+                    opponent,
+                    player_decision.amount,
+                    player_decision.animal,
+                    player_decision.animal_count,
+                )
+            }
             Err(e) => panic!("{:?}", e),
         }
     }
@@ -437,7 +463,11 @@ impl Game {
             match player_decision {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
-                    println!("gl | Player {} drew card: {}", player.borrow().id(), card);
+                    println!(
+                        "gl | \t Player {} drew card: {}",
+                        player.borrow().id(),
+                        card
+                    );
                     self.auction(player, &card)
                 }
                 PlayerTurnDecision::Trade(InitialTrade {
@@ -471,6 +501,9 @@ impl Game {
         for (i, player) in self.players.iter().cycle().enumerate() {
             let current_cycle = i / self.players.len();
             if current_cycle >= max_cycles {
+                println!(
+                    "gl | game ended after maximum number of iterations in trading phase was reached "
+                );
                 break;
             }
 

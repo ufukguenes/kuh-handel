@@ -163,7 +163,7 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        if let Some(min_payment) = self.wallet.get_min_payment() {
+        if let Some(_) = self.wallet.get_min_payment() {
             let random_value = self
                 .rng
                 .random_range(0..=self.wallet.total_money().unwrap().value());
@@ -172,7 +172,7 @@ impl PlayerActions for RandomPlayerActions {
                 .propose_bill_combinations(Value::new(random_value), false);
             let counter_offer =
                 TradeOpponentDecision::CounterOffer(combination.get(0).unwrap().1.clone());
-            return vec![TradeOpponentDecision::Accept]
+            return vec![TradeOpponentDecision::Accept, counter_offer]
                 .choose(&mut self.rng)
                 .unwrap()
                 .clone();

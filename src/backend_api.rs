@@ -8,7 +8,7 @@ use axum::{
     response::IntoResponse,
 };
 pub use axum_macros::debug_handler;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -23,18 +23,18 @@ pub struct AuthParams {
 }
 
 pub struct WebsocketGame {
-    connected_players: Arc<Mutex<HashMap<String, bool>>>,
-    channel_per_player: Arc<Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>>,
+    connected_players: Arc<Mutex<BTreeMap<String, bool>>>,
+    channel_per_player: Arc<Mutex<BTreeMap<String, (Receiver<Message>, Sender<Message>)>>>,
 }
 
 impl WebsocketGame {
     pub async fn new(
         websocket_channels_per_player: Arc<
-            Mutex<HashMap<String, (Receiver<Message>, Sender<Message>)>>,
+            Mutex<BTreeMap<String, (Receiver<Message>, Sender<Message>)>>,
         >,
     ) -> Result<WebsocketGame, GameError> {
-        let connected_players: Arc<Mutex<HashMap<String, bool>>> =
-            Arc::new(Mutex::new(HashMap::new()));
+        let connected_players: Arc<Mutex<BTreeMap<String, bool>>> =
+            Arc::new(Mutex::new(BTreeMap::new()));
 
         for player_id in websocket_channels_per_player.lock().await.keys() {
             connected_players

@@ -1,7 +1,7 @@
 use std::cell::Ref;
 use std::cell::RefCell;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use crate::messages::actions::*;
@@ -54,7 +54,7 @@ impl SupervisedPlayer {
     pub fn can_trade(&self) -> Option<InitialTrade> {
         self.player.borrow().can_trade(&self.opponents)
     }
-    pub fn clone_owned_animals(&self) -> HashMap<Animal, usize> {
+    pub fn clone_owned_animals(&self) -> BTreeMap<Animal, usize> {
         self.player.borrow().owned_animals().clone()
     }
 
@@ -84,7 +84,7 @@ impl SupervisedPlayer {
                     1
                 } else {
                     panic!(
-                        "animal was in hashmap, but amount was set to zero, this should/ can not happen"
+                        "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"
                     )
                 }
             }
@@ -109,7 +109,7 @@ impl SupervisedPlayer {
                     1
                 } else {
                     panic!(
-                        "animal was in hashmap, but amount was set to zero, this should/ can not happen"
+                        "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"
                     )
                 }
             }

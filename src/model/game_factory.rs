@@ -6,7 +6,7 @@ use crate::model::{
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::{collections::HashMap, rc::Rc, vec};
+use std::{collections::BTreeMap, rc::Rc, vec};
 
 impl Game {
     pub fn new_default_game(
@@ -14,7 +14,7 @@ impl Game {
         player_actions: Vec<Box<dyn PlayerActions>>,
         seed: u64,
     ) -> Self {
-        let mut bank_notes: HashMap<Money, usize> = HashMap::new();
+        let mut bank_notes: BTreeMap<Money, usize> = BTreeMap::new();
         bank_notes.insert(Money::new(Value::new(0)), 2);
         bank_notes.insert(Money::new(Value::new(10)), 4);
         bank_notes.insert(Money::new(Value::new(50)), 1);
@@ -70,7 +70,7 @@ impl Game {
         let ratio_player_money: usize = rng.random_range(1..=3).try_into().unwrap();
         let animals_per_player: usize = rng.random_range(2..=4).try_into().unwrap();
 
-        let mut bank_notes: HashMap<Money, usize> = HashMap::new();
+        let mut bank_notes: BTreeMap<Money, usize> = BTreeMap::new();
 
         let zero = Money::new_usize(0);
         let ten = Money::new_usize(10);

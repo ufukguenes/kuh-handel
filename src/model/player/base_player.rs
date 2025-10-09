@@ -9,7 +9,7 @@ use crate::model::game_errors::GameError;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -34,7 +34,7 @@ impl Display for PlayerId {
 pub struct Player {
     id: PlayerId,
     wallet: Wallet,
-    owned_animals: HashMap<Animal, usize>,
+    owned_animals: BTreeMap<Animal, usize>,
     game_stack: Vec<Rc<AnimalSet>>,
     player_actions: Box<dyn PlayerActions>,
 }
@@ -50,7 +50,7 @@ impl Player {
             id: PlayerId { name: id },
             wallet: wallet,
             game_stack: game_stack,
-            owned_animals: HashMap::new(),
+            owned_animals: BTreeMap::new(),
             player_actions,
         }
     }
@@ -148,7 +148,7 @@ impl Player {
         &mut self.wallet
     }
 
-    pub fn owned_animals(&self) -> &HashMap<Animal, usize> {
+    pub fn owned_animals(&self) -> &BTreeMap<Animal, usize> {
         &self.owned_animals
     }
 

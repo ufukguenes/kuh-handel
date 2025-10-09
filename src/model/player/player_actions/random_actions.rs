@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::usize;
 
 use rand::seq::{IndexedRandom, IteratorRandom};
@@ -23,7 +23,7 @@ use crate::model::{
 
 pub struct RandomPlayerActions {
     opponents: Vec<PlayerId>,
-    owned_animals: HashMap<Animal, usize>,
+    owned_animals: BTreeMap<Animal, usize>,
     wallet: Wallet,
     id: PlayerId,
     rng: ChaCha8Rng,
@@ -33,8 +33,8 @@ impl RandomPlayerActions {
     pub fn new(my_id: String, seed: u64) -> RandomPlayerActions {
         RandomPlayerActions {
             opponents: Vec::new(),
-            owned_animals: HashMap::new(),
-            wallet: Wallet::new(HashMap::new()),
+            owned_animals: BTreeMap::new(),
+            wallet: Wallet::new(BTreeMap::new()),
             id: PlayerId { name: my_id },
             rng: ChaCha8Rng::seed_from_u64(seed),
         }
@@ -255,7 +255,7 @@ impl PlayerActions for RandomPlayerActions {
                     .filter(|p| p.name != self.id.name)
                     .collect();
                 self.wallet = wallet;
-                self.owned_animals = HashMap::new();
+                self.owned_animals = BTreeMap::new();
             }
 
             _ => {}

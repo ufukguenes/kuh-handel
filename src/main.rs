@@ -2,7 +2,7 @@ use axum::extract::ws::Message;
 use axum::{Router, routing};
 use kuh_handel::model::animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory};
 use kuh_handel::model::game_logic::Game;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::vec;
 use tokio::sync::Mutex;
@@ -31,9 +31,9 @@ async fn main() {
         .init();
 
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new("ufuk".to_string());
-    let (leon_ws_action, leon_channel) = WebsocketActions::new("leon".to_string());
-    let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
+    let ufuk_ws_action = RandomPlayerActions::new("ufuk".to_string(), 5);
+    let leon_ws_action = RandomPlayerActions::new("leon".to_string(), 6);
+    let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 7);
     let seed: u64 = 0;
     let game_handle = tokio::task::spawn_blocking(move || {
         println!("-------Default game--------\n");
@@ -62,11 +62,8 @@ async fn main() {
         print!("game is done")
     });
 
-    let websocket_channels_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)> =
-        HashMap::from([
-            ("ufuk".to_string(), ufuk_channel),
-            ("leon".to_string(), leon_channel),
-        ]);
+    let websocket_channels_per_player: BTreeMap<String, (Receiver<Message>, Sender<Message>)> =
+        BTreeMap::from([]);
 
     let ws_game = Arc::new(Mutex::new(
         WebsocketGame::new(Arc::new(Mutex::new(websocket_channels_per_player)))

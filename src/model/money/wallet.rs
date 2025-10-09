@@ -4,17 +4,17 @@ use serde_with::serde_as;
 use crate::model::game_errors::GameError;
 use crate::model::money::money::Money;
 use crate::model::money::value::Value;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {
     #[serde_as(as = "Vec<(_, _)>")]
-    bank_notes: HashMap<Money, usize>,
+    bank_notes: BTreeMap<Money, usize>,
 }
 
 impl Wallet {
-    pub fn new(bank_notes: HashMap<Money, usize>) -> Self {
+    pub fn new(bank_notes: BTreeMap<Money, usize>) -> Self {
         Wallet {
             bank_notes: bank_notes,
         }
@@ -167,7 +167,7 @@ impl Wallet {
         Some(min_payment)
     }
 
-    pub fn bank_notes(&self) -> &HashMap<Money, usize> {
+    pub fn bank_notes(&self) -> &BTreeMap<Money, usize> {
         &self.bank_notes
     }
 }

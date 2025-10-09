@@ -96,7 +96,7 @@ impl AnimalSet {
     }
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct Animal {
     value: Value,
 }

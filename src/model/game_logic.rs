@@ -20,7 +20,7 @@ use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use std::fmt;
 use std::fmt::Display;
@@ -30,7 +30,7 @@ use std::rc::Rc;
 pub struct Game {
     players: Vec<Rc<RefCell<SupervisedPlayer>>>,
     game_stack: Vec<Rc<Animal>>,
-    animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
+    animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>>,
     animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
     start_wallet: Wallet,
@@ -65,7 +65,7 @@ impl Game {
         animal_sets: Vec<Rc<AnimalSet>>,
         seed: u64,
     ) -> Self {
-        let mut animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>> = HashMap::new();
+        let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
         let num_players = players.len();
 
@@ -145,7 +145,7 @@ impl Game {
     pub fn validate_players_money(&self) -> bool {
         //todo also validate new money gotten from inflation
 
-        let mut all_money_from_players: HashMap<Money, usize> = HashMap::new();
+        let mut all_money_from_players: BTreeMap<Money, usize> = BTreeMap::new();
         for player in self.players.iter() {
             let binding = player.borrow().clone_wallet();
             let current_bank_notes = binding.bank_notes();

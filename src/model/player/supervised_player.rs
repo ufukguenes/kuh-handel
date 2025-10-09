@@ -43,7 +43,7 @@ impl SupervisedPlayer {
         }
     }
 
-    // TODO: need to check, that player id is not opponents id
+    // TODO:
     // i also think there is an issue with keeping track of the animals
 
     pub fn clone_wallet(&self) -> Wallet {
@@ -70,6 +70,10 @@ impl SupervisedPlayer {
     }
 
     fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
+        if self.id() == trade.opponent {
+            return self.can_trade().unwrap();
+        }
+
         let new_amount = self.rectify_money_combination(&trade.amount);
 
         let trade_animal = trade.animal;
@@ -269,12 +273,12 @@ impl PlayerActions for SupervisedPlayer {
                 let animal_count: usize = animal_count.clone();
                 let mut player = self.player.borrow_mut();
                 let player_id = player.id().clone();
-                if (player_id == challenger || player_id == opponent) && player_id == receiver {
-                    player.add_animals(&animal, animal_count);
-                } else if (player_id == challenger || player_id == opponent)
-                    && player_id != receiver
-                {
-                    player.remove_animals(&animal, animal_count);
+                if player_id == challenger || player_id == opponent {
+                    if player_id == receiver {
+                        player.add_animals(&animal, animal_count);
+                    } else {
+                        player.remove_animals(&animal, animal_count);
+                    }
                 }
                 match money_trade {
                     MoneyTrade::Private {

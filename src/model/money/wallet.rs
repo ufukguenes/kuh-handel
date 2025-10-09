@@ -22,12 +22,13 @@ impl Wallet {
 
     pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), GameError> {
         for money in amount {
-            let count = self.bank_notes.get_mut(&money);
+            let count = self.bank_notes.get(&money);
             match count {
-                Some(count) => {
-                    if *count > 0 {
-                        *count -= 1;
-                    } else if *count == 0 {
+                Some(&count) => {
+                    let new_count: isize = count as isize - 1 as isize;
+                    if new_count > 0 {
+                        self.bank_notes.insert(*money, new_count as usize);
+                    } else if new_count == 0 {
                         self.bank_notes.remove(money);
                     } else {
                         return Result::Err(GameError::MoneyNotAvailable);
@@ -164,6 +165,10 @@ impl Wallet {
             Affordability::CannotAfford => return None,
         }
         Some(min_payment)
+    }
+
+    pub fn bank_notes(&self) -> &HashMap<Money, usize> {
+        &self.bank_notes
     }
 }
 

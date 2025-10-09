@@ -5,4 +5,7 @@ pub enum GameError {
     AnimalsNotAvailable,
     InvalidAction,
     InvalidState,
+
+    InvalidMoneyAtEnd,
+    InvalidAnimalsAtEnd,
 }

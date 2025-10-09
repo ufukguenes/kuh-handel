@@ -1,6 +1,7 @@
 use std::cell::Ref;
 use std::cell::RefCell;
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::messages::actions::*;
@@ -28,11 +29,7 @@ pub struct SupervisedPlayer {
     limit_bidding_until_next_auction: bool,
 }
 
-/// todo, what to do when invalid decision?
-///  maybe notify the bot and just pick a random valid action
-///
-/// todo: should the player actions be not be &mut self, but only &self, except for game update,
-/// as you might for example only withdraw the amount of money that you actually payed, and not if you only thought you payed?
+// todo tell the bot if action was changed
 
 impl SupervisedPlayer {
     pub fn new(player: Rc<RefCell<Player>>, opponents: Vec<Rc<RefCell<Player>>>) -> Self {
@@ -42,9 +39,6 @@ impl SupervisedPlayer {
             limit_bidding_until_next_auction: false,
         }
     }
-
-    // TODO:
-    // i also think there is an issue with keeping track of the animals
 
     pub fn clone_wallet(&self) -> Wallet {
         self.player.borrow().wallet().clone()
@@ -59,6 +53,9 @@ impl SupervisedPlayer {
     }
     pub fn can_trade(&self) -> Option<InitialTrade> {
         self.player.borrow().can_trade(&self.opponents)
+    }
+    pub fn clone_owned_animals(&self) -> HashMap<Animal, usize> {
+        self.player.borrow().owned_animals().clone()
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
@@ -250,21 +247,18 @@ impl PlayerActions for SupervisedPlayer {
                         from,
                         to,
                         money_transfer,
-                    } => {
-                        match money_transfer {
-                            // check if what animal, not necessary to check if host, because is checked with from to
-                            MoneyTransfer::Private { amount } => {
-                                let mut player = self.player.borrow_mut();
-                                if player.id() == &from {
-                                    player.wallet_mut().withdraw(&amount);
-                                    player.add_animals(&rounds.animal, 1);
-                                } else if player.id() == &to {
-                                    player.wallet_mut().deposit(&amount);
-                                }
+                    } => match money_transfer {
+                        MoneyTransfer::Private { amount } => {
+                            let mut player = self.player.borrow_mut();
+                            if player.id() == &from {
+                                player.wallet_mut().withdraw(&amount);
+                                player.add_animals(&rounds.animal, 1);
+                            } else if player.id() == &to {
+                                player.wallet_mut().deposit(&amount);
                             }
-                            _ => {}
                         }
-                    }
+                        _ => {}
+                    },
                 }
             }
             GameUpdate::Trade {

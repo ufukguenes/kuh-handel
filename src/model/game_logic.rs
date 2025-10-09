@@ -33,6 +33,7 @@ pub struct Game {
     animal_usage: HashMap<Rc<Animal>, Rc<AnimalSet>>,
     animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
+    start_wallet: Wallet,
 }
 
 // todo inflation
@@ -120,6 +121,7 @@ impl Game {
             animal_usage: animal_usage,
             animal_sets: animal_sets,
             num_players: num_players,
+            start_wallet: start_wallet,
         }
     }
 
@@ -127,11 +129,95 @@ impl Game {
         self.draw_phase();
         self.trading_phase();
 
-        // todo check if game state is valid:
-        // there are no more or less animals,
-        // there is no more or less money,
-        // everyone holds 4 (or num occurences) of each of their deck
+        if !self.validate_players_animals() {
+            print!("gl | game failed animal check at the end");
+            return Err(GameError::InvalidAnimalsAtEnd);
+        };
+
+        if !self.validate_players_money() {
+            print!("gl | game failed money check at the end");
+            return Err(GameError::InvalidMoneyAtEnd);
+        };
+
         Ok(())
+    }
+
+    pub fn validate_players_money(&self) -> bool {
+        //todo also validate new money gotten from inflation
+
+        let mut all_money_from_players: HashMap<Money, usize> = HashMap::new();
+        for player in self.players.iter() {
+            let binding = player.borrow().clone_wallet();
+            let current_bank_notes = binding.bank_notes();
+
+            println!("per: {:?}", current_bank_notes);
+
+            for (money, count) in current_bank_notes.into_iter() {
+                all_money_from_players
+                    .entry(money.clone())
+                    .and_modify(|total| *total += count)
+                    .or_insert(*count);
+            }
+        }
+
+        all_money_from_players = all_money_from_players
+            .into_iter()
+            .map(|(money, count)| (money, count / self.num_players))
+            .collect();
+
+        println!("{:?}", all_money_from_players);
+        println!("{:?}", *self.start_wallet.bank_notes());
+
+        all_money_from_players == *self.start_wallet.bank_notes()
+    }
+
+    pub fn validate_players_animals(&self) -> bool {
+        for (i, player) in self.players.iter().enumerate() {
+            //todo also check if all animals are still existent and none got lost
+            let binding = player.borrow();
+            let current_animals = binding.clone_owned_animals();
+            // check if animal occurs the right amount of times
+            for (animal, count) in current_animals.into_iter() {
+                let current_set = self.animal_sets.iter().find(|set| *set.animal() == animal);
+                match current_set {
+                    Some(current_set) => {
+                        if current_set.occurrences() != count {
+                            {
+                                println!(
+                                    "wrong occurrences {} instead of {}",
+                                    count,
+                                    current_set.occurrences()
+                                );
+                                return false;
+                            };
+                        }
+                    }
+                    None => {
+                        println!("{} does not exist", animal);
+                        return false;
+                    }
+                }
+            }
+
+            // check that no two players share the same animal
+            for other in self.players[i + 1..].iter() {
+                let binding = other.borrow();
+                let others_animals = binding.clone_owned_animals();
+                let has_shared = others_animals
+                    .keys()
+                    .all(|animal| player.borrow().clone_owned_animals().contains_key(animal));
+                if has_shared {
+                    println!(
+                        "{} and {} share animals",
+                        other.borrow().id(),
+                        player.borrow().id()
+                    );
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 
     pub fn num_players(&mut self) -> usize {

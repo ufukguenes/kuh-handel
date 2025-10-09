@@ -1,3 +1,4 @@
+use std::cell::Ref;
 use std::cell::RefCell;
 
 use std::rc::Rc;
@@ -50,8 +51,11 @@ impl SupervisedPlayer {
         self.player.borrow().id().clone()
     }
 
-    pub fn can_trade(&self) -> (Option<(Animal, usize)>, bool) {
-        self.player.borrow().can_trade()
+    pub fn can_trade_against(&self, opponent: Rc<RefCell<Player>>) -> Option<InitialTrade> {
+        self.player.borrow().can_trade_against(opponent)
+    }
+    pub fn can_trade(&self) -> Option<InitialTrade> {
+        self.player.borrow().can_trade(&self.opponents)
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
@@ -62,29 +66,13 @@ impl SupervisedPlayer {
         }
     }
 
-    fn find_new_trade(&self, current_trade: &mut InitialTrade) -> InitialTrade {
-        let mut new_trade = current_trade.clone();
-        let (animal, _) = self.can_trade().0.unwrap();
-        for opponent in self.opponents.iter() {
-            if opponent.borrow().owned_animals().contains_key(&animal) {
-                new_trade.opponent = opponent.borrow().id().clone();
-                new_trade.animal = animal;
-                new_trade.animal_count = 1;
-            }
-        }
-        new_trade
-    }
-
     fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
-        let mut new_trade = trade.clone();
-
-        let new_combination = self.rectify_money_combination(&trade.amount);
-        new_trade.amount = new_combination;
+        let new_amount = self.rectify_money_combination(&trade.amount);
 
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
 
-        let player_animal_count = match self.player.borrow().owned_animals().get(&trade_animal) {
+        let animal_trade_count = match self.player.borrow().owned_animals().get(&trade_animal) {
             Some(&count) => {
                 if count >= animal_count {
                     count
@@ -96,7 +84,7 @@ impl SupervisedPlayer {
                     )
                 }
             }
-            None => return self.find_new_trade(&mut new_trade), // player does not have animal
+            None => return self.can_trade().unwrap(), // player does not have animal
         };
 
         let opponent: Option<&Rc<RefCell<Player>>> = self
@@ -106,7 +94,7 @@ impl SupervisedPlayer {
 
         let opponent = match opponent {
             Some(opponent) => opponent,
-            None => return self.find_new_trade(&mut new_trade), // opponent does not exist
+            None => return self.can_trade().unwrap(), // opponent does not exist
         };
 
         let opponent_animal_count = match opponent.borrow().owned_animals().get(&trade_animal) {
@@ -121,9 +109,15 @@ impl SupervisedPlayer {
                     )
                 }
             }
-            None => return self.find_new_trade(&mut new_trade), // opponent does not have animal
+            None => return self.can_trade().unwrap(), // opponent does not have animal
         };
-        new_trade.animal_count = std::cmp::min(opponent_animal_count, player_animal_count); // is never 0
+        // is never 0
+
+        let mut new_trade = trade.clone();
+        new_trade.opponent = opponent.borrow().id().clone();
+        new_trade.animal = trade_animal;
+        new_trade.amount = new_amount;
+        new_trade.animal_count = std::cmp::min(opponent_animal_count, animal_trade_count);
         new_trade
     }
 
@@ -155,9 +149,12 @@ impl PlayerActions for SupervisedPlayer {
         let decision: PlayerTurnDecision =
             self.player.borrow_mut().player_actions()._draw_or_trade();
         match decision {
-            PlayerTurnDecision::Draw => decision,
+            PlayerTurnDecision::Draw => return decision,
             PlayerTurnDecision::Trade(initial_trade) => {
-                PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade))
+                if self.can_trade().is_some() {
+                    return PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade));
+                }
+                return PlayerTurnDecision::Draw;
             }
         }
     }
@@ -175,22 +172,24 @@ impl PlayerActions for SupervisedPlayer {
             ._provide_bidding(state);
 
         if self.limit_bidding_until_next_auction {
-            let limit = self.player.borrow().wallet().total_money();
-
-            match decision {
-                Bidding::Pass => {
-                    return decision;
-                }
-                Bidding::Bid(value) => {
-                    if value > limit {
-                        return Bidding::Bid(limit);
-                    } else {
+            if let Some(limit) = self.player.borrow().wallet().total_money() {
+                match decision {
+                    Bidding::Pass => {
                         return decision;
-                    };
+                    }
+                    Bidding::Bid(value) => {
+                        if value > limit {
+                            return Bidding::Bid(limit);
+                        } else {
+                            return decision;
+                        };
+                    }
                 }
             }
+            return Bidding::Pass;
+        } else {
+            return decision;
         }
-        decision
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {

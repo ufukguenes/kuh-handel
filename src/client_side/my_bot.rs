@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use rand::seq::IndexedRandom;
+use rand::{Rng, SeedableRng, rng};
+use rand_chacha::ChaCha8Rng;
+
 use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
@@ -16,22 +20,34 @@ pub struct MyBot {
     my_animals: HashMap<Animal, usize>,
     my_money: Wallet,
     my_id: PlayerId,
+    rng: ChaCha8Rng,
 }
 
 impl MyBot {
-    pub fn new(my_id: String) -> MyBot {
+    pub fn new(my_id: String, seed: u64) -> MyBot {
         MyBot {
             opponents: Vec::new(),
             my_animals: HashMap::new(),
             my_money: Wallet::new(HashMap::new()),
             my_id: PlayerId { name: my_id },
+            rng: ChaCha8Rng::seed_from_u64(seed),
         }
     }
 }
 
 impl PlayerActions for MyBot {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        PlayerTurnDecision::Draw
+        let random_opponent = 
+        let trade_choice = PlayerTurnDecision::Trade(InitialTrade {
+            opponent: (),
+            animal: (),
+            animal_count: (),
+            amount: (),
+        });
+
+        *vec![PlayerTurnDecision::Draw, trade_choice]
+            .choose(&mut self.rng)
+            .unwrap()
     }
 
     fn _trade(&mut self) -> InitialTrade {

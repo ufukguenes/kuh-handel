@@ -466,7 +466,7 @@ impl Game {
 
     fn trading_phase(&mut self) {
         for player in self.players.iter().cycle() {
-            if player.borrow().can_trade().1 {
+            if player.borrow().can_trade().is_some() {
                 self.player_must_trade(Rc::clone(player));
             }
         }

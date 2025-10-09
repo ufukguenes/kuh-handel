@@ -1,13 +1,15 @@
 use serde::{Deserialize, Serialize};
 
-use crate::messages::actions::FromActionMessage;
+use crate::messages::actions::{FromActionMessage, InitialTrade};
 
 use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::{Animal, AnimalSet};
 
 use crate::model::game_errors::GameError;
-use crate::model::money::wallet::Wallet;
+use crate::model::money::money::Money;
+use crate::model::money::wallet::{Affordability, Wallet};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
@@ -58,20 +60,76 @@ impl Player {
         &self.id
     }
 
-    pub fn can_trade(&self) -> (Option<(Animal, usize)>, bool) {
-        for (&animal, &animal_count) in self.owned_animals.iter() {
-            if animal_count
-                < self
-                    .game_stack
-                    .iter()
-                    .find(|set| set.animal() == &animal)
-                    .map(|set| set.occurrences())
-                    .unwrap()
-            {
-                return (Some((animal, animal_count)), true);
+    pub fn can_trade(&self, opponents: &Vec<Rc<RefCell<Player>>>) -> Option<InitialTrade> {
+        if let Some(_) = self.wallet.get_min_payment() {
+            for opponent in opponents.iter() {
+                let possible_trade = self.can_trade_against(Rc::clone(opponent));
+                match possible_trade {
+                    Some(trade) => return Some(trade),
+                    None => continue,
+                }
             }
         }
-        (None, false)
+
+        None
+    }
+
+    pub fn can_trade_animal(
+        &self,
+        animal: &Animal,
+        opponents: &Vec<Rc<RefCell<Player>>>,
+    ) -> Option<InitialTrade> {
+        if let Some(min_payment) = self.wallet.get_min_payment() {
+            if let Some(&animal_count) = self.owned_animals.get(animal) {
+                for opponent in opponents.iter() {
+                    if let Some(&opponent_animal_count) =
+                        opponent.borrow().owned_animals().get(animal)
+                    {
+                        let max_trade_count = std::cmp::min(animal_count, opponent_animal_count);
+
+                        return Some(InitialTrade {
+                            opponent: opponent.borrow().id().clone(),
+                            animal: animal.clone(),
+                            animal_count: max_trade_count,
+                            amount: min_payment,
+                        });
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn can_trade_against(&self, opponent: Rc<RefCell<Player>>) -> Option<InitialTrade> {
+        if let Some(min_payment) = self.wallet.get_min_payment() {
+            for (&animal, &animal_count) in self.owned_animals.iter() {
+                if animal_count
+                    < self
+                        .game_stack
+                        .iter()
+                        .find(|set| set.animal() == &animal)
+                        .map(|set| set.occurrences())
+                        .unwrap()
+                {
+                    for (&opponent_animal, &opponent_animal_count) in
+                        opponent.borrow().owned_animals()
+                    {
+                        if animal == opponent_animal {
+                            let max_trade_count =
+                                std::cmp::min(animal_count, opponent_animal_count);
+
+                            return Some(InitialTrade {
+                                opponent: opponent.borrow().id().clone(),
+                                animal: animal,
+                                animal_count: max_trade_count,
+                                amount: min_payment,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {

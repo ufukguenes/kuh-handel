@@ -221,7 +221,7 @@ impl Game {
     }
 
     pub fn num_players(&mut self) -> usize {
-        self.num_players = self.players.len();
+        self.num_players = self.players.len(); // todo if a player drops, we need to think about how we validate if the game is still valid
         self.num_players
     }
 
@@ -372,8 +372,8 @@ impl Game {
                 let receiver_id = receiver.borrow().id().clone();
                 let rounds = final_auction_round.clone();
                 let public_kind = MoneyTransfer::Public {
-                    card_amount: amount.len(), // todo this is sometime 0, but that shouldnt be, why is the supervisior not working?
-                    min_value: max_bid,        // ToDo: calculate the min value
+                    card_amount: amount.len(),
+                    min_value: max_bid, // ToDo: calculate the min value
                 };
 
                 println!(

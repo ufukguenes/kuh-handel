@@ -21,6 +21,8 @@ impl Wallet {
     }
 
     pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), GameError> {
+        let backup_notes = self.bank_notes.clone();
+
         for money in amount {
             let count = self.bank_notes.get(&money);
             match count {
@@ -31,10 +33,12 @@ impl Wallet {
                     } else if new_count == 0 {
                         self.bank_notes.remove(money);
                     } else {
+                        self.bank_notes = backup_notes;
                         return Result::Err(GameError::MoneyNotAvailable);
                     }
                 }
                 None => {
+                    self.bank_notes = backup_notes;
                     return Result::Err(GameError::MoneyNotAvailable);
                 }
             }

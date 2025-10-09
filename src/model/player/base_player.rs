@@ -160,6 +160,7 @@ impl Player {
     }
 
     pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), GameError> {
+        let backup_animals = self.owned_animals.clone();
         let current_count = self.owned_animals.get_mut(animal);
         match current_count {
             Some(current_count) => {
@@ -169,10 +170,14 @@ impl Player {
                 } else if *current_count == 0 || res == 0 {
                     self.owned_animals.remove(animal);
                 } else {
+                    self.owned_animals = backup_animals;
                     return Result::Err(GameError::AnimalsNotAvailable);
                 }
             }
-            None => return Result::Err(GameError::AnimalsNotAvailable),
+            None => {
+                self.owned_animals = backup_animals;
+                return Result::Err(GameError::AnimalsNotAvailable);
+            }
         }
 
         Ok(())

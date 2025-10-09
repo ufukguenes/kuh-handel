@@ -30,6 +30,7 @@ pub struct SupervisedPlayer {
 }
 
 // todo tell the bot if action was changed
+// todo somehow we still send money with 0 bills
 
 impl SupervisedPlayer {
     pub fn new(player: Rc<RefCell<Player>>, opponents: Vec<Rc<RefCell<Player>>>) -> Self {

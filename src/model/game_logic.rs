@@ -35,6 +35,7 @@ pub struct Game {
     num_players: usize,
 }
 
+// todo inflation
 impl Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -148,7 +149,7 @@ impl Game {
         let host_id = player.borrow().id().clone();
 
         let auction_players = self.get_players_excluding(vec![&host_id]);
-        print!("gl | host {}, auction_player: ", host_id);
+        print!("gl | \t host {}, auction_player: ", host_id);
         for p in auction_players.clone() {
             print!("{}, ", p.borrow().id().name);
         }
@@ -158,6 +159,7 @@ impl Game {
         let mut pass_count = 0usize;
 
         for bidder in auction_players.iter() {
+            // todo cycle but with max?
             let auction_round = AuctionRound {
                 animal: Rc::clone(&animal),
                 host: host_id.clone(),
@@ -171,13 +173,14 @@ impl Game {
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
             println!(
-                "gl | \t Player {} bids {:?} in auction for animal {}",
+                "gl | \t\t Player {} bids {:?} in auction for animal {}",
                 bidder.borrow().id(),
                 player_decision,
                 animal
             );
 
             if let Bidding::Pass = player_decision {
+                // todo should we be able to re join? and the pass count should be reset in this loop then, anyway currently just because a player passed doesnt exclude it from rebidding
                 pass_count += 1;
             }
 
@@ -202,7 +205,7 @@ impl Game {
                     .iter()
                     .find(|p| p.borrow().id() == *max_bidder_id)
                     .unwrap();
-                let mut auction_winner = auction_winner;
+                let auction_winner = auction_winner;
 
                 let max_bid = match max_bid {
                     Bidding::Pass => Value::new(0),
@@ -211,12 +214,18 @@ impl Game {
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy => {
-                        println!("gl | \t Player {} buys animal {}", host_id, animal);
+                        println!(
+                            "gl | \t Host {} buys animal {} from {} with bid {}",
+                            host_id, animal, max_bidder_id, max_bid
+                        );
 
                         (player, Rc::clone(auction_winner))
                     }
                     AuctionDecision::Sell => {
-                        println!("gl | \t Player {} sells animal {}", host_id, animal);
+                        println!(
+                            "gl | \t Host {} sells animal {} to {} with bid {}",
+                            host_id, animal, max_bidder_id, max_bid
+                        );
 
                         (Rc::clone(auction_winner), player)
                     }
@@ -256,6 +265,16 @@ impl Game {
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
                 Self::update_multiple_players(&self.players, update);
                 let host = self.get_by_id(&final_auction_round.host).unwrap();
+                println!(
+                    "gl | \t player {} bluffed, exposed value {}",
+                    sender.borrow().id(),
+                    sender
+                        .borrow()
+                        .clone_wallet()
+                        .total_money()
+                        .unwrap_or(Value::new(0)),
+                );
+
                 self.auction(host, &final_auction_round.animal);
             }
             SendMoney::Amount(amount) => {
@@ -266,6 +285,13 @@ impl Game {
                     card_amount: amount.len(),
                     min_value: max_bid, // ToDo: calculate the min value
                 };
+
+                println!(
+                    "gl | \t player {} sends {} bills to {}",
+                    sender.borrow().id(),
+                    amount.len(),
+                    receiver.borrow().id().clone()
+                );
 
                 let update = |transfer_kind| {
                     GameUpdate::Auction(AuctionKind::NormalAuction {
@@ -478,13 +504,33 @@ impl Game {
                 }) => {
                     let opponent = self.get_by_id(&opponent);
                     match opponent {
-                        Ok(opponent) => self.offer_trade_to_opponent(
-                            player,
-                            opponent,
-                            amount,
-                            animal,
-                            animal_count,
-                        ),
+                        Ok(opponent) => {
+                            let opponent_count = opponent
+                                .borrow()
+                                .player
+                                .borrow()
+                                .owned_animals()
+                                .get(&animal)
+                                .unwrap_or(&0)
+                                .clone();
+
+                            println!(
+                                "gl | \t {} trades {}-{} for {}, against {} who has {} many",
+                                player.borrow().id(),
+                                animal_count,
+                                animal,
+                                amount.iter().map(|m| m.as_usize()).sum::<usize>(),
+                                opponent.borrow().id(),
+                                opponent_count
+                            );
+                            self.offer_trade_to_opponent(
+                                player,
+                                opponent,
+                                amount,
+                                animal,
+                                animal_count,
+                            )
+                        }
                         Err(e) => panic!("{:?}", e),
                     }
                 }

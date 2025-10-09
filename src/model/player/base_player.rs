@@ -166,7 +166,7 @@ impl Player {
                 let res: isize = *current_count as isize - count as isize;
                 if res > 0 {
                     *current_count -= count;
-                } else if *current_count == 0 {
+                } else if *current_count == 0 || res == 0 {
                     self.owned_animals.remove(animal);
                 } else {
                     return Result::Err(GameError::AnimalsNotAvailable);

@@ -128,6 +128,11 @@ impl Game {
         self.trading_phase();
 
         Ok(())
+
+        /// todo check if game state is valid: 
+        /// there are no more or less animals, 
+        /// there is no more or less money, 
+        /// everyone holds 4 (or num occurences) of each of their deck
     }
 
     pub fn num_players(&mut self) -> usize {
@@ -544,6 +549,8 @@ impl Game {
 
     fn trading_phase(&mut self) {
         let max_cycles = 1000; // todo find a better limit based on game stack
+        let mut skip_players: Vec<PlayerId> = Vec::new();
+
         for (i, player) in self.players.iter().cycle().enumerate() {
             let current_cycle = i / self.players.len();
             if current_cycle >= max_cycles {
@@ -553,8 +560,17 @@ impl Game {
                 break;
             }
 
-            if player.borrow().can_trade().is_some() {
+            if skip_players.len() == self.players.len() {
+                println!("gl | game ended as no player can trade anymore");
+                break;
+            }
+
+            if !skip_players.contains(&player.borrow().id())
+                && player.borrow().can_trade().is_some()
+            {
                 self.player_must_trade(Rc::clone(player));
+            } else {
+                skip_players.push(player.borrow().id().clone());
             }
         }
     }

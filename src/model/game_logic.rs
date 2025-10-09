@@ -127,12 +127,11 @@ impl Game {
         self.draw_phase();
         self.trading_phase();
 
+        // todo check if game state is valid:
+        // there are no more or less animals,
+        // there is no more or less money,
+        // everyone holds 4 (or num occurences) of each of their deck
         Ok(())
-
-        /// todo check if game state is valid: 
-        /// there are no more or less animals, 
-        /// there is no more or less money, 
-        /// everyone holds 4 (or num occurences) of each of their deck
     }
 
     pub fn num_players(&mut self) -> usize {

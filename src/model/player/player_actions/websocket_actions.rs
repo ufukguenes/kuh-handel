@@ -38,8 +38,8 @@ impl WebsocketActions {
             WebsocketActions {
                 state_sender: state_sender,
                 action_receiver: action_receiver,
-                id: id,
-                backup_actions: RandomPlayerActions {},
+                id: id.clone(),
+                backup_actions: RandomPlayerActions::new(id, 42),
             },
             (state_receiver, action_sender),
         )
@@ -116,10 +116,14 @@ impl PlayerActions for WebsocketActions {
         let msg: StateMessage = StateMessage::GameUpdate {
             update: update.clone(),
         };
+
+        // keep the backup, up to date so that it can jump in at any time
+        let backup_decision = self.backup_actions._receive_game_update(update.clone());
+
         let decision: Option<NoAction> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._receive_game_update(update),
+            None => backup_decision,
         }
     }
 

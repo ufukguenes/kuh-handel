@@ -1,17 +1,18 @@
 use std::cmp::min;
+use std::panic;
 use std::str::FromStr;
 
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
-use crate::client_side::my_bot::MyBot;
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
+use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 
 pub struct Client {
     pub name: String,
-    pub bot: MyBot,
+    pub bot: RandomPlayerActions,
     pub print_indent_size: usize,
 }
 

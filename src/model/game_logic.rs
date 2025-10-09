@@ -400,6 +400,7 @@ impl Game {
     }
 
     fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
+        println!("gl | player_must_trade");
         let state_msg = StateMessage::Trade;
         let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
 

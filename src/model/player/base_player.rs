@@ -6,8 +6,7 @@ use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::{Animal, AnimalSet};
 
 use crate::model::game_errors::GameError;
-use crate::model::money::money::Money;
-use crate::model::money::wallet::{Affordability, Wallet};
+use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::cell::RefCell;
 use std::collections::HashMap;

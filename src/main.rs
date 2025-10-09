@@ -19,7 +19,7 @@ async fn main() {
     let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
     let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new("ufuk".to_string());
     let (leon_ws_action, leon_channel) = WebsocketActions::new("leon".to_string());
-    let gregor_random_action = RandomPlayerActions {};
+    let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
     let seed: u64 = 0;
     let game_handle = tokio::task::spawn_blocking(move || {
         println!("-------Default game--------\n");
@@ -44,6 +44,8 @@ async fn main() {
 
         game.play().unwrap();
         println!("{}", game);
+
+        print!("game is done")
     });
 
     let websocket_channels_per_player: HashMap<String, (Receiver<Message>, Sender<Message>)> =

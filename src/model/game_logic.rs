@@ -188,6 +188,15 @@ impl Game {
                                     count,
                                     current_set.occurrences()
                                 );
+
+                                for player in self.players.iter() {
+                                    println!("{:?}", player.borrow().clone_owned_animals());
+                                }
+
+                                for player in self.players.iter() {
+                                    println!("{:?}", player.borrow().clone_wallet());
+                                }
+
                                 return false;
                             };
                         }
@@ -358,11 +367,7 @@ impl Game {
                 println!(
                     "gl | \t player {} bluffed, exposed value {}",
                     sender.borrow().id(),
-                    sender
-                        .borrow()
-                        .clone_wallet()
-                        .total_money()
-                        .unwrap_or(Value::new(0)),
+                    sender.borrow().clone_wallet().total_money(),
                 );
 
                 self.auction(host, &final_auction_round.animal);

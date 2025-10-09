@@ -47,24 +47,23 @@ impl RandomPlayerActions {
             self.owned_animals.iter().choose(&mut self.rng)
         {
             let random_animal_count = self.rng.random_range(1..=animal_count) as usize;
-            if let Some(value) = self.wallet.total_money() {
-                let random_amount = self
-                    .wallet
-                    .propose_bill_combinations(value, false)
-                    .get(0)
-                    .unwrap()
-                    .1
-                    .clone();
+            let value = self.wallet.total_money();
+            let random_amount = self
+                .wallet
+                .propose_bill_combinations(value, false)
+                .get(0)
+                .unwrap()
+                .1
+                .clone();
 
-                let trade_choice = InitialTrade {
-                    opponent: random_opponent.clone(),
-                    animal: random_animal,
-                    animal_count: random_animal_count,
-                    amount: random_amount,
-                };
+            let trade_choice = InitialTrade {
+                opponent: random_opponent.clone(),
+                animal: random_animal,
+                animal_count: random_animal_count,
+                amount: random_amount,
+            };
 
-                return Some(trade_choice);
-            }
+            return Some(trade_choice);
         }
         None
     }
@@ -143,13 +142,12 @@ impl PlayerActions for RandomPlayerActions {
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         if let Some((_, bid_value)) = Self::get_highest_bid(&state.bids) {
-            if let Some(my_value) = self.wallet.total_money() {
-                if bid_value > &my_value {
-                    return vec![AuctionDecision::Sell, AuctionDecision::Buy]
-                        .choose(&mut self.rng)
-                        .unwrap()
-                        .clone();
-                }
+            let my_value = self.wallet.total_money();
+            if bid_value > &my_value {
+                return vec![AuctionDecision::Sell, AuctionDecision::Buy]
+                    .choose(&mut self.rng)
+                    .unwrap()
+                    .clone();
             }
         }
         AuctionDecision::Sell
@@ -163,21 +161,16 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        if let Some(_) = self.wallet.get_min_payment() {
-            let random_value = self
-                .rng
-                .random_range(0..=self.wallet.total_money().unwrap().value());
-            let combination = self
-                .wallet
-                .propose_bill_combinations(Value::new(random_value), false);
-            let counter_offer =
-                TradeOpponentDecision::CounterOffer(combination.get(0).unwrap().1.clone());
-            return vec![TradeOpponentDecision::Accept, counter_offer]
-                .choose(&mut self.rng)
-                .unwrap()
-                .clone();
-        }
-        TradeOpponentDecision::Accept
+        let random_value = self.rng.random_range(0..=self.wallet.total_money().value());
+        let combination = self
+            .wallet
+            .propose_bill_combinations(Value::new(random_value), false);
+        let counter_offer =
+            TradeOpponentDecision::CounterOffer(combination.get(0).unwrap().1.clone());
+        return vec![TradeOpponentDecision::Accept, counter_offer]
+            .choose(&mut self.rng)
+            .unwrap()
+            .clone();
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {

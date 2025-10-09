@@ -66,16 +66,13 @@ impl Wallet {
         all_bills
     }
 
-    pub fn total_money(&self) -> Option<Value> {
-        if self.bank_notes.len() == 0 {
-            return None;
-        }
+    pub fn total_money(&self) -> Value {
         let mut total: usize = 0;
 
         for (money, amount) in &self.bank_notes {
             total += money.as_usize() * amount;
         }
-        Some(Value::new(total))
+        Value::new(total)
     }
 
     pub fn check_if_exact(&self, bill_combination: &Vec<Money>) -> bool {
@@ -135,40 +132,24 @@ impl Wallet {
         let total_payed: usize = payment_amount.iter().map(|money| money.as_usize()).sum();
         let total_owned = self.total_money();
 
-        match total_owned {
-            Some(value) => {
-                if value.value() < total_payed {
-                    return Affordability::CannotAfford;
-                };
+        if total_owned.value() < total_payed {
+            return Affordability::CannotAfford;
+        };
 
-                let fits_exact = self.check_if_exact(&payment_amount);
+        let fits_exact = self.check_if_exact(&payment_amount);
 
-                if fits_exact {
-                    return Affordability::Exact;
-                }
-
-                // just pick the bill combination with the smallest overhead
-                let alternative = self
-                    .propose_bill_combinations(Value::new(total_payed), false)
-                    .get(0)
-                    .unwrap()
-                    .1
-                    .clone();
-                return Affordability::Alternative(alternative);
-            }
-            None => return Affordability::CannotAfford,
+        if fits_exact {
+            return Affordability::Exact;
         }
-    }
 
-    pub fn get_min_payment(&self) -> Option<Vec<Money>> {
-        let can_afford = self.can_afford(&vec![Money::new_usize(0)]); // check to see if player has 0 bills
-        let min_payment;
-        match can_afford {
-            Affordability::Exact => min_payment = vec![Money::new_usize(0)],
-            Affordability::Alternative(amount) => min_payment = amount,
-            Affordability::CannotAfford => return None,
-        }
-        Some(min_payment)
+        // just pick the bill combination with the smallest overhead
+        let alternative = self
+            .propose_bill_combinations(Value::new(total_payed), false)
+            .get(0)
+            .unwrap()
+            .1
+            .clone();
+        return Affordability::Alternative(alternative);
     }
 
     pub fn bank_notes(&self) -> &BTreeMap<Money, usize> {

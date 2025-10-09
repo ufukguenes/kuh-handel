@@ -30,7 +30,6 @@ pub struct SupervisedPlayer {
 }
 
 // todo tell the bot if action was changed
-// todo somehow we still send money with 0 bills
 
 impl SupervisedPlayer {
     pub fn new(player: Rc<RefCell<Player>>, opponents: Vec<Rc<RefCell<Player>>>) -> Self {
@@ -177,21 +176,19 @@ impl PlayerActions for SupervisedPlayer {
             ._provide_bidding(state);
 
         if self.limit_bidding_until_next_auction {
-            if let Some(limit) = self.player.borrow().wallet().total_money() {
-                match decision {
-                    Bidding::Pass => {
+            let limit = self.player.borrow().wallet().total_money();
+            match decision {
+                Bidding::Pass => {
+                    return decision;
+                }
+                Bidding::Bid(value) => {
+                    if value > limit {
+                        return Bidding::Bid(limit);
+                    } else {
                         return decision;
-                    }
-                    Bidding::Bid(value) => {
-                        if value > limit {
-                            return Bidding::Bid(limit);
-                        } else {
-                            return decision;
-                        };
-                    }
+                    };
                 }
             }
-            return Bidding::Pass;
         } else {
             return decision;
         }

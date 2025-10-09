@@ -156,8 +156,10 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
-        let combination = self.wallet.propose_bill_combinations(amount, false);
-        SendMoney::Amount(combination.get(0).unwrap().1.clone())
+        if let Some(combination) = self.wallet.propose_bill_combinations(amount, false).get(0) {
+            return SendMoney::Amount(combination.1.clone());
+        }
+        SendMoney::WasBluff
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {

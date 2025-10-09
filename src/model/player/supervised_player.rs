@@ -247,6 +247,7 @@ impl PlayerActions for SupervisedPlayer {
                 panic!();
             }
         }
+        test
         match update.clone() {
             GameUpdate::Auction(auction_kind) => {
                 self.limit_bidding_until_next_auction = false;

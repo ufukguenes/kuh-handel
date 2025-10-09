@@ -236,18 +236,6 @@ impl PlayerActions for SupervisedPlayer {
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
-        for (animal, count) in self.player.borrow().owned_animals().iter() {
-            if *count > 4 {
-                println!(
-                    "player {}, animal {}, count {}",
-                    self.player.borrow().id(),
-                    animal,
-                    count
-                );
-                panic!();
-            }
-        }
-
         match update.clone() {
             GameUpdate::Auction(auction_kind) => {
                 self.limit_bidding_until_next_auction = false;

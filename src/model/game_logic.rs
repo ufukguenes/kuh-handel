@@ -282,8 +282,8 @@ impl Game {
                 let receiver_id = receiver.borrow().id().clone();
                 let rounds = final_auction_round.clone();
                 let public_kind = MoneyTransfer::Public {
-                    card_amount: amount.len(),
-                    min_value: max_bid, // ToDo: calculate the min value
+                    card_amount: amount.len(), // todo this is sometime 0, but that shouldnt be, why is the supervisior not working?
+                    min_value: max_bid,        // ToDo: calculate the min value
                 };
 
                 println!(
@@ -333,7 +333,7 @@ impl Game {
         private_update: GameUpdate,
     ) {
         let other_player =
-            self.get_players_excluding(vec![&player_a.borrow().id(), &player_a.borrow().id()]);
+            self.get_players_excluding(vec![&player_a.borrow().id(), &player_b.borrow().id()]);
 
         Self::update_multiple_players(&other_player, public_update);
 

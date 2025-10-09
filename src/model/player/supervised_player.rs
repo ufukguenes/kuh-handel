@@ -43,6 +43,9 @@ impl SupervisedPlayer {
         }
     }
 
+    // TODO: need to check, that player id is not opponents id
+    // i also think there is an issue with keeping track of the animals
+
     pub fn clone_wallet(&self) -> Wallet {
         self.player.borrow().wallet().clone()
     }
@@ -59,10 +62,10 @@ impl SupervisedPlayer {
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
-        match self.player.borrow_mut().wallet().can_afford(combination) {
+        match self.player.borrow().wallet().can_afford(combination) {
             Exact => combination.clone(),
             Alternative(alternative) => alternative,
-            CannotAfford => self.player.borrow_mut().wallet().to_vec(),
+            CannotAfford => self.player.borrow().wallet().to_vec(),
         }
     }
 

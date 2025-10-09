@@ -93,9 +93,10 @@ impl RandomPlayerActions {
         let current_count = self.owned_animals.get_mut(animal);
         match current_count {
             Some(current_count) => {
-                if *current_count - count > 0 {
+                let res: isize = *current_count as isize - count as isize;
+                if res > 0 {
                     *current_count -= count;
-                } else if *current_count - count > 0 {
+                } else if *current_count == 0 {
                     self.owned_animals.remove(animal);
                 } else {
                     return Result::Err(GameError::AnimalsNotAvailable);
@@ -249,10 +250,11 @@ impl PlayerActions for RandomPlayerActions {
                 players_in_turn_order,
                 animals,
             } => {
-                players_in_turn_order
-                    .clone()
-                    .retain(|p| p.name != self.id.name);
-                self.opponents = players_in_turn_order;
+                self.opponents = players_in_turn_order
+                    .iter()
+                    .cloned()
+                    .filter(|p| p.name != self.id.name)
+                    .collect();
                 self.wallet = wallet;
                 self.owned_animals = HashMap::new();
             }

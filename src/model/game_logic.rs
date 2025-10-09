@@ -24,6 +24,7 @@ use std::collections::HashMap;
 
 use std::fmt;
 use std::fmt::Display;
+use std::ops::Not;
 use std::rc::Rc;
 
 pub struct Game {
@@ -479,7 +480,7 @@ impl Game {
     ) -> Vec<Rc<RefCell<SupervisedPlayer>>> {
         self.players
             .iter()
-            .filter(|p| excluding.contains(&&p.borrow().id()))
+            .filter(|p| excluding.contains(&&p.borrow().id()).not())
             .cloned()
             .collect()
     }

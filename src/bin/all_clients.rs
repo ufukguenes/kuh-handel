@@ -6,14 +6,14 @@ async fn main() {
     let ufuk_string = "ufuk".to_string();
     let ufuk_client = Client {
         name: ufuk_string.clone(),
-        bot: MyBot::new(ufuk_string),
+        bot: MyBot::new(ufuk_string, 3),
         print_indent_size: 0,
     };
 
     let leon_string = "leon".to_string();
     let leon_client = Client {
         name: leon_string.clone(),
-        bot: MyBot::new(leon_string),
+        bot: MyBot::new(leon_string, 42),
         print_indent_size: 1,
     };
 

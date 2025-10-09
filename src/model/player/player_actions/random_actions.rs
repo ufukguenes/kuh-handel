@@ -124,7 +124,6 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        println!("my animal: {:?}", self.owned_animals);
         self.get_random_trade().unwrap()
     }
 

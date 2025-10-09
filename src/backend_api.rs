@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tracing::{error, info};
 
 // Define the game state. It now tracks players and the current turn.
 use serde::Deserialize;
@@ -72,14 +73,14 @@ pub async fn websocket_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, player_id: String) {
-    println!("bck | New bot connecting...");
+    info!("bck | New bot connecting...");
 
     // for each bot, create two channels
     // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
     // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
     // to the websocket so it can send it to the client-bot
 
-    println!("bck | Bot connected with ID: {}", player_id.clone());
+    info!("bck | Bot connected with ID: {}", player_id.clone());
     let (mut state_receiver, action_sender) = state
         .lock()
         .await
@@ -100,7 +101,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
     loop {
         // send state and possible actions to client-bot
 
-        println!(
+        info!(
             "bck | waiting to receive game state info for bot {}",
             player_id
         );
@@ -108,48 +109,48 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
 
         match recv_state {
             Some(msg) => {
-                println!("bck | received game state info for bot {}", player_id);
+                info!("bck | received game state info for bot {}", player_id);
 
-                println!(
+                info!(
                     "bck | game state info for bot {}: {}",
                     player_id,
                     msg.to_text().unwrap()
                 );
 
-                println!("bck | waiting to send state to client of bot {}", player_id);
+                info!("bck | waiting to send state to client of bot {}", player_id);
 
                 if let Err(e) = socket.send(msg).await {
-                    eprintln!("bck | Error sending message: {}", e);
+                    error!("bck | Error sending message: {}", e);
                 }
-                println!(
+                info!(
                     "bck | finished sending state to client of bot {}",
                     player_id
                 );
 
                 // receive action and send to server-bot
-                println!(
+                info!(
                     "bck | waiting to receive action from client of bot {}",
                     player_id
                 );
                 if let Some(Ok(msg)) = socket.recv().await {
-                    println!(
+                    info!(
                         "bck | bot {} action: {}",
                         player_id,
                         msg.clone().to_text().unwrap()
                     );
-                    println!(
+                    info!(
                         "bck | finished receiving action from client of bot {}",
                         player_id
                     );
 
-                    println!("bck | waiting to send action of bot {} to game", player_id);
+                    info!("bck | waiting to send action of bot {} to game", player_id);
                     match msg {
                         Message::Text(_) => match action_sender.send(msg).await {
                             Ok(_) => {
-                                println!("bck | action of bot {} has been send to game", player_id)
+                                info!("bck | action of bot {} has been send to game", player_id)
                             }
                             Err(_) => {
-                                eprintln!(
+                                error!(
                                     "bck | failure sending action of bot {} to game, closing connection",
                                     player_id
                                 );
@@ -157,12 +158,12 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
                             }
                         },
                         Message::Close(_) => {
-                            println!("bck | Closing WebSocket connection of bot {}.", player_id);
+                            info!("bck | Closing WebSocket connection of bot {}.", player_id);
                             break;
                         }
                         _ => {
-                            eprintln!(
-                                "received unknown message type from client of bot {}, closing WebSocket connection",
+                            error!(
+                                "bck | received unknown message type from client of bot {}, closing WebSocket connection",
                                 player_id
                             );
                             break;
@@ -171,13 +172,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
                 }
             }
             None => {
-                eprintln!("game closed connection to bot {}.", player_id);
+                info!("bck | game closed connection to bot {}.", player_id);
                 break;
             }
         }
     }
 
-    println!("bck | Bot ID {} disconnected.", player_id);
+    info!("bck | Bot ID {} disconnected.", player_id);
 
     state
         .lock()
@@ -193,22 +194,22 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, 
 pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
     let mut missing_players = state.lock().await.get_missing_players().await;
     while missing_players.len() > 0 {
-        println!("bck | Waiting for missing players: {:?}", missing_players);
+        info!("bck | Waiting for missing players: {:?}", missing_players);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         missing_players = state.lock().await.get_missing_players().await;
     }
 
-    println!("bck | all players joined");
+    info!("bck | all players joined");
     loop {
         missing_players = state.lock().await.get_missing_players().await;
         if missing_players.len() > 0 {
-            println!(
+            info!(
                 "The game should be interrupted and the following players removed: {:?}",
                 missing_players
             );
         }
 
-        println!("bck | It's bot ID ___'s turn.",);
+        info!("bck | It's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();
 
         // todo: do i want to keep this (either the sleep or in general the organize game)

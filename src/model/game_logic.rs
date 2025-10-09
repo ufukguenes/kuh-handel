@@ -467,7 +467,13 @@ impl Game {
     }
 
     fn trading_phase(&mut self) {
-        for player in self.players.iter().cycle() {
+        let max_cycles = 1000; // todo find a better limit based on game stack
+        for (i, player) in self.players.iter().cycle().enumerate() {
+            let current_cycle = i / self.players.len();
+            if current_cycle >= max_cycles {
+                break;
+            }
+
             if player.borrow().can_trade().is_some() {
                 self.player_must_trade(Rc::clone(player));
             }

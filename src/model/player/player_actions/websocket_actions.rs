@@ -14,6 +14,7 @@ use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 use axum::extract::ws::{Message, Utf8Bytes};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tracing::{error, info};
 
 pub struct WebsocketActions {
     // for each bot, create two channels
@@ -50,7 +51,7 @@ impl WebsocketActions {
     }
 
     pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> Option<T> {
-        println!(
+        info!(
             "wsp | going to send state from game to backend {}, {}",
             self.id, msg
         );
@@ -59,17 +60,17 @@ impl WebsocketActions {
                 serde_json::to_string(&msg).unwrap().as_str(),
             )))
             .unwrap();
-        println!(
+        info!(
             "wsp | finished, sending state to backend {}, {}",
             self.id, msg
         );
 
-        println!(
+        info!(
             "wsp | waiting for action from backend for game {}, {}",
             self.id, msg
         );
         let msg: Option<Message> = self.action_receiver.blocking_recv();
-        println!("wsp | finished, receiving action from backend {}", self.id,);
+        info!("wsp | finished, receiving action from backend {}", self.id,);
 
         let action_msg: ActionMessage = match msg {
             Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),

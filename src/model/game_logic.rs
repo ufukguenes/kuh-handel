@@ -655,12 +655,16 @@ impl Game {
                 break;
             }
 
-            if !skip_players.contains(&player.borrow().id())
-                && player.borrow().can_trade().is_some()
-            {
-                self.player_must_trade(Rc::clone(player));
-            } else {
-                skip_players.push(player.borrow().id().clone());
+            if !skip_players.contains(&player.borrow().id()) {
+                if player.borrow().can_trade().is_some() {
+                    self.player_must_trade(Rc::clone(player));
+                } else {
+                    println!(
+                        "gl | player will be {} skipped in trading",
+                        player.borrow().id()
+                    );
+                    skip_players.push(player.borrow().id().clone());
+                }
             }
         }
     }

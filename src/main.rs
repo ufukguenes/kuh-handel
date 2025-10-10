@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::vec;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tracing::Level;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -38,7 +39,7 @@ async fn main() {
     let (results_writer, _guard2) = non_blocking(game_results_file);
 
     fmt()
-        .with_writer(log_writer.and(results_writer.with_filter(|meta| meta.target() == "winner")))
+        .with_writer(log_writer.and(results_writer.with_filter(|meta| meta.target() == "results")))
         .with_ansi(false)
         .finish()
         .init();
@@ -72,6 +73,7 @@ async fn main() {
         let results = game.play().unwrap();
 
         println!("ranking: {:?}", results);
+        tracing::event!(target: "results", Level::INFO, "{:?}", results);
 
         print!("game is done")
     });

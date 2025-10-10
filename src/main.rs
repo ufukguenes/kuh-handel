@@ -2,9 +2,6 @@ use axum::extract::ws::Message;
 use axum::{Router, routing};
 use kuh_handel::model::animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory};
 use kuh_handel::model::game_logic::Game;
-use rand::Rng;
-use rand::SeedableRng;
-use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::vec;
@@ -33,29 +30,13 @@ async fn main() {
         .finish()
         .init();
 
-    let mut rng = ChaCha8Rng::seed_from_u64(0);
-
-    let tuples: Vec<(u64, u64, u64, u64)> = (0..100)
-        .map(|_| {
-            (
-                rng.random::<u64>(),
-                rng.random::<u64>(),
-                rng.random::<u64>(),
-                rng.random::<u64>(),
-            )
-        })
-        .collect();
-
-    for (i, (a, b, c, d)) in tuples.into_iter().enumerate() {
-        println!("{}: randoms: {},{},{},{},", i, a, b, c, d);
-
-        let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-        let ufuk_ws_action = RandomPlayerActions::new("ufuk".to_string(), a);
-        let leon_ws_action = RandomPlayerActions::new("leon".to_string(), b);
-        let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), c);
-        let seed: u64 = d;
-
-        let game_handle = println!("-------Default game--------\n");
+    let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
+    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new("ufuk".to_string());
+    let (leon_ws_action, leon_channel) = WebsocketActions::new("leon".to_string());
+    let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
+    let seed: u64 = 0;
+    let game_handle = tokio::task::spawn_blocking(move || {
+        println!("-------Default game--------\n");
         let mut game = Game::new_default_game(
             vec![
                 String::from("ufuk"),
@@ -78,12 +59,14 @@ async fn main() {
         game.play().unwrap();
         println!("{}", game);
 
-        println!("game is done");
-        println!("{}: randoms: {},{},{},{},", i, a, b, c, d);
-    }
+        print!("game is done")
+    });
 
     let websocket_channels_per_player: BTreeMap<String, (Receiver<Message>, Sender<Message>)> =
-        BTreeMap::from([]);
+        BTreeMap::from([
+            ("ufuk".to_string(), ufuk_channel),
+            ("leon".to_string(), leon_channel),
+        ]);
 
     let ws_game = Arc::new(Mutex::new(
         WebsocketGame::new(Arc::new(Mutex::new(websocket_channels_per_player)))

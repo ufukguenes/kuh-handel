@@ -21,7 +21,7 @@ use tracing_subscriber::fmt;
 
 // TODO:
 // - provide demo, where players can test their bot against our random bots for testing
-// - maybe also provide test people can make so that they can see what goes wrong?
+// - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - calculate the winner of a game and log that in a file
 // - make a simple visualization for that that is also hosted on the website
 // - add an authentication key for each player so others cant just copy the name

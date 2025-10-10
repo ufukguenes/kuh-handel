@@ -277,7 +277,9 @@ impl Game {
         return all_ids;
     }
 
-    pub fn remove_player(&mut self, id: String) {}
+    pub fn remove_player(&mut self, id: String) {
+        todo!()
+    }
 
     fn auction(&mut self, player: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
         let host_id = player.borrow().id().clone();

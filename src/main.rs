@@ -22,7 +22,6 @@ use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
 // TODO:
-// - calculate the winner of a game and log that in a file
 // - create matches in multiple threads and handle who plays against who
 // - we might not need AnimalSet, consider removing that
 // - add an authentication key for each player so others cant just copy the name

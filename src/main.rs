@@ -20,13 +20,13 @@ use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
 // TODO:
-// - provide demo, where players can test their bot against our random bots for testing
-// - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - calculate the winner of a game and log that in a file
-// - make a simple visualization for that that is also hosted on the website
-// - add an authentication key for each player so others cant just copy the name
 // - create matches in multiple threads and handle who plays against who
 // - we might not need AnimalSet, consider removing that
+// - add an authentication key for each player so others cant just copy the name
+// - provide demo, where players can test their bot against our random bots for testing
+// - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
+// - make a simple visualization for that that is also hosted on the website
 
 #[tokio::main]
 async fn main() {

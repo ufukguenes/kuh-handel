@@ -18,6 +18,7 @@ use crate::model::player::supervised_player::SupervisedPlayer;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
+use tracing::error;
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -150,8 +151,6 @@ impl Game {
             let binding = player.borrow().clone_wallet();
             let current_bank_notes = binding.bank_notes();
 
-            println!("per: {:?}", current_bank_notes);
-
             for (money, count) in current_bank_notes.into_iter() {
                 all_money_from_players
                     .entry(money.clone())
@@ -165,10 +164,15 @@ impl Game {
             .map(|(money, count)| (money, count / self.num_players))
             .collect();
 
-        println!("{:?}", all_money_from_players);
-        println!("{:?}", *self.start_wallet.bank_notes());
+        if all_money_from_players == *self.start_wallet.bank_notes() {
+            true
+        } else {
+            error!("gl | validation: all player money doesn't add up to total money generated");
+            error!("gl | validation: \t {:?}", all_money_from_players);
+            error!("gl | validation: \t {:?}", *self.start_wallet.bank_notes());
 
-        all_money_from_players == *self.start_wallet.bank_notes()
+            false
+        }
     }
 
     pub fn validate_players_animals(&self) -> bool {
@@ -183,18 +187,24 @@ impl Game {
                     Some(current_set) => {
                         if current_set.occurrences() != count {
                             {
-                                println!(
-                                    "wrong occurrences {} instead of {}",
+                                error!(
+                                    "gl | validation: wrong occurrences {} instead of {}",
                                     count,
                                     current_set.occurrences()
                                 );
 
                                 for player in self.players.iter() {
-                                    println!("{:?}", player.borrow().clone_owned_animals());
+                                    error!(
+                                        "gl | validation: \t {:?}",
+                                        player.borrow().clone_owned_animals()
+                                    );
                                 }
 
                                 for player in self.players.iter() {
-                                    println!("{:?}", player.borrow().clone_wallet());
+                                    error!(
+                                        "gl | validation: \t {:?}",
+                                        player.borrow().clone_wallet()
+                                    );
                                 }
 
                                 return false;
@@ -202,7 +212,11 @@ impl Game {
                         }
                     }
                     None => {
-                        println!("{} does not exist", animal);
+                        error!(
+                            "gl | validation: player {} has animal {} that does not exist",
+                            player.borrow().id(),
+                            animal
+                        );
                         return false;
                     }
                 }
@@ -226,12 +240,21 @@ impl Game {
                         other.borrow().id(),
                         player.borrow().id()
                     );
+                    error!(
+                        "gl | validation: {} and {} share animals",
+                        other.borrow().id(),
+                        player.borrow().id()
+                    );
+
                     for player in self.players.iter() {
-                        println!("{:?}", player.borrow().clone_owned_animals());
+                        error!(
+                            "gl | validation: \t {:?}",
+                            player.borrow().clone_owned_animals()
+                        );
                     }
 
                     for player in self.players.iter() {
-                        println!("{:?}", player.borrow().clone_wallet());
+                        error!("gl | validation: \t {:?}", player.borrow().clone_wallet());
                     }
                     return false;
                 }

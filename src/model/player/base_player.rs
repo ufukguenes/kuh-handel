@@ -61,24 +61,13 @@ impl Player {
     }
 
     pub fn can_trade(&self, opponents: &Vec<Rc<RefCell<Player>>>) -> Option<InitialTrade> {
-        print!(
-            "check trade for {}, animals {:?}",
-            self.id,
-            self.owned_animals
-                .iter()
-                .map(|(animal, count)| (animal.value().value(), *count))
-                .collect::<Vec<(usize, usize)>>()
-        );
         for opponent in opponents.iter() {
-            print!("\n \t against {}", opponent.borrow().id());
             let possible_trade = self.can_trade_against(Rc::clone(opponent));
             match possible_trade {
                 Some(trade) => {
-                    println!("\n \t worked");
                     return Some(trade);
                 }
                 None => {
-                    println!("\n \t failed");
                     continue;
                 }
             }
@@ -111,7 +100,6 @@ impl Player {
 
     pub fn can_trade_against(&self, opponent: Rc<RefCell<Player>>) -> Option<InitialTrade> {
         for (&animal, &animal_count) in self.owned_animals.iter() {
-            print!("\n \t \t for animal {}, count {}", animal, animal_count);
             if animal_count
                 < self
                     .game_stack
@@ -123,11 +111,6 @@ impl Player {
                 let binding = opponent.borrow();
                 let opponent_animals = binding.owned_animals();
                 if let Some(&opponent_animal_count) = opponent_animals.get(&animal) {
-                    println!(
-                        "\n \t \t opponent has animal {} with count {}",
-                        animal, opponent_animal_count
-                    );
-
                     let max_trade_count = std::cmp::min(animal_count, opponent_animal_count);
                     return Some(InitialTrade {
                         opponent: opponent.borrow().id().clone(),
@@ -136,7 +119,6 @@ impl Player {
                         amount: Vec::new(),
                     });
                 }
-                print!("\n \t \t failed");
             }
         }
 

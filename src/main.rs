@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::vec;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use kuh_handel::backend_api::{WebsocketGame, organize_new_game, websocket_handler};
@@ -30,11 +31,14 @@ use tracing_subscriber::fmt;
 
 #[tokio::main]
 async fn main() {
-    let file_appender = tracing_appender::rolling::never("logs", "app.log");
-    let (non_blocking, _guard) = non_blocking(file_appender);
+    let game_log_file = tracing_appender::rolling::never("logs", "app.log");
+    let (log_writer, _guard1) = non_blocking(game_log_file);
+
+    let game_results_file = tracing_appender::rolling::never("logs", "results.log");
+    let (results_writer, _guard2) = non_blocking(game_results_file);
 
     fmt()
-        .with_writer(non_blocking)
+        .with_writer(log_writer.and(results_writer.with_filter(|meta| meta.target() == "winner")))
         .with_ansi(false)
         .finish()
         .init();
@@ -65,8 +69,9 @@ async fn main() {
 
         game.num_players();
 
-        game.play().unwrap();
-        println!("{}", game);
+        let results = game.play().unwrap();
+
+        println!("ranking: {:?}", results);
 
         print!("game is done")
     });

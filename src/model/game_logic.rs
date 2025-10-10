@@ -3,7 +3,7 @@ use crate::messages::actions::{
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{
-    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer,
+    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points,
 };
 
 use crate::messages::message_protocol::StateMessage;
@@ -126,7 +126,7 @@ impl Game {
         }
     }
 
-    pub fn play(&mut self) -> Result<(), GameError> {
+    pub fn play(&mut self) -> Result<Vec<(PlayerId, Points)>, GameError> {
         self.draw_phase();
         self.trading_phase();
 
@@ -140,7 +140,19 @@ impl Game {
             return Err(GameError::InvalidMoneyAtEnd);
         };
 
-        Ok(())
+        let mut ranking: Vec<(PlayerId, Points)> = self
+            .players
+            .iter()
+            .map(|p| (p.borrow().id(), p.borrow().calculate_points()))
+            .collect();
+
+        ranking.sort_by(|(_, points_a), (_, points_b)| points_b.cmp(points_a));
+
+        let update = GameUpdate::End {
+            ranking: ranking.clone(),
+        };
+        Self::update_multiple_players(&self.players, update);
+        Ok(ranking)
     }
 
     pub fn validate_players_money(&self) -> bool {

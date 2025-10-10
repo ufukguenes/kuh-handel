@@ -79,6 +79,14 @@ impl Client {
             }
             self.print_in_columns(format!("waiting for next action request"));
         }
+        self.print_in_columns(format!(
+            "ranking: {:?}",
+            self.bot
+                .final_ranking()
+                .iter()
+                .map(|ranking| (ranking.0.name.clone(), ranking.1.to_string()))
+                .collect::<Vec<_>>(),
+        ));
     }
 
     pub fn indent_space(&self) -> String {

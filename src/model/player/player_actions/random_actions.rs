@@ -10,7 +10,7 @@ use crate::messages::actions::{
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{
-    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer,
+    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points,
 };
 use crate::model::game_errors::GameError;
 
@@ -27,6 +27,7 @@ pub struct RandomPlayerActions {
     wallet: Wallet,
     id: PlayerId,
     rng: ChaCha8Rng,
+    final_ranking: Vec<(PlayerId, Points)>,
 }
 
 impl RandomPlayerActions {
@@ -37,6 +38,7 @@ impl RandomPlayerActions {
             wallet: Wallet::new(BTreeMap::new()),
             id: PlayerId { name: my_id },
             rng: ChaCha8Rng::seed_from_u64(seed),
+            final_ranking: Vec::new(),
         }
     }
 
@@ -66,6 +68,10 @@ impl RandomPlayerActions {
             return Some(trade_choice);
         }
         None
+    }
+
+    pub fn final_ranking(&self) -> &Vec<(PlayerId, Points)> {
+        &self.final_ranking
     }
 
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
@@ -251,6 +257,9 @@ impl PlayerActions for RandomPlayerActions {
                 self.owned_animals = BTreeMap::new();
             }
 
+            GameUpdate::End { ranking } => {
+                self.final_ranking = ranking;
+            }
             _ => {}
         }
 

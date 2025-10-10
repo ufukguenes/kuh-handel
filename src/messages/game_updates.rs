@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-type Points = usize;
+pub type Points = usize;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {

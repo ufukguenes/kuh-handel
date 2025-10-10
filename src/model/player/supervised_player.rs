@@ -1,4 +1,3 @@
-use std::cell::Ref;
 use std::cell::RefCell;
 
 use std::collections::BTreeMap;
@@ -56,6 +55,10 @@ impl SupervisedPlayer {
     }
     pub fn clone_owned_animals(&self) -> BTreeMap<Animal, usize> {
         self.player.borrow().owned_animals().clone()
+    }
+
+    pub fn calculate_points(&self) -> Points {
+        self.player.borrow().calculate_points()
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {

@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::messages::actions::{FromActionMessage, InitialTrade};
 
+use crate::messages::game_updates::Points;
 use crate::messages::message_protocol::StateMessage;
 use crate::model::animals::{Animal, AnimalSet};
 
 use crate::model::game_errors::GameError;
-use crate::model::money::value::Value;
 use crate::model::money::wallet::Wallet;
 use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use std::cell::RefCell;
@@ -58,6 +58,14 @@ impl Player {
 
     pub fn id(&self) -> &PlayerId {
         &self.id
+    }
+
+    pub fn calculate_points(&self) -> Points {
+        let mut animal_sum: Points = 0;
+        for (animal, _) in self.owned_animals.iter() {
+            animal_sum += animal.value().value();
+        }
+        return animal_sum * self.owned_animals.len();
     }
 
     pub fn can_trade(&self, opponents: &Vec<Rc<RefCell<Player>>>) -> Option<InitialTrade> {

@@ -212,6 +212,11 @@ impl Game {
             for other in self.players[i + 1..].iter() {
                 let binding = other.borrow();
                 let others_animals = binding.clone_owned_animals();
+
+                if others_animals.is_empty() {
+                    return true;
+                }
+
                 let has_shared = others_animals
                     .keys()
                     .all(|animal| player.borrow().clone_owned_animals().contains_key(animal));
@@ -221,6 +226,13 @@ impl Game {
                         other.borrow().id(),
                         player.borrow().id()
                     );
+                    for player in self.players.iter() {
+                        println!("{:?}", player.borrow().clone_owned_animals());
+                    }
+
+                    for player in self.players.iter() {
+                        println!("{:?}", player.borrow().clone_wallet());
+                    }
                     return false;
                 }
             }

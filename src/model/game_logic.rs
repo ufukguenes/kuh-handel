@@ -177,14 +177,17 @@ impl Game {
 
     pub fn validate_players_animals(&self) -> bool {
         for (i, player) in self.players.iter().enumerate() {
-            //todo also check if all animals are still existent and none got lost
             let binding = player.borrow();
             let current_animals = binding.clone_owned_animals();
+            let mut beginning_animals = self.animal_sets.clone();
             // check if animal occurs the right amount of times
             for (animal, count) in current_animals.into_iter() {
-                let current_set = self.animal_sets.iter().find(|set| *set.animal() == animal);
-                match current_set {
-                    Some(current_set) => {
+                let pos = beginning_animals
+                    .iter()
+                    .position(|set| *set.animal() == animal);
+                match pos {
+                    Some(pos) => {
+                        let current_set = beginning_animals.remove(pos);
                         if current_set.occurrences() != count {
                             {
                                 error!(
@@ -220,6 +223,13 @@ impl Game {
                         return false;
                     }
                 }
+            }
+
+            if beginning_animals.len() > 0 {
+                error!(
+                    "gl | validation: animals that existed are now missing {:?}",
+                    beginning_animals
+                );
             }
 
             // check that no two players share the same animal
@@ -294,8 +304,11 @@ impl Game {
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
         let mut pass_count = 0usize;
 
-        for bidder in auction_players.iter() {
-            // todo cycle but with max?
+        let max_bids: usize = 100; // todo find a better limit, maybe 10*player_num?
+        for (i, bidder) in auction_players.iter().cycle().enumerate() {
+            if i >= max_bids {
+                break;
+            }
             let auction_round = AuctionRound {
                 animal: Rc::clone(&animal),
                 host: host_id.clone(),

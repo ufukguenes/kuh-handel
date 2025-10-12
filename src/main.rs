@@ -24,10 +24,11 @@ use tracing_subscriber::fmt;
 // TODO:
 // - create matches in multiple threads and handle who plays against who
 // - we might not need AnimalSet, consider removing that
-// - add an authentication key for each player so others cant just copy the name
+// - store password and player_ids and check for duplicate ids
 // - provide demo, where players can test their bot against our random bots for testing
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - make a simple visualization for that that is also hosted on the website
+// - should we allow for one bot to play multiple games in parallel, or just one game per bot at any time?
 
 #[tokio::main]
 async fn main() {

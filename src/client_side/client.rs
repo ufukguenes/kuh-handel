@@ -33,10 +33,12 @@ impl Client {
     }
 
     pub async fn start(mut self) {
-        let (ws_stream, _) =
-            connect_async(format!("ws://127.0.0.1:3000/game?player_id={}", self.name))
-                .await
-                .expect("Failed to connect");
+        let (ws_stream, _) = connect_async(format!(
+            "ws://127.0.0.1:3000/game?player_id={}&password={}",
+            self.name, self.name
+        ))
+        .await
+        .expect("Failed to connect");
 
         self.print_in_columns(format!("Connected to server!"));
 

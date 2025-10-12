@@ -3,14 +3,13 @@ use crate::model::game_errors::GameError;
 use axum::{
     extract::{
         Query, State,
-        connect_info::Connected,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
 };
 pub use axum_macros::debug_handler;
+use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::{collections::BTreeMap, os::linux::raw::stat};
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info};
@@ -21,6 +20,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct AuthParams {
     player_id: String,
+    password: String,
 }
 
 pub struct WebsocketGame {
@@ -72,11 +72,21 @@ pub async fn websocket_handler(
     State(state): State<Arc<Mutex<WebsocketGame>>>,
 ) -> impl IntoResponse {
     let player_id = params.player_id.clone();
-    ws.on_upgrade(|socket| handle_socket(socket, state, player_id))
+    let password = params.password.clone();
+    ws.on_upgrade(|socket| handle_socket(socket, state, player_id, password))
 }
 
-async fn handle_socket(mut socket: WebSocket, state: Arc<Mutex<WebsocketGame>>, player_id: String) {
+async fn handle_socket(
+    mut socket: WebSocket,
+    state: Arc<Mutex<WebsocketGame>>,
+    player_id: String,
+    password: String,
+) {
     info!("bck | New bot connecting...");
+    if password != player_id {
+        info!("bck | password for bot {}, was wrong", player_id);
+        return;
+    }
 
     // for each bot, create two channels
     // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)

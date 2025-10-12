@@ -209,7 +209,7 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
 
     info!("og | all players joined");
     loop {
-        missing_players = state.lock().await.get_missing_players().await; // todo this does not work correctly
+        missing_players = state.lock().await.get_missing_players().await;
         if missing_players.len() > 0 {
             info!(
                 "og | The game should be interrupted and the following players removed: {:?}",

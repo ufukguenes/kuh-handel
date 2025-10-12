@@ -74,6 +74,7 @@ impl RandomPlayerActions {
         &self.final_ranking
     }
 
+// todo this is wrong, it gets the last bid, not the highest, of someone later bids lower this is wrong, just use leons implementation 
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
         bids.iter()
             .rev()

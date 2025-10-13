@@ -1,14 +1,16 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug Rust",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/target/debug/kuh-handel",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            
-        }
-    ]
-}
+     "version": "0.2.0",
+     "configurations": [
+         {
+             "name": "Launch",
+             "type": "cppdbg",
+             "request": "launch",
+             "program": "${workspaceRoot}/target/debug/kuh-handel",
+             "args": [],
+             "stopAtEntry": false,
+             "cwd": "${workspaceRoot}",
+
+         },
+
+     ]
+ }

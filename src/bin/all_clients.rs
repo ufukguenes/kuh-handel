@@ -37,9 +37,8 @@ async fn main() {
     let johannes_handel = tokio::spawn(johannes_client.start());
     let viola_handel = tokio::spawn(viola_client.start());
 
-    while !ufuk_handel.is_finished()
-        || !leon_handel.is_finished()
-        || !johannes_handel.is_finished()
-        || !viola_handel.is_finished()
-    {}
+    let _ = ufuk_handel.await;
+    let _ = leon_handel.await;
+    let _ = johannes_handel.await;
+    let _ = viola_handel.await;
 }

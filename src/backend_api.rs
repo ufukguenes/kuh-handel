@@ -19,8 +19,11 @@ use axum::{
 pub use axum_macros::debug_handler;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{Mutex, mpsc};
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
+};
 use tracing::{Level, error, info};
 
 // Define the game state. It now tracks players and the current turn.
@@ -207,7 +210,7 @@ async fn handle_socket(
 
 pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
     // todo: better match making
-    while state.lock().await.connected_players.lock().await.len() < 2 {
+    while state.lock().await.connected_players.lock().await.len() < 4 {
         info!("og | waiting for more players to join");
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
@@ -217,63 +220,23 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
         // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
 
         let ws_lobby = Arc::clone(&state);
-        let game_handle = tokio::spawn(async move {
-            let ufuk_channel = {
-                let lobby_lock = ws_lobby.lock().await;
-                let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
-                let (ufuk_sender, ufuk_receiver) =
-                    channel_for_ws_actions.get(&"ufuk".to_string()).unwrap();
+        let first_game = spawn_game(
+            ws_lobby,
+            "ufuk".to_string(),
+            "leon".to_string(),
+            "gregor".to_string(),
+        );
 
-                (ufuk_sender.clone(), Arc::clone(&ufuk_receiver))
-            };
+        let ws_lobby = Arc::clone(&state);
+        let second_game = spawn_game(
+            ws_lobby,
+            "johannes".to_string(),
+            "viola".to_string(),
+            "fiete".to_string(),
+        );
 
-            let leon_channel = {
-                let lobby_lock = ws_lobby.lock().await;
-                let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
-                let (leon_sender, leon_receiver) =
-                    channel_for_ws_actions.get(&"leon".to_string()).unwrap();
-
-                (leon_sender.clone(), Arc::clone(&leon_receiver))
-            };
-
-            let ufuk_ws_action = WebsocketActions::new("ufuk".to_string(), ufuk_channel);
-            let leon_ws_action = WebsocketActions::new("leon".to_string(), leon_channel);
-            let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
-
-            let seed: u64 = 0;
-            let game_handle = tokio::task::spawn_blocking(move || {
-                println!("-------Default game--------\n");
-                let mut game = Game::new_default_game(
-                    vec![
-                        String::from("ufuk"),
-                        String::from("leon"),
-                        String::from("gregor"),
-                    ],
-                    vec![
-                        Box::new(ufuk_ws_action),
-                        Box::new(leon_ws_action),
-                        Box::new(gregor_random_action),
-                    ],
-                    seed,
-                );
-
-                game.num_players();
-                println!("{}", game);
-
-                game.num_players();
-
-                let results = game.play().unwrap();
-
-                println!("ranking: {:?}", results);
-                tracing::event!(target: "results", Level::INFO, "{:?}", results);
-
-                print!("game is done");
-            });
-
-            game_handle.await;
-        });
-
-        let wait = game_handle.await;
+        let wait = first_game.await;
+        let wait = second_game.await;
 
         info!("og | It's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();
@@ -281,4 +244,67 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
         // todo: do i want to keep this (either the sleep or in general the organize game)
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
+}
+
+pub async fn spawn_game(
+    state: Arc<Mutex<WebsocketGame>>,
+    player_a: String,
+    player_b: String,
+    player_c: String,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let ufuk_channel = {
+            let lobby_lock = state.lock().await;
+            let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+            let (ufuk_sender, ufuk_receiver) =
+                channel_for_ws_actions.get(&player_a.clone()).unwrap();
+
+            (ufuk_sender.clone(), Arc::clone(&ufuk_receiver))
+        };
+
+        let leon_channel = {
+            let lobby_lock = state.lock().await;
+            let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+            let (leon_sender, leon_receiver) =
+                channel_for_ws_actions.get(&player_b.clone()).unwrap();
+
+            (leon_sender.clone(), Arc::clone(&leon_receiver))
+        };
+
+        let ufuk_ws_action = WebsocketActions::new(player_a.clone(), ufuk_channel);
+        let leon_ws_action = WebsocketActions::new(player_b.clone(), leon_channel);
+        let gregor_random_action = RandomPlayerActions::new(player_c.clone(), 25);
+
+        let seed: u64 = 0;
+        let game_handle = tokio::task::spawn_blocking(move || {
+            println!("-------Default game--------\n");
+            let mut game = Game::new_default_game(
+                vec![
+                    String::from(player_a.clone()),
+                    String::from(player_b.clone()),
+                    String::from(player_c.clone()),
+                ],
+                vec![
+                    Box::new(ufuk_ws_action),
+                    Box::new(leon_ws_action),
+                    Box::new(gregor_random_action),
+                ],
+                seed,
+            );
+
+            game.num_players();
+            println!("{}", game);
+
+            game.num_players();
+
+            let results = game.play().unwrap();
+
+            println!("ranking: {:?}", results);
+            tracing::event!(target: "results", Level::INFO, "{:?}", results);
+
+            print!("game is done");
+        });
+
+        game_handle.await;
+    })
 }

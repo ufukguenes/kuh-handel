@@ -1,11 +1,7 @@
 use crate::model::{
-    game_errors::GameError,
     game_logic::Game,
-    player::{
-        base_player::Player,
-        player_actions::{
-            random_actions::RandomPlayerActions, websocket_actions::WebsocketActions,
-        },
+    player::player_actions::{
+        random_actions::RandomPlayerActions, websocket_actions::WebsocketActions,
     },
 };
 
@@ -235,8 +231,8 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
             "fiete".to_string(),
         );
 
-        let wait = first_game.await;
-        let wait = second_game.await;
+        let _wait = first_game.await;
+        let _wait = second_game.await;
 
         info!("og | It's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();
@@ -305,6 +301,6 @@ pub async fn spawn_game(
             print!("game is done");
         });
 
-        game_handle.await;
+        let _ = game_handle.await;
     })
 }

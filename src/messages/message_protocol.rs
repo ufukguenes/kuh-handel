@@ -5,10 +5,7 @@ use crate::messages::actions::{
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
-use crate::model::{
-    money::{money::Money, value::Value},
-    player::base_player::PlayerId,
-};
+use crate::model::{money::value::Value, player::base_player::PlayerId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

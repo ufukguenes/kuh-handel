@@ -5,7 +5,6 @@ use crate::messages::actions::{
 
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
-use crate::model::money::money::Money;
 use crate::model::money::value::Value;
 use crate::model::player::base_player::PlayerId;
 

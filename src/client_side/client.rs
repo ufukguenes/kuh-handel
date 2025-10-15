@@ -1,5 +1,4 @@
 use std::cmp::min;
-use std::panic;
 use std::str::FromStr;
 
 use futures_util::{SinkExt, StreamExt};

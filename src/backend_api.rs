@@ -32,22 +32,14 @@ pub struct AuthParams {
 }
 
 pub struct WebsocketLobby {
-    connected_players: Arc<Mutex<BTreeMap<String, bool>>>,
-    channel_for_ws_actions:
+    channels_for_ws_actions:
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
 }
 
 impl WebsocketLobby {
     pub fn new() -> WebsocketLobby {
-        let connected_players: Arc<Mutex<BTreeMap<String, bool>>> =
-            Arc::new(Mutex::new(BTreeMap::new()));
-        let channel_for_ws_actions: Arc<
-            Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>,
-        > = Arc::new(Mutex::new(BTreeMap::new()));
-
         WebsocketLobby {
-            connected_players: connected_players,
-            channel_for_ws_actions: channel_for_ws_actions,
+            channels_for_ws_actions: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
 }
@@ -78,13 +70,17 @@ async fn handle_socket(
     let (state_sender, mut state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
     let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
 
-    let channels_for_ws_action = (state_sender, Arc::new(Mutex::new(action_receiver)));
+    let channels_for_this_bot = (state_sender, Arc::new(Mutex::new(action_receiver)));
 
-    {
+    let arc_channels_for_ws_actions = {
         let state_lock = state.lock().await;
-        let mut map_lock = state_lock.channel_for_ws_actions.lock().await;
-        map_lock.insert(player_id.clone(), channels_for_ws_action);
-    }
+        Arc::clone(&state_lock.channels_for_ws_actions)
+    };
+
+    arc_channels_for_ws_actions
+        .lock()
+        .await
+        .insert(player_id.clone(), channels_for_this_bot);
 
     // for each bot, create two channels
     // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
@@ -95,16 +91,6 @@ async fn handle_socket(
     // todo use a tokio notify or watch here to check if the channels have been created
     // or should i just create the channels here, read them in the lobby, where i create the game and loop here forever until the bot disconnects,
     // so i could just reuse the channel over multiple games
-
-    let connected_players = {
-        let state_lock = state.lock().await;
-        Arc::clone(&state_lock.connected_players)
-    };
-
-    connected_players
-        .lock()
-        .await
-        .insert(player_id.clone(), true);
 
     loop {
         // send state and possible actions to client-bot
@@ -199,14 +185,25 @@ async fn handle_socket(
 
     info!("bck | Bot ID {} disconnected.", player_id);
 
-    connected_players.lock().await.insert(player_id, false);
+    arc_channels_for_ws_actions
+        .lock()
+        .await
+        .remove(&player_id.clone());
 
     state_receiver.close();
 }
 
 pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
     // todo: better match making
-    while state.lock().await.connected_players.lock().await.len() < 4 {
+    while state
+        .lock()
+        .await
+        .channels_for_ws_actions
+        .lock()
+        .await
+        .len()
+        < 4
+    {
         info!("og | waiting for more players to join");
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
@@ -251,7 +248,7 @@ pub async fn spawn_game(
     tokio::spawn(async move {
         let ufuk_channel = {
             let lobby_lock = state.lock().await;
-            let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+            let channel_for_ws_actions = lobby_lock.channels_for_ws_actions.lock().await;
             let (ufuk_sender, ufuk_receiver) =
                 channel_for_ws_actions.get(&player_a.clone()).unwrap();
 
@@ -260,7 +257,7 @@ pub async fn spawn_game(
 
         let leon_channel = {
             let lobby_lock = state.lock().await;
-            let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+            let channel_for_ws_actions = lobby_lock.channels_for_ws_actions.lock().await;
             let (leon_sender, leon_receiver) =
                 channel_for_ws_actions.get(&player_b.clone()).unwrap();
 

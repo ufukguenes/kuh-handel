@@ -53,11 +53,19 @@ impl WebsocketActions {
             "wsp | going to send state from game to backend {}, {}",
             self.id, msg
         );
-        self.state_sender
-            .blocking_send(Message::Text(Utf8Bytes::from(
-                serde_json::to_string(&msg).unwrap().as_str(),
-            )))
-            .unwrap();
+
+        let serialized_obj = match serde_json::to_string(&msg) {
+            Ok(text) => Message::Text(Utf8Bytes::from(text)),
+            Err(_) => return None,
+        };
+
+        let try_send_to_backend = self.state_sender.blocking_send(serialized_obj);
+
+        if let Err(e) = try_send_to_backend {
+            error!("wsp | Player: {}, {}", self.id, e);
+            return None;
+        }
+
         info!(
             "wsp | finished, sending state to backend {}, {}",
             self.id, msg
@@ -70,10 +78,29 @@ impl WebsocketActions {
         let msg: Option<Message> = self.action_receiver.blocking_lock().blocking_recv();
         info!("wsp | finished, receiving action from backend {}", self.id,);
 
-        let action_msg: ActionMessage = match msg {
-            Some(text) => serde_json::from_str(text.to_text().unwrap()).unwrap(),
+        let msg = match msg {
+            Some(msg) => msg,
             None => return None,
         };
+
+        let msg_text = match msg {
+            Message::Text(text) => text,
+
+            Message::Close(_) => {
+                self.action_receiver.blocking_lock().close();
+                return None;
+            }
+            _ => return None,
+        };
+
+        let action_msg: ActionMessage = match serde_json::from_str(&msg_text) {
+            Ok(action_msg) => action_msg,
+            Err(e) => {
+                error!("wsp | Player: {}, {}", self.id, e);
+                return None;
+            }
+        };
+
         Some(T::extract(action_msg))
     }
 }

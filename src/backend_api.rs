@@ -51,20 +51,6 @@ impl WebsocketGame {
             channel_for_ws_actions: channel_for_ws_actions,
         }
     }
-
-    pub async fn get_missing_players(&self) -> Vec<String> {
-        let locked_connected_player = self.connected_players.lock().await;
-        let player_ids: Vec<String> = locked_connected_player.keys().cloned().collect();
-
-        let mut missing_players = Vec::new();
-        for current_id in player_ids {
-            let is_connected = locked_connected_player.get(&current_id).unwrap();
-            if !is_connected {
-                missing_players.push(current_id.clone());
-            }
-        }
-        missing_players
-    }
 }
 
 #[debug_handler]
@@ -220,31 +206,18 @@ async fn handle_socket(
 }
 
 pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
-    let mut missing_players = state.lock().await.get_missing_players().await;
-
-    while missing_players.len() > 0 {
-        info!("og | Waiting for missing players: {:?}", missing_players);
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        missing_players = state.lock().await.get_missing_players().await;
-    }
-
+    // todo: better match making
     while state.lock().await.connected_players.lock().await.len() < 2 {
-        println!("og | waiting for more players to join");
+        info!("og | waiting for more players to join");
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 
-    info!("og | all players joined");
+    info!("og | enough players joined");
     loop {
-        missing_players = state.lock().await.get_missing_players().await;
-        if missing_players.len() > 0 {
-            info!(
-                "og | The game should be interrupted and the following players removed: {:?}",
-                missing_players
-            );
-        }
+        // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
 
         let ws_lobby = Arc::clone(&state);
-        tokio::spawn(async move {
+        let game_handle = tokio::spawn(async move {
             let ufuk_channel = {
                 let lobby_lock = ws_lobby.lock().await;
                 let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
@@ -299,6 +272,8 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
 
             game_handle.await;
         });
+
+        let wait = game_handle.await;
 
         info!("og | It's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();

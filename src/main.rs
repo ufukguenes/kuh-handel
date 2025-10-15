@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use kuh_handel::backend_api::{WebsocketGame, organize_new_game, websocket_handler};
+use kuh_handel::backend_api::{WebsocketLobby, organize_new_game, websocket_handler};
 
 use std::net::SocketAddr;
 
@@ -16,7 +16,8 @@ use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
 // TODO:
-// - create matches in multiple threads and handle who plays against who
+// - real matchmaking
+// - remove dangerous unwraps, ?, etc...
 // - we might not need AnimalSet, consider removing that
 // - store password and player_ids and check for duplicate ids
 // - provide demo, where players can test their bot against our random bots for testing
@@ -38,50 +39,7 @@ async fn main() {
         .finish()
         .init();
 
-    /*
-    let animal_set: AnimalSet = DefaultAnimalSetFactory::new(500, vec![0, 4]);
-    let (ufuk_ws_action, ufuk_channel) = WebsocketActions::new("ufuk".to_string());
-    let (leon_ws_action, leon_channel) = WebsocketActions::new("leon".to_string());
-    let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
-    let seed: u64 = 0;
-    let game_handle = tokio::task::spawn_blocking(move || {
-        println!("-------Default game--------\n");
-        let mut game = Game::new_default_game(
-            vec![
-                String::from("ufuk"),
-                String::from("leon"),
-                String::from("gregor"),
-            ],
-            vec![
-                Box::new(ufuk_ws_action),
-                Box::new(leon_ws_action),
-                Box::new(gregor_random_action),
-            ],
-            seed,
-        );
-
-        game.num_players();
-        println!("{}", game);
-
-        game.num_players();
-
-        let results = game.play().unwrap();
-
-        println!("ranking: {:?}", results);
-        tracing::event!(target: "results", Level::INFO, "{:?}", results);
-
-        print!("game is done")
-    });
-
-
-    let websocket_channels_per_player: BTreeMap<String, (Receiver<Message>, Sender<Message>)> =
-        BTreeMap::from([
-            ("ufuk".to_string(), ufuk_channel),
-            ("leon".to_string(), leon_channel),
-        ]);
-    */
-
-    let ws_game = Arc::new(Mutex::new(WebsocketGame::new()));
+    let ws_game = Arc::new(Mutex::new(WebsocketLobby::new()));
     // start the game in a seperate thread, so that server can handle connections
     tokio::spawn(organize_new_game(Arc::clone(&ws_game)));
 

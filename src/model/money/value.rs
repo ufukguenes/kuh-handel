@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize, de::value};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Serialize, Deserialize, Debug)]
 pub struct Value {

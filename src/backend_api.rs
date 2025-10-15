@@ -31,21 +31,21 @@ pub struct AuthParams {
     password: String,
 }
 
-pub struct WebsocketGame {
+pub struct WebsocketLobby {
     connected_players: Arc<Mutex<BTreeMap<String, bool>>>,
     channel_for_ws_actions:
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
 }
 
-impl WebsocketGame {
-    pub fn new() -> WebsocketGame {
+impl WebsocketLobby {
+    pub fn new() -> WebsocketLobby {
         let connected_players: Arc<Mutex<BTreeMap<String, bool>>> =
             Arc::new(Mutex::new(BTreeMap::new()));
         let channel_for_ws_actions: Arc<
             Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>,
         > = Arc::new(Mutex::new(BTreeMap::new()));
 
-        WebsocketGame {
+        WebsocketLobby {
             connected_players: connected_players,
             channel_for_ws_actions: channel_for_ws_actions,
         }
@@ -56,7 +56,7 @@ impl WebsocketGame {
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     Query(params): Query<AuthParams>,
-    State(state): State<Arc<Mutex<WebsocketGame>>>,
+    State(state): State<Arc<Mutex<WebsocketLobby>>>,
 ) -> impl IntoResponse {
     let player_id = params.player_id.clone();
     let password = params.password.clone();
@@ -65,7 +65,7 @@ pub async fn websocket_handler(
 
 async fn handle_socket(
     mut socket: WebSocket,
-    state: Arc<Mutex<WebsocketGame>>,
+    state: Arc<Mutex<WebsocketLobby>>,
     player_id: String,
     password: String,
 ) {
@@ -204,7 +204,7 @@ async fn handle_socket(
     state_receiver.close();
 }
 
-pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
+pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
     // todo: better match making
     while state.lock().await.connected_players.lock().await.len() < 4 {
         info!("og | waiting for more players to join");
@@ -243,7 +243,7 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
 }
 
 pub async fn spawn_game(
-    state: Arc<Mutex<WebsocketGame>>,
+    state: Arc<Mutex<WebsocketLobby>>,
     player_a: String,
     player_b: String,
     player_c: String,

@@ -16,8 +16,9 @@ pub struct Client {
     pub print_indent_size: usize,
 }
 
+// todo adjust client connection like in backend
 impl Client {
-    const INDENT_MULTIPLIER: usize = 50;
+    const INDENT_MULTIPLIER: usize = 1000;
     const COLUMN_BUFFER: usize = 5;
 
     fn print_in_columns(&self, text: String) {

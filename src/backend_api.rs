@@ -1,4 +1,13 @@
-use crate::model::game_errors::GameError;
+use crate::model::{
+    game_errors::GameError,
+    game_logic::Game,
+    player::{
+        base_player::Player,
+        player_actions::{
+            random_actions::RandomPlayerActions, websocket_actions::WebsocketActions,
+        },
+    },
+};
 
 use axum::{
     extract::{
@@ -10,9 +19,9 @@ use axum::{
 pub use axum_macros::debug_handler;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{error, info};
+use tokio::sync::{Mutex, mpsc};
+use tracing::{Level, error, info};
 
 // Define the game state. It now tracks players and the current turn.
 use serde::Deserialize;
@@ -25,29 +34,22 @@ pub struct AuthParams {
 
 pub struct WebsocketGame {
     connected_players: Arc<Mutex<BTreeMap<String, bool>>>,
-    channel_per_player: Arc<Mutex<BTreeMap<String, (Receiver<Message>, Sender<Message>)>>>,
+    channel_for_ws_actions:
+        Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
 }
 
 impl WebsocketGame {
-    pub async fn new(
-        websocket_channels_per_player: Arc<
-            Mutex<BTreeMap<String, (Receiver<Message>, Sender<Message>)>>,
-        >,
-    ) -> Result<WebsocketGame, GameError> {
+    pub fn new() -> WebsocketGame {
         let connected_players: Arc<Mutex<BTreeMap<String, bool>>> =
             Arc::new(Mutex::new(BTreeMap::new()));
+        let channel_for_ws_actions: Arc<
+            Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>,
+        > = Arc::new(Mutex::new(BTreeMap::new()));
 
-        for player_id in websocket_channels_per_player.lock().await.keys() {
-            connected_players
-                .lock()
-                .await
-                .insert(player_id.clone(), false);
-        }
-
-        Result::Ok(WebsocketGame {
+        WebsocketGame {
             connected_players: connected_players,
-            channel_per_player: websocket_channels_per_player,
-        })
+            channel_for_ws_actions: channel_for_ws_actions,
+        }
     }
 
     pub async fn get_missing_players(&self) -> Vec<String> {
@@ -88,18 +90,26 @@ async fn handle_socket(
         return;
     }
 
+    let (state_sender, mut state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
+    let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
+
+    let channels_for_ws_action = (state_sender, Arc::new(Mutex::new(action_receiver)));
+
+    {
+        let state_lock = state.lock().await;
+        let mut map_lock = state_lock.channel_for_ws_actions.lock().await;
+        map_lock.insert(player_id.clone(), channels_for_ws_action);
+    }
+
     // for each bot, create two channels
     // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
     // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
     // to the websocket so it can send it to the client-bot
 
-    let channels = {
-        let state_lock = state.lock().await;
-        Arc::clone(&state_lock.channel_per_player)
-    };
-
     info!("bck | Bot connected with ID: {}", player_id.clone());
-    let (mut state_receiver, action_sender) = channels.lock().await.remove(&player_id).unwrap();
+    // todo use a tokio notify or watch here to check if the channels have been created
+    // or should i just create the channels here, read them in the lobby, where i create the game and loop here forever until the bot disconnects,
+    // so i could just reuse the channel over multiple games
 
     let connected_players = {
         let state_lock = state.lock().await;
@@ -211,10 +221,16 @@ async fn handle_socket(
 
 pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
     let mut missing_players = state.lock().await.get_missing_players().await;
+
     while missing_players.len() > 0 {
         info!("og | Waiting for missing players: {:?}", missing_players);
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         missing_players = state.lock().await.get_missing_players().await;
+    }
+
+    while state.lock().await.connected_players.lock().await.len() < 2 {
+        println!("og | waiting for more players to join");
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 
     info!("og | all players joined");
@@ -226,6 +242,63 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketGame>>) {
                 missing_players
             );
         }
+
+        let ws_lobby = Arc::clone(&state);
+        tokio::spawn(async move {
+            let ufuk_channel = {
+                let lobby_lock = ws_lobby.lock().await;
+                let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+                let (ufuk_sender, ufuk_receiver) =
+                    channel_for_ws_actions.get(&"ufuk".to_string()).unwrap();
+
+                (ufuk_sender.clone(), Arc::clone(&ufuk_receiver))
+            };
+
+            let leon_channel = {
+                let lobby_lock = ws_lobby.lock().await;
+                let channel_for_ws_actions = lobby_lock.channel_for_ws_actions.lock().await;
+                let (leon_sender, leon_receiver) =
+                    channel_for_ws_actions.get(&"leon".to_string()).unwrap();
+
+                (leon_sender.clone(), Arc::clone(&leon_receiver))
+            };
+
+            let ufuk_ws_action = WebsocketActions::new("ufuk".to_string(), ufuk_channel);
+            let leon_ws_action = WebsocketActions::new("leon".to_string(), leon_channel);
+            let gregor_random_action = RandomPlayerActions::new("gregor".to_string(), 25);
+
+            let seed: u64 = 0;
+            let game_handle = tokio::task::spawn_blocking(move || {
+                println!("-------Default game--------\n");
+                let mut game = Game::new_default_game(
+                    vec![
+                        String::from("ufuk"),
+                        String::from("leon"),
+                        String::from("gregor"),
+                    ],
+                    vec![
+                        Box::new(ufuk_ws_action),
+                        Box::new(leon_ws_action),
+                        Box::new(gregor_random_action),
+                    ],
+                    seed,
+                );
+
+                game.num_players();
+                println!("{}", game);
+
+                game.num_players();
+
+                let results = game.play().unwrap();
+
+                println!("ranking: {:?}", results);
+                tracing::event!(target: "results", Level::INFO, "{:?}", results);
+
+                print!("game is done");
+            });
+
+            game_handle.await;
+        });
 
         info!("og | It's bot ID ___'s turn.",);
         // todo, should i use this: state.game.play_one_round();

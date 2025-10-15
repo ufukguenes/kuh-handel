@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::messages::actions::{
     AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
     SendMoney, TradeOffer, TradeOpponentDecision,
@@ -12,8 +14,8 @@ use crate::model::player::player_actions::base_player_actions::PlayerActions;
 use crate::model::player::player_actions::random_actions::RandomPlayerActions;
 
 use axum::extract::ws::{Message, Utf8Bytes};
-use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::{Mutex, mpsc};
 use tracing::{error, info};
 
 pub struct WebsocketActions {
@@ -24,30 +26,26 @@ pub struct WebsocketActions {
 
     // used by the player
     state_sender: Sender<Message>,
-    action_receiver: Receiver<Message>,
+    action_receiver: Arc<Mutex<Receiver<Message>>>,
     id: String,
     backup_actions: RandomPlayerActions,
 }
 
 impl WebsocketActions {
-    pub fn new(id: String) -> (WebsocketActions, (Receiver<Message>, Sender<Message>)) {
-        let (state_sender, state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
-        let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) =
-            mpsc::channel(1);
-
-        (
-            WebsocketActions {
-                state_sender: state_sender,
-                action_receiver: action_receiver,
-                id: id.clone(),
-                backup_actions: RandomPlayerActions::new(id, 42),
-            },
-            (state_receiver, action_sender),
-        )
+    pub fn new(
+        id: String,
+        (state_sender, action_receiver): (Sender<Message>, Arc<Mutex<Receiver<Message>>>),
+    ) -> WebsocketActions {
+        WebsocketActions {
+            state_sender: state_sender,
+            action_receiver: action_receiver,
+            id: id.clone(),
+            backup_actions: RandomPlayerActions::new(id, 42),
+        }
     }
 
     pub async fn close_connections(&mut self) {
-        self.action_receiver.close();
+        self.action_receiver.lock().await.close();
     }
 
     pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> Option<T> {
@@ -69,7 +67,7 @@ impl WebsocketActions {
             "wsp | waiting for action from backend for game {}, {}",
             self.id, msg
         );
-        let msg: Option<Message> = self.action_receiver.blocking_recv();
+        let msg: Option<Message> = self.action_receiver.blocking_lock().blocking_recv();
         info!("wsp | finished, receiving action from backend {}", self.id,);
 
         let action_msg: ActionMessage = match msg {

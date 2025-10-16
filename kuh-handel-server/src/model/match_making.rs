@@ -196,7 +196,7 @@ pub fn spawn_game(
 
         let mut random_actions: Vec<RandomPlayerActions> = Vec::new();
         for id in ws_players {
-            random_actions.push(RandomPlayerActions::new(id.clone(), 25)); //todo change see
+            random_actions.push(RandomPlayerActions::new(id.clone(), 25)); //todo change seed
         }
 
         let seed: u64 = 0; //todo change seed

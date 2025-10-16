@@ -165,7 +165,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         .lock()
         .await
         .get(&player_id)
-        .is_none()
+        .is_some()
     {
         info!(
             "bck | Already connected bot tried to connect again {}",

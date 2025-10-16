@@ -70,6 +70,8 @@ let chart;
 let historyData = {}; // { playerName: [{x, y}] }
 const POINT_ALPHA = 0.3;
 let selectedPlayers = new Set(); // Track which players are currently visible
+// New: Global map for stable color assignment
+let playerColorMap = {}; 
 
 function generatePastelColors(n){
     const colors=[];
@@ -91,9 +93,18 @@ async function loadData(){
         return {player, wins, total, winPct: parseFloat(winPct), ranks};
     });
 
+    // 1. Establish stable Player -> Color mapping
+    if (Object.keys(playerColorMap).length === 0 || Object.keys(playerColorMap).length !== players.length) {
+        const allPlayerNames = players.map(p => p.player);
+        const colors = generatePastelColors(allPlayerNames.length);
+        playerColorMap = {};
+        allPlayerNames.forEach((name, index) => {
+            playerColorMap[name] = colors[index];
+        });
+    }
+
     // Sort by win %
     const sortedPlayers=[...players].sort((a,b)=>b.winPct-a.winPct);
-    const colors = generatePastelColors(players.length);
 
     // Assign ranks with ties
     let lastPct = null, displayRank = 0;
@@ -109,10 +120,11 @@ async function loadData(){
     const tbody=document.querySelector('#rankingTable tbody');
     tbody.innerHTML='';
     sortedPlayers.forEach((p,i)=>{
+        const playerColor = playerColorMap[p.player]; // Use stable map color
         const row=document.createElement('tr');
         row.innerHTML=`
             <td>${p.rank}</td>
-            <td><span class="player-color" style="background-color:${colors[i]}"></span>${p.player}</td>
+            <td><span class="player-color" style="background-color:${playerColor}"></span>${p.player}</td>
             <td>${p.wins}</td>
             <td>${p.total}</td>
             <td>${p.winPct}%</td>
@@ -121,7 +133,6 @@ async function loadData(){
         tbody.appendChild(row);
 
         // Initialize selection (all players selected initially)
-        // Ensure all players are selected by default
         if(!selectedPlayers.size){
             Object.keys(data).forEach(player => selectedPlayers.add(player));
         }
@@ -160,7 +171,7 @@ async function loadData(){
 
     // Build datasets
     const datasets = filteredPlayers.map((p,i)=>{
-        const baseColor = colors[players.findIndex(pl=>pl.player===p.player)];
+        const baseColor = playerColorMap[p.player]; // Use stable map color
         const playerHistory = historyData[p.player];
         const datasetData = showHistory ? playerHistory : [playerHistory[playerHistory.length - 1]];
 

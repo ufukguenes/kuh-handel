@@ -8,6 +8,9 @@ use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::extract::ws::Message;
 pub use axum_macros::debug_handler;
+use core::num;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -59,6 +62,42 @@ pub async fn organize_new_game(ws_lobby: WebsocketLobby, game_results: JsonLog<V
         update_results(game_results.clone(), ranking).await;
 
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    }
+}
+
+pub async fn organize_random_game(
+    ws_lobby: WebsocketLobby,
+    game_results: JsonLog<Vec<usize>>,
+    seed: u64,
+) {
+    info!("og | starting to create random games");
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    loop {
+        if ws_lobby.channels_for_ws_actions.lock().await.len() < 1 {
+            info!("og | waiting for someone to join random game");
+        } else {
+            info!("og | creating new random games");
+
+            let mut new_games = Vec::new();
+            for player in ws_lobby.channels_for_ws_actions.lock().await.keys() {
+                let new_ws_lobby = ws_lobby.clone();
+
+                let num_random_players = rng.random_range(3..=5) as usize;
+                let random_players: Vec<String> = (0..num_random_players)
+                    .map(|i| String::from(format!("random_player_{}", i)))
+                    .collect();
+
+                let random_game =
+                    spawn_game(new_ws_lobby.clone(), vec![player.clone()], random_players);
+                new_games.push(random_game);
+            }
+
+            for game in new_games {
+                let ranking = game.await.await;
+                update_results(game_results.clone(), ranking).await
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }
 

@@ -7,7 +7,7 @@ use axum::{Router, routing};
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use backend_api::websocket_handler;
+use backend_api::{pvp_websocket_handler, random_websocket_handler};
 use model::match_making::{WebsocketLobby, organize_new_game};
 
 use std::net::SocketAddr;
@@ -16,7 +16,10 @@ use tokio;
 use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
-use crate::backend_api::{JsonLog, register_handler, stats_handler};
+use crate::{
+    backend_api::{JsonLog, register_handler, stats_handler},
+    model::match_making::organize_random_game,
+};
 
 // TODO:
 // - real matchmaking
@@ -24,10 +27,7 @@ use crate::backend_api::{JsonLog, register_handler, stats_handler};
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
 // - we might not need AnimalSet, consider removing that
-// - provide demo, where players can test their bot against our random bots for testing
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
-// - make visualization more insightful, like calculate the condorcet winner, or show position change over time
-// - should we allow for one bot to play multiple games in parallel, or just one game per bot at any time?
 
 #[tokio::main]
 async fn main() {
@@ -57,29 +57,44 @@ async fn main() {
         Err(_) => JsonLog::new("game_results.json".to_string()).await.unwrap(),
     };
 
-    let ws_lobby = WebsocketLobby::default();
+    let pvp_ws_lobby = WebsocketLobby::default();
+    let random_ws_lobby = WebsocketLobby::default();
     // start the game in a separate thread, so that server can handle connections
-    tokio::spawn(organize_new_game(ws_lobby.clone(), game_results.clone()));
+    tokio::spawn(organize_new_game(
+        pvp_ws_lobby.clone(),
+        game_results.clone(),
+    ));
+    tokio::spawn(organize_random_game(
+        random_ws_lobby.clone(),
+        game_results.clone(),
+        0,
+    ));
 
     // init websocket through http websocket upgrade
     let app: Router = Router::new()
         .route(
-            "/register",
+            "/kuh-handel/register",
             routing::post(register_handler).with_state(authentication.clone()),
         )
         .route(
-            "/results",
+            "/kuh-handel/results",
             routing::get(|| async {
                 axum::response::Html(tokio::fs::read_to_string("stats.html").await.unwrap())
             }),
         )
         .route(
-            "/get_results",
+            "/kuh-handel/get_results",
             routing::get(stats_handler).with_state(game_results.clone()),
         )
         .route(
-            "/game",
-            routing::get(websocket_handler).with_state((ws_lobby, authentication)),
+            "/kuh-handel/game",
+            routing::get(pvp_websocket_handler)
+                .with_state((pvp_ws_lobby.clone(), authentication.clone())),
+        )
+        .route(
+            "/kuh-handel/random_game",
+            routing::get(random_websocket_handler)
+                .with_state((random_ws_lobby.clone(), authentication.clone())),
         );
     let address = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();

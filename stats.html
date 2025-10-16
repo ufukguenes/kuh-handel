@@ -81,7 +81,7 @@ function generatePastelColors(n){
 }
 
 async function loadData(){
-    const response = await fetch('/get_results');
+    const response = await fetch('/kuh-handel/get_results');
     const data = await response.json();
 
     const players = Object.entries(data).map(([player,ranks])=>{

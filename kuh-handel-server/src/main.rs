@@ -33,11 +33,8 @@ async fn main() {
     let game_log_file = tracing_appender::rolling::never("logs", "app.log");
     let (log_writer, _guard1) = non_blocking(game_log_file);
 
-    let game_results_file = tracing_appender::rolling::never("logs", "results.log");
-    let (results_writer, _guard2) = non_blocking(game_results_file);
-
     fmt()
-        .with_writer(log_writer.and(results_writer.with_filter(|meta| meta.target() == "results")))
+        .with_writer(log_writer)
         .with_ansi(false)
         .finish()
         .init();

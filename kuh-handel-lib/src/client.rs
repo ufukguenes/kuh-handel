@@ -17,7 +17,6 @@ pub struct Client {
     pub print_indent_size: usize,
 }
 
-// todo adjust client connection like in backend
 impl Client {
     const INDENT_MULTIPLIER: usize = 1000;
     const COLUMN_BUFFER: usize = 5;
@@ -67,42 +66,76 @@ impl Client {
         let (mut send, mut recv) = ws_stream.split();
 
         // Spawn a task to listen for incoming messages
-        while let Some(msg) = recv.next().await {
-            match msg {
-                Ok(Message::Text(text)) => {
-                    let state_msg: StateMessage = serde_json::from_str(&text).unwrap();
-
-                    self.print_in_columns(format!("bot {} received message: {}", self.name, text));
-
-                    let action_msg: ActionMessage = self.bot.map_to_action(state_msg);
-
-                    self.print_in_columns(format!(
-                        "bot {} picked action: {}",
-                        self.name,
-                        serde_json::to_string(&action_msg).unwrap()
-                    ));
-
-                    let _ = send
-                        .send(Message::Text(serde_json::to_string(&action_msg).unwrap()))
-                        .await;
-
-                    self.print_in_columns(format!("bot {}, finished sending action", self.name));
+        loop {
+            self.print_in_columns(format!("waiting for next action request"));
+            let msg = match recv.next().await {
+                Some(msg) => msg,
+                None => {
+                    self.print_in_columns(
+                        "game closed connection to game, ending loop".to_string(),
+                    );
+                    break;
                 }
+            };
 
-                Ok(Message::Close(_)) => {
+            let msg_type = match msg {
+                Ok(msg_type) => msg_type,
+                Err(e) => {
+                    self.print_in_columns(format!("error receiving from game: {}", e));
+                    break;
+                }
+            };
+
+            let text = match msg_type {
+                Message::Text(text) => text,
+
+                Message::Close(_) => {
                     self.print_in_columns("Connection closed by server".to_string());
                     break;
                 }
-                Ok(other) => {
+                other => {
                     self.print_in_columns(format!("Received other message: {:?}", other));
+                    break;
                 }
-                Err(e) => {
-                    self.print_in_columns(format!("Error: {}", e));
+            };
+
+            let action_msg: ActionMessage;
+            {
+                let state_message: StateMessage = serde_json::from_str(&text).unwrap();
+                self.print_in_columns(format!(
+                    "bot {} received message: {}",
+                    self.name, state_message
+                ));
+
+                action_msg = self.bot.map_to_action(state_message);
+            }
+
+            self.print_in_columns(format!(
+                "bot {} picked action: {}",
+                self.name,
+                serde_json::to_string(&action_msg).unwrap()
+            ));
+            let send_status = send
+                .send(Message::Text(serde_json::to_string(&action_msg).unwrap()))
+                .await;
+
+            match send_status {
+                Ok(_) => self
+                    .print_in_columns(
+                        format!("action of bot {} has been send to game", self.name,),
+                    ),
+                Err(_) => {
+                    self.print_in_columns(format!(
+                        "failure sending action of bot {} to game, closing connection",
+                        self.name,
+                    ));
                     break;
                 }
             }
-            self.print_in_columns(format!("waiting for next action request"));
+
+            self.print_in_columns(format!("bot {}, finished sending action", self.name));
         }
+
         self.print_in_columns(format!(
             "ranking: {:?}",
             self.bot

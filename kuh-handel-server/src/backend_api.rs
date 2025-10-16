@@ -62,7 +62,10 @@ where
     pub async fn to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let data = self.data.lock().await;
 
-        let json = serde_json::to_string_pretty(&*data)?;
+        let mut json = serde_json::to_string(&*data)?;
+        json = json.replace("],", "],\n");
+        json = json.replace("{", "{\n");
+        json = json.replace("}", "\n}");
 
         let mut file = File::create(&self.path).await?;
         file.write_all(json.as_bytes()).await?;
@@ -74,7 +77,7 @@ where
     pub async fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
         let data = self.data.lock().await;
 
-        let json = serde_json::to_string_pretty(&*data)?;
+        let json = serde_json::to_string(&*data)?;
         Ok(json)
     }
 }

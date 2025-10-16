@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Player Wins (Live)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #f0f2f5;
+}
+h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+.chart-container {
+    width: 90%;
+    max-width: 800px;
+    height: 400px;
+    margin-bottom: 20px;
+    background-color: #fff; /* white background */
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    padding: 10px;
+}
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+table {
+    border-collapse: collapse;
+    width: 90%;
+    max-width: 800px;
+    margin-bottom: 50px;
+    background-color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+th, td {
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+    text-align: center;
+}
+th {
+    background-color: #f7f9fb;
+    color: #555;
+}
+tr:last-child td {
+    border-bottom: none;
+}
+td:nth-child(2) {
+    text-align: left;
+    padding-left: 12px;
+}
+.player-color {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    margin-right: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+</style>
+</head>
+<body>
+<h2>Player Wins vs Total Games (Live)</h2>
+
+<div class="chart-container">
+    <canvas id="winsChart"></canvas>
+</div>
+
+<table id="rankingTable">
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Wins</th>
+            <th>Total Games</th>
+            <th>Win %</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Filled dynamically -->
+    </tbody>
+</table>
+
+<script>
+let chart;
+
+function generatePastelColors(n){
+    const colors = [];
+    for(let i=0;i<n;i++){
+        const hue=(i*137.508)%360;
+        colors.push(`hsl(${hue},70%,80%)`);
+    }
+    return colors;
+}
+
+async function loadData(){
+    const response = await fetch('/get_results');
+    const data = await response.json();
+
+    const players = Object.entries(data).map(([player,ranks])=>{
+        const wins=ranks.filter(rank=>rank===0).length;
+        const total=ranks.length;
+        const winPct = total ? ((wins/total)*100).toFixed(1) : '0.0';
+        return {player, wins, total, winPct};
+    });
+
+    const sortedPlayers=[...players].sort((a,b)=>b.wins-a.wins);
+    const colors = generatePastelColors(players.length);
+
+    // Assign ranks with ties
+    let lastWins = null, rank = 0, displayRank = 0;
+    sortedPlayers.forEach((p,i)=>{
+        if(p.wins !== lastWins){
+            displayRank = i+1;
+            lastWins = p.wins;
+        }
+        p.rank = displayRank;
+    });
+
+    // Update table
+    const tbody = document.querySelector('#rankingTable tbody');
+    tbody.innerHTML='';
+    sortedPlayers.forEach((p,i)=>{
+        const row=document.createElement('tr');
+        row.innerHTML=`
+            <td>${p.rank}</td>
+            <td><span class="player-color" style="background-color:${colors[i]}"></span>${p.player}</td>
+            <td>${p.wins}</td>
+            <td>${p.total}</td>
+            <td>${p.winPct}%</td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Scatter plot with jitter for overlapping points
+    const usedCoordinates={};
+    const points = players.map((p,i)=>{
+        let x=p.total;
+        let y=p.wins;
+        const key=`${x},${y}`;
+        const count=usedCoordinates[key]||0;
+        const jitter = 0.15*count;
+        x+=jitter;
+        y+=jitter;
+        usedCoordinates[key]=count+1;
+        return {x,y,label:p.player,backgroundColor:colors[i],borderColor:colors[i]};
+    });
+
+    const maxX=Math.max(...points.map(p=>p.x))+2;
+    const maxY=Math.max(...points.map(p=>p.y))+2;
+
+    if(!chart){
+        const ctx=document.getElementById('winsChart').getContext('2d');
+        chart=new Chart(ctx,{
+            type:'scatter',
+            data:{
+                datasets:[{
+                    label:'Players',
+                    data:points,
+                    pointBackgroundColor: points.map(p=>p.backgroundColor),
+                    pointBorderColor: points.map(p=>p.borderColor),
+                    pointRadius:8,
+                    pointHitRadius:20
+                }]
+            },
+            options:{
+                responsive:true,
+                maintainAspectRatio:false,
+                animation:false,
+                plugins:{
+                    tooltip:{
+                        callbacks:{
+                            label:function(context){
+                                const d=context.raw;
+                                return `${d.label}: ${d.y} wins / ${d.x} games`;
+                            }
+                        }
+                    }
+                },
+                scales:{
+                    x:{beginAtZero:true,max:maxX,title:{display:true,text:'Total Games'},ticks:{stepSize:1}},
+                    y:{beginAtZero:true,max:maxY,title:{display:true,text:'Number of Wins'},ticks:{stepSize:1}}
+                }
+            }
+        });
+    } else {
+        chart.data.datasets[0].data=points;
+        chart.data.datasets[0].pointBackgroundColor=points.map(p=>p.backgroundColor);
+        chart.data.datasets[0].pointBorderColor=points.map(p=>p.borderColor);
+        chart.options.scales.x.max=maxX;
+        chart.options.scales.y.max=maxY;
+        chart.update();
+    }
+}
+
+loadData();
+setInterval(loadData,5000);
+</script>
+</body>
+</html>

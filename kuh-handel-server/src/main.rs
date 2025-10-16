@@ -30,7 +30,7 @@ use crate::backend_api::{JsonLog, register_handler, stats_handler};
 // - we might not need AnimalSet, consider removing that
 // - provide demo, where players can test their bot against our random bots for testing
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
-// - make a simple visualization for that that is also hosted on the website
+// - make visualization more insightful, like calculate the condorcet winner, or show position change over time
 // - should we allow for one bot to play multiple games in parallel, or just one game per bot at any time?
 
 #[tokio::main]
@@ -73,6 +73,12 @@ async fn main() {
         )
         .route(
             "/results",
+            routing::get(|| async {
+                axum::response::Html(tokio::fs::read_to_string("stats.html").await.unwrap())
+            }),
+        )
+        .route(
+            "/get_results",
             routing::get(stats_handler).with_state(game_results.clone()),
         )
         .route(

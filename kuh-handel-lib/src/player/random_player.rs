@@ -72,18 +72,11 @@ impl RandomPlayerActions {
         &self.final_ranking
     }
 
-    // todo this is wrong, it gets the last bid, not the highest, of someone later bids lower this is wrong, just use leons implementation
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
-        bids.iter()
-            .rev()
-            .filter_map(|(id, bid)| {
-                if let Bidding::Bid(val) = bid {
-                    Some((id, val))
-                } else {
-                    None
-                }
-            })
-            .next()
+        match bids.iter().max_by_key(|(_, bid)| bid) {
+            Some((player_id, Bidding::Bid(value))) => Some((player_id, value)),
+            _ => None,
+        }
     }
 
     pub fn add_animals(&mut self, animal: &Animal, count: usize) {

@@ -8,7 +8,8 @@ use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::extract::ws::Message;
 pub use axum_macros::debug_handler;
-use core::num;
+
+use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
@@ -27,41 +28,88 @@ pub struct WebsocketLobby {
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
 }
 
-pub async fn organize_new_game(ws_lobby: WebsocketLobby, game_results: JsonLog<Vec<usize>>) {
-    // todo: better match making
-
-    while ws_lobby.clone().channels_for_ws_actions.lock().await.len() < 4 {
-        info!("og | waiting for more players to join");
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-    }
-
+pub async fn organize_new_game(
+    ws_lobby: WebsocketLobby,
+    game_results: JsonLog<Vec<usize>>,
+    seed: u64,
+    (min_game_size, max_game_size): (usize, usize),
+) {
     info!("og | enough players joined");
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
+
     loop {
-        // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
+        if ws_lobby.channels_for_ws_actions.lock().await.len() < 3 {
+            info!("og | waiting for more players to join");
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        } else {
+            info!("og | creating new round of games");
 
-        info!("og | creating new round of games");
+            // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
+            let mut all_player_ids: Vec<String> = ws_lobby
+                .channels_for_ws_actions
+                .lock()
+                .await
+                .keys()
+                .cloned()
+                .collect();
 
-        let new_ws_lobby = ws_lobby.clone();
-        let first_game = spawn_game(
-            new_ws_lobby.clone(),
-            vec![String::from("ufuk"), String::from("leon")],
-            vec![String::from("gregor")],
-        );
+            all_player_ids.shuffle(&mut rng);
 
-        let new_ws_lobby = ws_lobby.clone();
-        let second_game = spawn_game(
-            new_ws_lobby,
-            vec![String::from("johannes"), String::from("viola")],
-            vec![String::from("fiete")],
-        );
+            let num_players = all_player_ids.len();
 
-        let ranking = first_game.await.await;
-        update_results(game_results.clone(), ranking).await;
+            let remainders: Vec<usize> = valid_game_sizes.iter().map(|i| num_players % i).collect();
 
-        let ranking = second_game.await.await;
-        update_results(game_results.clone(), ranking).await;
+            let (min_index, &min_value) = remainders
+                .iter()
+                .enumerate()
+                .min_by(|&(_, a), &(_, b)| a.cmp(b))
+                .unwrap();
+            let (max_index, &max_value) = remainders
+                .iter()
+                .enumerate()
+                .max_by(|&(_, a), &(_, b)| a.cmp(b))
+                .unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            let players_per_game;
+
+            if min_value == 0 {
+                players_per_game = *valid_game_sizes.get(min_index).unwrap();
+            } else {
+                players_per_game = *valid_game_sizes.get(max_index).unwrap();
+            }
+
+            let mut new_games = Vec::new();
+
+            for _ in (0..num_players).step_by(players_per_game) {
+                let current_players: Vec<String> = all_player_ids
+                    .iter()
+                    .take(players_per_game)
+                    .cloned()
+                    .collect();
+                let new_ws_lobby = ws_lobby.clone();
+
+                let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
+                let max_random_players = max_game_size.checked_sub(players_per_game).unwrap_or(0);
+
+                let num_random_player = rng.random_range(min_random_players..=max_random_players);
+
+                let random_players: Vec<String> = (0..num_random_player)
+                    .map(|i| String::from(format!("random_player_{}", i)))
+                    .collect();
+
+                let new_game = spawn_game(new_ws_lobby.clone(), current_players, random_players);
+
+                new_games.push(new_game);
+            }
+
+            for game in new_games {
+                let ranking = game.await;
+                update_results(game_results.clone(), ranking).await
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }
 
@@ -69,9 +117,11 @@ pub async fn organize_random_game(
     ws_lobby: WebsocketLobby,
     game_results: JsonLog<Vec<usize>>,
     seed: u64,
+    (min_game_size, max_game_size): (usize, usize),
 ) {
     info!("og | starting to create random games");
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
+
     loop {
         if ws_lobby.channels_for_ws_actions.lock().await.len() < 1 {
             info!("og | waiting for someone to join random game");
@@ -82,7 +132,7 @@ pub async fn organize_random_game(
             for player in ws_lobby.channels_for_ws_actions.lock().await.keys() {
                 let new_ws_lobby = ws_lobby.clone();
 
-                let num_random_players = rng.random_range(3..=5) as usize;
+                let num_random_players = rng.random_range(min_game_size..=max_game_size) as usize;
                 let random_players: Vec<String> = (0..num_random_players)
                     .map(|i| String::from(format!("random_player_{}", i)))
                     .collect();
@@ -93,8 +143,8 @@ pub async fn organize_random_game(
             }
 
             for game in new_games {
-                let ranking = game.await.await;
-                update_results(game_results.clone(), ranking).await
+                let ranking = game.await;
+                // update_results(game_results.clone(), ranking).await // todo should we update the result for these kind of test games?
             }
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -121,7 +171,7 @@ async fn update_results(
     game_results.to_file().await;
 }
 
-pub async fn spawn_game(
+pub fn spawn_game(
     ws_lobby: WebsocketLobby,
     ws_players: Vec<String>,
     random_players: Vec<String>,

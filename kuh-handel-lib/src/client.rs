@@ -56,7 +56,7 @@ impl Client {
 
     pub async fn start(mut self) {
         let (ws_stream, _) = connect_async(format!(
-            "ws://127.0.0.1:3000/kuh-handel/random_game?player_id={}&token={}",
+            "ws://127.0.0.1:3000/kuh-handel/game?player_id={}&token={}",
             self.name, self.token
         ))
         .await

@@ -22,7 +22,6 @@ use crate::{
 };
 
 // TODO:
-// - real matchmaking
 // - should we remove money and value and make them type renames?
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
@@ -63,11 +62,14 @@ async fn main() {
     tokio::spawn(organize_new_game(
         pvp_ws_lobby.clone(),
         game_results.clone(),
+        0,
+        (3, 6),
     ));
     tokio::spawn(organize_random_game(
         random_ws_lobby.clone(),
         game_results.clone(),
         0,
+        (3, 6),
     ));
 
     // init websocket through http websocket upgrade

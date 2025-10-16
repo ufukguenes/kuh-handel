@@ -4,10 +4,6 @@ pub mod model;
 pub mod server_side_player;
 use axum::{Router, routing};
 
-use std::sync::Arc;
-
-use tokio::sync::Mutex;
-
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 

@@ -1,7 +1,7 @@
 pub mod backend_api;
+pub mod game_error;
 pub mod model;
 pub mod server_side_player;
-
 use axum::{Router, routing};
 
 use std::sync::Arc;

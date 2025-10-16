@@ -6,9 +6,9 @@ use crate::animals::{Animal, AnimalSet};
 use crate::messages::game_updates::Points;
 use crate::messages::message_protocol::StateMessage;
 
-use crate::game_errors::GameError;
 use crate::money::wallet::Wallet;
 use crate::player::player_actions::PlayerActions;
+use crate::player::player_error::PlayerError;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -161,7 +161,7 @@ impl Player {
             .or_insert(count);
     }
 
-    pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), GameError> {
+    pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), PlayerError> {
         let backup_animals = self.owned_animals.clone();
         let current_count = self.owned_animals.get_mut(animal);
         match current_count {
@@ -173,12 +173,12 @@ impl Player {
                     self.owned_animals.remove(animal);
                 } else {
                     self.owned_animals = backup_animals;
-                    return Result::Err(GameError::AnimalsNotAvailable);
+                    return Result::Err(PlayerError::AnimalsNotAvailable);
                 }
             }
             None => {
                 self.owned_animals = backup_animals;
-                return Result::Err(GameError::AnimalsNotAvailable);
+                return Result::Err(PlayerError::AnimalsNotAvailable);
             }
         }
 

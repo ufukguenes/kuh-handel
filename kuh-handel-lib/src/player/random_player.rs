@@ -5,7 +5,6 @@ use rand::seq::{IndexedRandom, IteratorRandom};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::game_errors::GameError;
 use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
@@ -13,6 +12,7 @@ use crate::messages::actions::{
 use crate::messages::game_updates::{
     AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points,
 };
+use crate::player::player_error::PlayerError;
 
 use crate::{
     animals::Animal, money::value::Value, money::wallet::Wallet, player::base_player::PlayerId,
@@ -93,7 +93,7 @@ impl RandomPlayerActions {
             .or_insert(count);
     }
 
-    pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), GameError> {
+    pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), PlayerError> {
         let current_count = self.owned_animals.get_mut(animal);
         match current_count {
             Some(current_count) => {
@@ -103,10 +103,10 @@ impl RandomPlayerActions {
                 } else if *current_count == 0 {
                     self.owned_animals.remove(animal);
                 } else {
-                    return Result::Err(GameError::AnimalsNotAvailable);
+                    return Result::Err(PlayerError::AnimalsNotAvailable);
                 }
             }
-            None => return Result::Err(GameError::AnimalsNotAvailable),
+            None => return Result::Err(PlayerError::AnimalsNotAvailable),
         }
 
         Ok(())

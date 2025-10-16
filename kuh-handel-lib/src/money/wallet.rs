@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use crate::game_errors::GameError;
 use crate::money::money::Money;
 use crate::money::value::Value;
+use crate::player::player_error::PlayerError;
 use std::collections::BTreeMap;
 
 #[serde_as]
@@ -20,7 +20,7 @@ impl Wallet {
         }
     }
 
-    pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), GameError> {
+    pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), PlayerError> {
         let backup_notes = self.bank_notes.clone();
 
         for money in amount {
@@ -34,12 +34,12 @@ impl Wallet {
                         self.bank_notes.remove(money);
                     } else {
                         self.bank_notes = backup_notes;
-                        return Result::Err(GameError::MoneyNotAvailable);
+                        return Result::Err(PlayerError::MoneyNotAvailable);
                     }
                 }
                 None => {
                     self.bank_notes = backup_notes;
-                    return Result::Err(GameError::MoneyNotAvailable);
+                    return Result::Err(PlayerError::MoneyNotAvailable);
                 }
             }
         }

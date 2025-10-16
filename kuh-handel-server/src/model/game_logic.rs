@@ -7,12 +7,13 @@ use kuh_handel_lib::messages::game_updates::{
 };
 
 use kuh_handel_lib::animals::{Animal, AnimalSet};
-use kuh_handel_lib::game_errors::GameError;
 use kuh_handel_lib::messages::message_protocol::StateMessage;
 use kuh_handel_lib::money::money::Money;
 use kuh_handel_lib::money::value::Value;
 use kuh_handel_lib::money::wallet::Wallet;
 use kuh_handel_lib::player::base_player::{Player, PlayerId};
+
+use crate::game_error::GameError;
 
 use crate::server_side_player::supervised_player::SupervisedPlayer;
 use rand::SeedableRng;

@@ -1,9 +1,8 @@
 use crate::model::game_logic::Game;
 use crate::server_side_player::websocket_actions::WebsocketActions;
 
-use kuh_handel_lib::player::player_actions::{
-    base_player_actions::PlayerActions, random_actions::RandomPlayerActions,
-};
+use kuh_handel_lib::player::player_actions::PlayerActions;
+use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::{
     extract::{

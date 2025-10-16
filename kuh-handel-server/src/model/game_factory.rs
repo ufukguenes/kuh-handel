@@ -2,7 +2,7 @@ use super::game_logic::Game;
 use kuh_handel_lib::{
     animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
     money::{money::Money, value::Value, wallet::Wallet},
-    player::{base_player::Player, player_actions::base_player_actions::PlayerActions},
+    player::{base_player::Player, player_actions::PlayerActions},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

@@ -10,8 +10,8 @@ use kuh_handel_lib::messages::message_protocol::{ActionMessage, StateMessage};
 use kuh_handel_lib::money::value::Value;
 use kuh_handel_lib::player::base_player::PlayerId;
 
-use kuh_handel_lib::player::player_actions::base_player_actions::PlayerActions;
-use kuh_handel_lib::player::player_actions::random_actions::RandomPlayerActions;
+use kuh_handel_lib::player::player_actions::PlayerActions;
+use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::extract::ws::{Message, Utf8Bytes};
 use tokio::sync::Mutex;

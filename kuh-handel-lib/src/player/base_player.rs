@@ -8,7 +8,7 @@ use crate::messages::message_protocol::StateMessage;
 
 use crate::game_errors::GameError;
 use crate::money::wallet::Wallet;
-use crate::player::player_actions::base_player_actions::PlayerActions;
+use crate::player::player_actions::PlayerActions;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;

@@ -13,7 +13,7 @@ use kuh_handel_lib::money::wallet::Affordability::*;
 use kuh_handel_lib::money::wallet::Wallet;
 use kuh_handel_lib::player::{
     base_player::{Player, PlayerId},
-    player_actions::base_player_actions::PlayerActions,
+    player_actions::PlayerActions,
 };
 
 /// This changes an action based on the deepest nested thing that breaks the action

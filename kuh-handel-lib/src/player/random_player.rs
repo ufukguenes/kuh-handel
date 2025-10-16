@@ -15,10 +15,8 @@ use crate::messages::game_updates::{
 };
 
 use crate::{
-    animals::Animal,
-    money::value::Value,
-    money::wallet::Wallet,
-    player::{base_player::PlayerId, player_actions::base_player_actions::PlayerActions},
+    animals::Animal, money::value::Value, money::wallet::Wallet, player::base_player::PlayerId,
+    player::player_actions::PlayerActions,
 };
 
 pub struct RandomPlayerActions {

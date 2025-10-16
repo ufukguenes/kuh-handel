@@ -1,5 +1,5 @@
 use kuh_handel_lib::client::Client;
-use kuh_handel_lib::player::player_actions::random_actions::RandomPlayerActions;
+use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 #[tokio::main]
 async fn main() {

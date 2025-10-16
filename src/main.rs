@@ -17,6 +17,8 @@ use tracing_subscriber::fmt;
 
 // TODO:
 // - real matchmaking
+// - restructure libraries to be able to publish
+// - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
 // - we might not need AnimalSet, consider removing that
 // - store password and player_ids and check for duplicate ids
@@ -39,13 +41,15 @@ async fn main() {
         .finish()
         .init();
 
-    let ws_game = Arc::new(Mutex::new(WebsocketLobby::new()));
-    // start the game in a seperate thread, so that server can handle connections
-    tokio::spawn(organize_new_game(Arc::clone(&ws_game)));
+    let ws_lobby = Arc::new(Mutex::new(WebsocketLobby::new()));
+    // start the game in a separate thread, so that server can handle connections
+    tokio::spawn(organize_new_game(Arc::clone(&ws_lobby)));
 
     // init websocket through http websocket upgrade
-    let app: Router =
-        Router::new().route("/game", routing::get(websocket_handler).with_state(ws_game));
+    let app: Router = Router::new().route(
+        "/game",
+        routing::get(websocket_handler).with_state(ws_lobby),
+    );
     let address = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     axum::serve(listener, app).await.unwrap();

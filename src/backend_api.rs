@@ -22,7 +22,6 @@ use tokio::{
 };
 use tracing::{Level, error, info};
 
-// Define the game state. It now tracks players and the current turn.
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -88,9 +87,6 @@ async fn handle_socket(
     // to the websocket so it can send it to the client-bot
 
     info!("bck | Bot connected with ID: {}", player_id.clone());
-    // todo use a tokio notify or watch here to check if the channels have been created
-    // or should i just create the channels here, read them in the lobby, where i create the game and loop here forever until the bot disconnects,
-    // so i could just reuse the channel over multiple games
 
     loop {
         // send state and possible actions to client-bot
@@ -212,6 +208,8 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
     loop {
         // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
 
+        info!("og | creating new round of games");
+
         let ws_lobby = Arc::clone(&state);
         let first_game = spawn_game(
             ws_lobby,
@@ -231,10 +229,6 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
         let _wait = first_game.await;
         let _wait = second_game.await;
 
-        info!("og | It's bot ID ___'s turn.",);
-        // todo, should i use this: state.game.play_one_round();
-
-        // todo: do i want to keep this (either the sleep or in general the organize game)
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 }

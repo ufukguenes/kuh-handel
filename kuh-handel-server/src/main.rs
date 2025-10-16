@@ -27,6 +27,8 @@ use crate::{
 // - remove dangerous unwraps, ?, etc...
 // - we might not need AnimalSet, consider removing that
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
+// - documentation
+// - minimize bloated logging
 
 #[tokio::main]
 async fn main() {

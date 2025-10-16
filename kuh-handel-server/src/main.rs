@@ -11,13 +11,16 @@ use tokio::sync::Mutex;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use backend_api::{WebsocketLobby, organize_new_game, websocket_handler};
+use backend_api::websocket_handler;
+use model::match_making::{WebsocketLobby, organize_new_game};
 
 use std::net::SocketAddr;
 
 use tokio;
 use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
+
+use crate::backend_api::{Authentication, register_handler};
 
 // TODO:
 // - real matchmaking
@@ -46,15 +49,28 @@ async fn main() {
         .finish()
         .init();
 
-    let ws_lobby = Arc::new(Mutex::new(WebsocketLobby::new()));
+    //todo load authentication from file
+    let authentication = match Authentication::from_file("authentication.json".to_string()).await {
+        Ok(authentication) => authentication,
+        Err(_) => Authentication::new("authentication.json".to_string())
+            .await
+            .unwrap(),
+    };
+
+    let ws_lobby = WebsocketLobby::default();
     // start the game in a separate thread, so that server can handle connections
-    tokio::spawn(organize_new_game(Arc::clone(&ws_lobby)));
+    tokio::spawn(organize_new_game(ws_lobby.clone()));
 
     // init websocket through http websocket upgrade
-    let app: Router = Router::new().route(
-        "/game",
-        routing::get(websocket_handler).with_state(ws_lobby),
-    );
+    let app: Router = Router::new()
+        .route(
+            "/register",
+            routing::post(register_handler).with_state(authentication.clone()),
+        )
+        .route(
+            "/game",
+            routing::get(websocket_handler).with_state((ws_lobby, authentication)),
+        );
     let address = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     axum::serve(listener, app).await.unwrap();

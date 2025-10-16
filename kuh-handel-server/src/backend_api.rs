@@ -1,79 +1,135 @@
-use crate::model::game_logic::Game;
-use crate::server_side_player::websocket_actions::WebsocketActions;
-
-use kuh_handel_lib::player::player_actions::PlayerActions;
-use kuh_handel_lib::player::random_player::RandomPlayerActions;
-
+use crate::model::match_making::WebsocketLobby;
 use axum::{
     extract::{
         Query, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
+    http::StatusCode,
     response::IntoResponse,
 };
 pub use axum_macros::debug_handler;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use std::{collections::BTreeMap, sync::Arc};
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{Mutex, mpsc};
-use tokio::{
-    sync::mpsc::{Receiver, Sender},
-    task::JoinHandle,
-};
-use tracing::{Level, error, info};
+
+use tracing::{error, info};
 
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct AuthParams {
     player_id: String,
-    password: String,
+    token: String,
 }
 
-pub struct WebsocketLobby {
-    channels_for_ws_actions:
-        Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
+#[derive(Clone)]
+pub struct Authentication {
+    pub credentials: Arc<Mutex<BTreeMap<String, String>>>,
+    path: String,
 }
 
-impl WebsocketLobby {
-    pub fn new() -> WebsocketLobby {
-        WebsocketLobby {
-            channels_for_ws_actions: Arc::new(Mutex::new(BTreeMap::new())),
+impl Authentication {
+    pub async fn new(path: String) -> Result<Self, Box<dyn std::error::Error>> {
+        let new_auth = Authentication {
+            credentials: Arc::new(Mutex::new(BTreeMap::new())),
+            path: path,
+        };
+
+        let _ = new_auth.to_file().await?;
+
+        Ok(new_auth)
+    }
+
+    pub async fn from_file(path: String) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut file = File::open(&path).await?;
+
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).await?;
+
+        let credentials: BTreeMap<String, String> = serde_json::from_str(&contents)?;
+        Ok(Authentication {
+            credentials: Arc::new(Mutex::new(credentials)),
+            path: path,
+        })
+    }
+
+    pub async fn to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let credentials = self.credentials.lock().await;
+
+        let json = serde_json::to_string_pretty(&*credentials)?;
+
+        let mut file = File::create(&self.path).await?;
+        file.write_all(json.as_bytes()).await?;
+        file.flush().await?;
+
+        Ok(())
+    }
+
+    pub async fn authenticate(&self, auth_params: &AuthParams) -> bool {
+        let credentials = self.credentials.lock().await;
+
+        match credentials.get(&auth_params.player_id) {
+            Some(stored_token) => stored_token == &auth_params.token,
+            None => false,
         }
     }
+}
+
+pub async fn register_handler(
+    state: State<Authentication>,
+    Query(params): Query<AuthParams>,
+) -> Result<impl IntoResponse, StatusCode> {
+    {
+        let mut credentials = state.credentials.lock().await;
+        if credentials.contains_key(&params.player_id) {
+            info!(
+                "bck | Registration failed: Player ID {} already exists.",
+                params.player_id
+            );
+            return Err(StatusCode::CONFLICT);
+        }
+        credentials.insert(params.player_id.clone(), params.token);
+    }
+
+    let _ = state.to_file().await;
+
+    info!(
+        "bck | Successfully registered new player: {}",
+        params.player_id.clone()
+    );
+    Ok(StatusCode::CREATED)
 }
 
 #[debug_handler]
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     Query(params): Query<AuthParams>,
-    State(state): State<Arc<Mutex<WebsocketLobby>>>,
+    State(state): State<(WebsocketLobby, Authentication)>,
 ) -> impl IntoResponse {
     let player_id = params.player_id.clone();
-    let password = params.password.clone();
-    ws.on_upgrade(|socket| handle_socket(socket, state, player_id, password))
+    let (ws_lobby, authentication) = state;
+
+    if !authentication.authenticate(&params).await {
+        info!("bck | Authentication failed for player: {}", player_id);
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    info!("bck | Player {} authenticated successfully.", player_id);
+    ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
 
-async fn handle_socket(
-    mut socket: WebSocket,
-    state: Arc<Mutex<WebsocketLobby>>,
-    player_id: String,
-    password: String,
-) {
+async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: String) {
     info!("bck | New bot connecting...");
-    if password != player_id {
-        info!("bck | password for bot {}, was wrong", player_id);
-        return;
-    }
 
     let (state_sender, mut state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
     let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
 
     let channels_for_this_bot = (state_sender, Arc::new(Mutex::new(action_receiver)));
 
-    let arc_channels_for_ws_actions = {
-        let state_lock = state.lock().await;
-        Arc::clone(&state_lock.channels_for_ws_actions)
-    };
+    let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
 
     arc_channels_for_ws_actions
         .lock()
@@ -186,108 +242,4 @@ async fn handle_socket(
         .remove(&player_id.clone());
 
     state_receiver.close();
-}
-
-pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
-    // todo: better match making
-    while state
-        .lock()
-        .await
-        .channels_for_ws_actions
-        .lock()
-        .await
-        .len()
-        < 4
-    {
-        info!("og | waiting for more players to join");
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-    }
-
-    info!("og | enough players joined");
-    loop {
-        // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
-
-        info!("og | creating new round of games");
-
-        let ws_lobby = Arc::clone(&state);
-        let first_game = spawn_game(
-            ws_lobby,
-            vec![String::from("ufuk"), String::from("leon")],
-            vec![String::from("gregor")],
-        );
-
-        let ws_lobby = Arc::clone(&state);
-        let second_game = spawn_game(
-            ws_lobby,
-            vec![String::from("johannes"), String::from("viola")],
-            vec![String::from("fiete")],
-        );
-
-        let _wait = first_game.await;
-        let _wait = second_game.await;
-
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-    }
-}
-
-pub async fn spawn_game(
-    state: Arc<Mutex<WebsocketLobby>>,
-    ws_players: Vec<String>,
-    random_players: Vec<String>,
-) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        let mut all_ids: Vec<String> = Vec::new();
-        all_ids.extend(ws_players.clone());
-        all_ids.extend(random_players.clone());
-
-        let mut ws_actions: Vec<WebsocketActions> = Vec::new();
-
-        {
-            let lobby_lock = state.lock().await;
-            let channel_for_ws_actions = lobby_lock.channels_for_ws_actions.lock().await;
-
-            for id in &ws_players {
-                let (sender, receiver) = channel_for_ws_actions.get(id).unwrap();
-                let channels = (sender.clone(), Arc::clone(&receiver));
-
-                ws_actions.push(WebsocketActions::new(id.clone(), channels));
-            }
-        }
-
-        let mut random_actions: Vec<RandomPlayerActions> = Vec::new();
-        for id in ws_players {
-            random_actions.push(RandomPlayerActions::new(id.clone(), 25)); //todo change see
-        }
-
-        let seed: u64 = 0; //todo change seed
-        let game_handle = tokio::task::spawn_blocking(move || {
-            println!("-------Default game--------\n");
-            let mut all_actions: Vec<Box<dyn PlayerActions>> = Vec::new();
-            all_actions.extend(
-                ws_actions
-                    .into_iter()
-                    .map(|action: WebsocketActions| Box::new(action) as Box<dyn PlayerActions>),
-            );
-            all_actions.extend(
-                random_actions
-                    .into_iter()
-                    .map(|action: RandomPlayerActions| Box::new(action) as Box<dyn PlayerActions>),
-            );
-
-            let mut game = Game::new_default_game(all_ids, all_actions, seed);
-            game.num_players();
-            println!("{}", game);
-
-            game.num_players();
-
-            let results = game.play().unwrap();
-
-            println!("ranking: {:?}", results);
-            tracing::event!(target: "results", Level::INFO, "{:?}", results);
-
-            print!("game is done");
-        });
-
-        let _ = game_handle.await;
-    })
 }

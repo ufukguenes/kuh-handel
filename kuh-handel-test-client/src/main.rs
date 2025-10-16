@@ -6,6 +6,7 @@ async fn main() {
     let ufuk_string = "ufuk".to_string();
     let ufuk_client = Client {
         name: ufuk_string.clone(),
+        token: "abcd".to_string(),
         bot: RandomPlayerActions::new(ufuk_string, 3),
         print_indent_size: 0,
     };
@@ -13,6 +14,7 @@ async fn main() {
     let leon_string = "leon".to_string();
     let leon_client = Client {
         name: leon_string.clone(),
+        token: "efgh".to_string(),
         bot: RandomPlayerActions::new(leon_string, 42),
         print_indent_size: 1,
     };
@@ -20,6 +22,7 @@ async fn main() {
     let johannes_string = "johannes".to_string();
     let johannes_client = Client {
         name: johannes_string.clone(),
+        token: "ijkl".to_string(),
         bot: RandomPlayerActions::new(johannes_string, 42),
         print_indent_size: 1,
     };
@@ -27,9 +30,15 @@ async fn main() {
     let viola_string = "viola".to_string();
     let viola_client = Client {
         name: viola_string.clone(),
+        token: "mnop".to_string(),
         bot: RandomPlayerActions::new(viola_string, 42),
         print_indent_size: 1,
     };
+
+    let _ = ufuk_client.register().await;
+    let _ = leon_client.register().await;
+    let _ = johannes_client.register().await;
+    let _ = viola_client.register().await;
 
     let ufuk_handel = tokio::spawn(ufuk_client.start());
     let leon_handel = tokio::spawn(leon_client.start());

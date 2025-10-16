@@ -25,11 +25,9 @@ use crate::backend_api::{Authentication, register_handler};
 // TODO:
 // - real matchmaking
 // - should we remove money and value and make them type renames?
-// - restructure libraries to be able to publish
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
 // - we might not need AnimalSet, consider removing that
-// - store password and player_ids and check for duplicate ids
 // - provide demo, where players can test their bot against our random bots for testing
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - make a simple visualization for that that is also hosted on the website

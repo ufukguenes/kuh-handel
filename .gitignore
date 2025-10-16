@@ -2,3 +2,4 @@
 Cargo.lock
 /logs
 authentication.json
+game_results.json

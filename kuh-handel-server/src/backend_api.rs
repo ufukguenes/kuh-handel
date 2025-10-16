@@ -17,7 +17,7 @@ use tokio::sync::{Mutex, mpsc};
 
 use tracing::{error, info};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct AuthParams {
@@ -26,15 +26,18 @@ pub struct AuthParams {
 }
 
 #[derive(Clone)]
-pub struct Authentication {
-    pub credentials: Arc<Mutex<BTreeMap<String, String>>>,
+pub struct JsonLog<T> {
+    pub data: Arc<Mutex<BTreeMap<String, T>>>,
     path: String,
 }
 
-impl Authentication {
+impl<T> JsonLog<T>
+where
+    T: Serialize + for<'a> Deserialize<'a> + Send + Sync + 'static,
+{
     pub async fn new(path: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let new_auth = Authentication {
-            credentials: Arc::new(Mutex::new(BTreeMap::new())),
+        let new_auth = JsonLog {
+            data: Arc::new(Mutex::new(BTreeMap::new())),
             path: path,
         };
 
@@ -49,17 +52,17 @@ impl Authentication {
         let mut contents = String::new();
         file.read_to_string(&mut contents).await?;
 
-        let credentials: BTreeMap<String, String> = serde_json::from_str(&contents)?;
-        Ok(Authentication {
-            credentials: Arc::new(Mutex::new(credentials)),
+        let data: BTreeMap<String, T> = serde_json::from_str(&contents)?;
+        Ok(JsonLog {
+            data: Arc::new(Mutex::new(data)),
             path: path,
         })
     }
 
     pub async fn to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let credentials = self.credentials.lock().await;
+        let data = self.data.lock().await;
 
-        let json = serde_json::to_string_pretty(&*credentials)?;
+        let json = serde_json::to_string_pretty(&*data)?;
 
         let mut file = File::create(&self.path).await?;
         file.write_all(json.as_bytes()).await?;
@@ -68,22 +71,29 @@ impl Authentication {
         Ok(())
     }
 
-    pub async fn authenticate(&self, auth_params: &AuthParams) -> bool {
-        let credentials = self.credentials.lock().await;
+    pub async fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let data = self.data.lock().await;
 
-        match credentials.get(&auth_params.player_id) {
-            Some(stored_token) => stored_token == &auth_params.token,
-            None => false,
-        }
+        let json = serde_json::to_string_pretty(&*data)?;
+        Ok(json)
+    }
+}
+
+async fn authenticate(authentication: JsonLog<String>, auth_params: &AuthParams) -> bool {
+    let credentials = authentication.data.lock().await;
+
+    match credentials.get(&auth_params.player_id) {
+        Some(stored_token) => stored_token == &auth_params.token,
+        None => false,
     }
 }
 
 pub async fn register_handler(
-    state: State<Authentication>,
+    authentication: State<JsonLog<String>>,
     Query(params): Query<AuthParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     {
-        let mut credentials = state.credentials.lock().await;
+        let mut credentials = authentication.data.lock().await;
         if credentials.contains_key(&params.player_id) {
             info!(
                 "bck | Registration failed: Player ID {} already exists.",
@@ -94,7 +104,7 @@ pub async fn register_handler(
         credentials.insert(params.player_id.clone(), params.token);
     }
 
-    let _ = state.to_file().await;
+    let _ = authentication.to_file().await;
 
     info!(
         "bck | Successfully registered new player: {}",
@@ -103,16 +113,23 @@ pub async fn register_handler(
     Ok(StatusCode::CREATED)
 }
 
+pub async fn stats_handler(State(game_results): State<JsonLog<Vec<usize>>>) -> String {
+    match game_results.to_json().await {
+        Ok(json) => json,
+        Err(e) => e.to_string(),
+    }
+}
+
 #[debug_handler]
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     Query(params): Query<AuthParams>,
-    State(state): State<(WebsocketLobby, Authentication)>,
+    State(state): State<(WebsocketLobby, JsonLog<String>)>,
 ) -> impl IntoResponse {
     let player_id = params.player_id.clone();
     let (ws_lobby, authentication) = state;
 
-    if !authentication.authenticate(&params).await {
+    if !authenticate(authentication, &params).await {
         info!("bck | Authentication failed for player: {}", player_id);
         return StatusCode::UNAUTHORIZED.into_response();
     }

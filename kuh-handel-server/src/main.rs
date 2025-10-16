@@ -20,7 +20,7 @@ use tokio;
 use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
-use crate::backend_api::{Authentication, register_handler};
+use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
 // TODO:
 // - real matchmaking
@@ -47,23 +47,33 @@ async fn main() {
         .finish()
         .init();
 
-    //todo load authentication from file
-    let authentication = match Authentication::from_file("authentication.json".to_string()).await {
+    let authentication = match JsonLog::<String>::from_file("authentication.json".to_string()).await
+    {
         Ok(authentication) => authentication,
-        Err(_) => Authentication::new("authentication.json".to_string())
+        Err(_) => JsonLog::new("authentication.json".to_string())
             .await
             .unwrap(),
     };
 
+    let game_results = match JsonLog::<Vec<usize>>::from_file("game_results.json".to_string()).await
+    {
+        Ok(game_results) => game_results,
+        Err(_) => JsonLog::new("game_results.json".to_string()).await.unwrap(),
+    };
+
     let ws_lobby = WebsocketLobby::default();
     // start the game in a separate thread, so that server can handle connections
-    tokio::spawn(organize_new_game(ws_lobby.clone()));
+    tokio::spawn(organize_new_game(ws_lobby.clone(), game_results.clone()));
 
     // init websocket through http websocket upgrade
     let app: Router = Router::new()
         .route(
             "/register",
             routing::post(register_handler).with_state(authentication.clone()),
+        )
+        .route(
+            "/results",
+            routing::get(stats_handler).with_state(game_results.clone()),
         )
         .route(
             "/game",

@@ -1,6 +1,8 @@
+use crate::backend_api::JsonLog;
 use crate::model::game_logic::Game;
 use crate::server_side_player::websocket_actions::WebsocketActions;
 
+use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
@@ -10,11 +12,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::task::JoinError;
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
-use tracing::{Level, info};
+use tracing::{Level, error, info};
 
 #[derive(Default, Clone)]
 pub struct WebsocketLobby {
@@ -22,7 +25,7 @@ pub struct WebsocketLobby {
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
 }
 
-pub async fn organize_new_game(ws_lobby: WebsocketLobby) {
+pub async fn organize_new_game(ws_lobby: WebsocketLobby, game_results: JsonLog<Vec<usize>>) {
     // todo: better match making
 
     while ws_lobby.clone().channels_for_ws_actions.lock().await.len() < 4 {
@@ -50,18 +53,41 @@ pub async fn organize_new_game(ws_lobby: WebsocketLobby) {
             vec![String::from("fiete")],
         );
 
-        let _wait = first_game.await;
-        let _wait = second_game.await;
+        let ranking = first_game.await.await;
+        update_results(game_results.clone(), ranking).await;
+
+        let ranking = second_game.await.await;
+        update_results(game_results.clone(), ranking).await;
 
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
+}
+
+async fn update_results(
+    game_results: JsonLog<Vec<usize>>,
+    ranking: Result<Vec<(PlayerId, usize)>, JoinError>,
+) {
+    match ranking {
+        Ok(ranking) => {
+            let mut result_map = game_results.data.lock().await;
+            for (rank, (player, points)) in ranking.iter().enumerate() {
+                result_map
+                    .entry(player.name.clone())
+                    .or_insert(vec![rank])
+                    .push(rank);
+            }
+        }
+        Err(_) => error!("og | game not properly finished"),
+    }
+
+    game_results.to_file().await;
 }
 
 pub async fn spawn_game(
     ws_lobby: WebsocketLobby,
     ws_players: Vec<String>,
     random_players: Vec<String>,
-) -> JoinHandle<()> {
+) -> JoinHandle<Vec<(PlayerId, usize)>> {
     tokio::spawn(async move {
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
@@ -106,14 +132,16 @@ pub async fn spawn_game(
 
             game.num_players();
 
-            let results = game.play().unwrap();
+            let ranking = game.play().unwrap();
 
-            println!("ranking: {:?}", results);
-            tracing::event!(target: "results", Level::INFO, "{:?}", results);
+            println!("ranking: {:?}", ranking);
+            tracing::event!(target: "ranking", Level::INFO, "{:?}", ranking);
 
             print!("game is done");
+            ranking
         });
 
-        let _ = game_handle.await;
+        let ranking = game_handle.await.unwrap();
+        ranking
     })
 }

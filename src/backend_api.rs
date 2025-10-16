@@ -1,7 +1,9 @@
 use crate::model::{
     game_logic::Game,
     player::player_actions::{
-        random_actions::RandomPlayerActions, websocket_actions::WebsocketActions,
+        base_player_actions::PlayerActions,
+        random_actions::{self, RandomPlayerActions},
+        websocket_actions::WebsocketActions,
     },
 };
 
@@ -213,17 +215,15 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
         let ws_lobby = Arc::clone(&state);
         let first_game = spawn_game(
             ws_lobby,
-            "ufuk".to_string(),
-            "leon".to_string(),
-            "gregor".to_string(),
+            vec![String::from("ufuk"), String::from("leon")],
+            vec![String::from("gregor")],
         );
 
         let ws_lobby = Arc::clone(&state);
         let second_game = spawn_game(
             ws_lobby,
-            "johannes".to_string(),
-            "viola".to_string(),
-            "fiete".to_string(),
+            vec![String::from("johannes"), String::from("viola")],
+            vec![String::from("fiete")],
         );
 
         let _wait = first_game.await;
@@ -235,50 +235,49 @@ pub async fn organize_new_game(state: Arc<Mutex<WebsocketLobby>>) {
 
 pub async fn spawn_game(
     state: Arc<Mutex<WebsocketLobby>>,
-    player_a: String,
-    player_b: String,
-    player_c: String,
+    ws_players: Vec<String>,
+    random_players: Vec<String>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let ufuk_channel = {
+        let mut all_ids: Vec<String> = Vec::new();
+        all_ids.extend(ws_players.clone());
+        all_ids.extend(random_players.clone());
+
+        let mut ws_actions: Vec<WebsocketActions> = Vec::new();
+
+        {
             let lobby_lock = state.lock().await;
             let channel_for_ws_actions = lobby_lock.channels_for_ws_actions.lock().await;
-            let (ufuk_sender, ufuk_receiver) =
-                channel_for_ws_actions.get(&player_a.clone()).unwrap();
 
-            (ufuk_sender.clone(), Arc::clone(&ufuk_receiver))
-        };
+            for id in &ws_players {
+                let (sender, receiver) = channel_for_ws_actions.get(id).unwrap();
+                let channels = (sender.clone(), Arc::clone(&receiver));
 
-        let leon_channel = {
-            let lobby_lock = state.lock().await;
-            let channel_for_ws_actions = lobby_lock.channels_for_ws_actions.lock().await;
-            let (leon_sender, leon_receiver) =
-                channel_for_ws_actions.get(&player_b.clone()).unwrap();
+                ws_actions.push(WebsocketActions::new(id.clone(), channels));
+            }
+        }
 
-            (leon_sender.clone(), Arc::clone(&leon_receiver))
-        };
+        let mut random_actions: Vec<RandomPlayerActions> = Vec::new();
+        for id in ws_players {
+            random_actions.push(RandomPlayerActions::new(id.clone(), 25)); //todo change see
+        }
 
-        let ufuk_ws_action = WebsocketActions::new(player_a.clone(), ufuk_channel);
-        let leon_ws_action = WebsocketActions::new(player_b.clone(), leon_channel);
-        let gregor_random_action = RandomPlayerActions::new(player_c.clone(), 25);
-
-        let seed: u64 = 0;
+        let seed: u64 = 0; //todo change seed
         let game_handle = tokio::task::spawn_blocking(move || {
             println!("-------Default game--------\n");
-            let mut game = Game::new_default_game(
-                vec![
-                    String::from(player_a.clone()),
-                    String::from(player_b.clone()),
-                    String::from(player_c.clone()),
-                ],
-                vec![
-                    Box::new(ufuk_ws_action),
-                    Box::new(leon_ws_action),
-                    Box::new(gregor_random_action),
-                ],
-                seed,
+            let mut all_actions: Vec<Box<dyn PlayerActions>> = Vec::new();
+            all_actions.extend(
+                ws_actions
+                    .into_iter()
+                    .map(|action: WebsocketActions| Box::new(action) as Box<dyn PlayerActions>),
+            );
+            all_actions.extend(
+                random_actions
+                    .into_iter()
+                    .map(|action: RandomPlayerActions| Box::new(action) as Box<dyn PlayerActions>),
             );
 
+            let mut game = Game::new_default_game(all_ids, all_actions, seed);
             game.num_players();
             println!("{}", game);
 

@@ -40,7 +40,7 @@ impl WebsocketActions {
             state_sender: state_sender,
             action_receiver: action_receiver,
             id: id.clone(),
-            backup_actions: RandomPlayerActions::new(id, 42),
+            backup_actions: RandomPlayerActions::new(id, 42), // todo change seed
         }
     }
 

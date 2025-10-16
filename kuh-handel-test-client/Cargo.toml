@@ -1,0 +1,9 @@
+[package]
+name = "kuh-handel-test-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+kuh-handel-lib = {path = "../kuh-handel-lib"}
+tokio = {workspace = true}
+

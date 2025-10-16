@@ -159,12 +159,25 @@ pub async fn random_websocket_handler(
 async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: String) {
     info!("bck | New bot connecting...");
 
+    let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
+
+    if arc_channels_for_ws_actions
+        .lock()
+        .await
+        .get(&player_id)
+        .is_none()
+    {
+        info!(
+            "bck | Already connected bot tried to connect again {}",
+            player_id
+        );
+        return;
+    }
+
     let (state_sender, mut state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
     let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
 
     let channels_for_this_bot = (state_sender, Arc::new(Mutex::new(action_receiver)));
-
-    let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
 
     arc_channels_for_ws_actions
         .lock()

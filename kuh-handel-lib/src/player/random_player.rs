@@ -19,6 +19,7 @@ use crate::{
     player::player_actions::PlayerActions,
 };
 
+// todo: should this wrap the base player and use the functions of that, here is already duplicate code
 pub struct RandomPlayerActions {
     opponents: Vec<PlayerId>,
     owned_animals: BTreeMap<Animal, usize>,

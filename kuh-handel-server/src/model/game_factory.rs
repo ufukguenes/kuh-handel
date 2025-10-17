@@ -1,6 +1,6 @@
 use super::game_logic::Game;
 use kuh_handel_lib::{
-    animals::{AnimalSet, AnimalSetFactory, DefaultAnimalSetFactory},
+    animals::AnimalSet,
     money::{money::Money, value::Value, wallet::Wallet},
     player::{base_player::Player, player_actions::PlayerActions},
 };
@@ -19,16 +19,16 @@ impl Game {
         bank_notes.insert(Money::new(Value::new(10)), 4);
         bank_notes.insert(Money::new(Value::new(50)), 1);
 
-        let chicken = DefaultAnimalSetFactory::new(10, vec![0; 4]);
-        let goose = DefaultAnimalSetFactory::new(40, vec![0; 4]);
-        let cat = DefaultAnimalSetFactory::new(90, vec![0; 4]);
-        let dog = DefaultAnimalSetFactory::new(160, vec![0; 4]);
-        let sheep = DefaultAnimalSetFactory::new(250, vec![0; 4]);
-        let goat = DefaultAnimalSetFactory::new(350, vec![0; 4]);
-        let donkey = DefaultAnimalSetFactory::new(500, vec![50, 100, 200, 500]);
-        let pig = DefaultAnimalSetFactory::new(650, vec![0; 4]);
-        let cow = DefaultAnimalSetFactory::new(800, vec![0; 4]);
-        let horse = DefaultAnimalSetFactory::new(1000, vec![0; 4]);
+        let chicken = AnimalSet::new(10, vec![0; 4]);
+        let goose = AnimalSet::new(40, vec![0; 4]);
+        let cat = AnimalSet::new(90, vec![0; 4]);
+        let dog = AnimalSet::new(160, vec![0; 4]);
+        let sheep = AnimalSet::new(250, vec![0; 4]);
+        let goat = AnimalSet::new(350, vec![0; 4]);
+        let donkey = AnimalSet::new(500, vec![50, 100, 200, 500]);
+        let pig = AnimalSet::new(650, vec![0; 4]);
+        let cow = AnimalSet::new(800, vec![0; 4]);
+        let horse = AnimalSet::new(1000, vec![0; 4]);
 
         let game_stack: Vec<Rc<AnimalSet>> = vec![
             Rc::new(chicken),
@@ -99,17 +99,17 @@ impl Game {
                 let random_value = possible_values[random_value_idx];
 
                 let count_of_animal = rng.random_range(3..5);
-                let mut inflation: Vec<Value> = vec![Value::new(0); count_of_animal];
+                let mut inflation: Vec<usize> = vec![0; count_of_animal];
 
                 if use_inflation {
                     for i in 0..count_of_animal {
                         let random_inflation_idx = rng.random_range(0..all_notes.len());
-                        inflation[i] = all_notes[random_inflation_idx].value();
+                        inflation[i] = all_notes[random_inflation_idx].as_usize();
                     }
                     inflation.sort();
                 }
 
-                let animal_set = DefaultAnimalSetFactory::new_from_value(random_value, inflation);
+                let animal_set = AnimalSet::new(random_value, inflation);
                 game_stack.push(Rc::new(animal_set));
             }
         }

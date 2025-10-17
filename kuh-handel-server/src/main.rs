@@ -1,10 +1,15 @@
-pub mod backend_api;
-pub mod game_error;
-pub mod model;
-pub mod server_side_player;
+mod model {
+    mod game_factory;
+    pub mod game_logic;
+    pub mod match_making;
+}
+
+mod backend_api;
+mod game_error;
+mod server_side_player;
+
 use axum::{Router, routing};
 
-use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use backend_api::{pvp_websocket_handler, random_websocket_handler};

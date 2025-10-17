@@ -85,7 +85,7 @@ async fn main() {
         .route(
             "/kuh-handel/results",
             routing::get(|| async {
-                axum::response::Html(tokio::fs::read_to_string("stats.html").await.unwrap())
+                axum::response::Html(tokio::fs::read_to_string("results.html").await.unwrap())
             }),
         )
         .route(

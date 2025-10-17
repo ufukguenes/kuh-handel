@@ -32,7 +32,7 @@ use crate::{
 
 #[tokio::main]
 async fn main() {
-    let game_log_file = tracing_appender::rolling::never("logs", "app.log");
+    let game_log_file = tracing_appender::rolling::minutely("logs", "app.log");
     let (log_writer, _guard1) = non_blocking(game_log_file);
 
     fmt()

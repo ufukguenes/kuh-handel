@@ -8,7 +8,6 @@ async fn main() {
         name: ufuk_string.clone(),
         token: "abcd".to_string(),
         bot: RandomPlayerActions::new(ufuk_string, 3),
-        print_indent_size: 0,
     };
 
     let leon_string = "leon".to_string();
@@ -16,7 +15,6 @@ async fn main() {
         name: leon_string.clone(),
         token: "efgh".to_string(),
         bot: RandomPlayerActions::new(leon_string, 42),
-        print_indent_size: 1,
     };
 
     let johannes_string = "johannes".to_string();
@@ -24,7 +22,6 @@ async fn main() {
         name: johannes_string.clone(),
         token: "ijkl".to_string(),
         bot: RandomPlayerActions::new(johannes_string, 42),
-        print_indent_size: 1,
     };
 
     let viola_string = "viola".to_string();
@@ -32,7 +29,6 @@ async fn main() {
         name: viola_string.clone(),
         token: "mnop".to_string(),
         bot: RandomPlayerActions::new(viola_string, 42),
-        print_indent_size: 1,
     };
 
     let _ = ufuk_client.register().await;

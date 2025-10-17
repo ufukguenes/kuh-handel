@@ -14,28 +14,12 @@ pub struct Client {
     pub name: String,
     pub token: String,
     pub bot: RandomPlayerActions,
-    pub print_indent_size: usize,
 }
 
 impl Client {
-    const INDENT_MULTIPLIER: usize = 1000;
-    const COLUMN_BUFFER: usize = 5;
-
-    fn print_in_columns(&self, text: String) {
-        let print_str: String = format!("{}{}!", self.indent_space(), text);
-        println!(
-            "{}",
-            &print_str[..min(
-                print_str.len(),
-                self.print_indent_size * Self::INDENT_MULTIPLIER + Self::INDENT_MULTIPLIER
-                    - Self::COLUMN_BUFFER
-            )]
-        );
-    }
-
     pub async fn register(&self) -> Result<(), Box<dyn std::error::Error>> {
         let http = HttpClient::new();
-        self.print_in_columns(format!("Registering bot {} ...", self.name));
+        println!("Registering bot {} ...", self.name);
         let response = http
             .post(format!(
                 "http://127.0.0.1:3000/kuh-handel/register?player_id={}&token={}",
@@ -48,7 +32,7 @@ impl Client {
             return Err(format!("Registration failed: {:?}", response.status()).into());
         };
 
-        self.print_in_columns(format!("Successfully registered bot {}", self.name));
+        println!("Successfully registered bot {}", self.name);
 
         Ok(())
     }
@@ -61,19 +45,17 @@ impl Client {
         .await
         .expect("Failed to connect");
 
-        self.print_in_columns(format!("Connected to server!"));
+        println!("Connected to server!");
 
         let (mut send, mut recv) = ws_stream.split();
 
         // Spawn a task to listen for incoming messages
         loop {
-            self.print_in_columns(format!("waiting for next action request"));
+            println!("waiting for next action request");
             let msg = match recv.next().await {
                 Some(msg) => msg,
                 None => {
-                    self.print_in_columns(
-                        "game closed connection to game, ending loop".to_string(),
-                    );
+                    println!("game closed connection to game, ending loop");
                     break;
                 }
             };
@@ -81,7 +63,7 @@ impl Client {
             let msg_type = match msg {
                 Ok(msg_type) => msg_type,
                 Err(e) => {
-                    self.print_in_columns(format!("error receiving from game: {}", e));
+                    println!("error receiving from game: {}", e);
                     break;
                 }
             };
@@ -90,11 +72,11 @@ impl Client {
                 Message::Text(text) => text,
 
                 Message::Close(_) => {
-                    self.print_in_columns("Connection closed by server".to_string());
+                    println!("Connection closed by server");
                     break;
                 }
                 other => {
-                    self.print_in_columns(format!("Received other message: {:?}", other));
+                    println!("Received other message: {:?}", other);
                     break;
                 }
             };
@@ -102,53 +84,41 @@ impl Client {
             let action_msg: ActionMessage;
             {
                 let state_message: StateMessage = serde_json::from_str(&text).unwrap();
-                self.print_in_columns(format!(
-                    "bot {} received message: {}",
-                    self.name, state_message
-                ));
+                println!("bot {} received message: {}", self.name, state_message);
 
                 action_msg = self.bot.map_to_action(state_message);
             }
 
-            self.print_in_columns(format!(
+            println!(
                 "bot {} picked action: {}",
                 self.name,
                 serde_json::to_string(&action_msg).unwrap()
-            ));
+            );
             let send_status = send
                 .send(Message::Text(serde_json::to_string(&action_msg).unwrap()))
                 .await;
 
             match send_status {
-                Ok(_) => self
-                    .print_in_columns(
-                        format!("action of bot {} has been send to game", self.name,),
-                    ),
+                Ok(_) => println!("action of bot {} has been send to game", self.name,),
                 Err(_) => {
-                    self.print_in_columns(format!(
+                    println!(
                         "failure sending action of bot {} to game, closing connection",
                         self.name,
-                    ));
+                    );
                     break;
                 }
             }
 
-            self.print_in_columns(format!("bot {}, finished sending action", self.name));
+            println!("bot {}, finished sending action", self.name);
         }
 
-        self.print_in_columns(format!(
+        println!(
             "ranking: {:?}",
             self.bot
                 .final_ranking()
                 .iter()
-                .map(|ranking| (ranking.0.name.clone(), ranking.1.to_string()))
+                .map(|ranking| (ranking.0.name.clone(), ranking.1))
                 .collect::<Vec<_>>(),
-        ));
-    }
-
-    pub fn indent_space(&self) -> String {
-        String::from_str(" ")
-            .unwrap()
-            .repeat(Self::INDENT_MULTIPLIER * self.print_indent_size)
+        );
     }
 }

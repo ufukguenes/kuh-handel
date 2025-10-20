@@ -14,14 +14,12 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::Mutex;
 use tokio::task::JoinError;
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
-use tower_http::follow_redirect::policy::PolicyExt;
 use tracing::{Level, error, info};
 
 #[derive(Clone)]
@@ -45,12 +43,12 @@ impl WebsocketLobby {
         let locked_times = self.time_last_n_games.lock().await;
         let last = locked_times.last();
         let first = locked_times.first();
-        if last.is_none() || first.is_none() {
+        if locked_times.len() <= 1 || last.is_none() || first.is_none() {
             return 0f32;
         }
 
         let difference = last.unwrap().duration_since(*first.unwrap());
-        locked_times.len() as f32 / difference.as_secs_f32()
+        (locked_times.len() - 1) as f32 / difference.as_secs_f32()
     }
 }
 
@@ -135,7 +133,7 @@ pub async fn organize_new_game(
             }
         }
 
-        //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     }
 }
 

@@ -22,10 +22,31 @@ use tokio::{
 };
 use tracing::{Level, error, info};
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct WebsocketLobby {
     pub channels_for_ws_actions:
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
+    pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Instant>>>,
+}
+
+impl WebsocketLobby {
+    pub fn new_default(average_time_over_n_games: usize) -> Self {
+        WebsocketLobby {
+            channels_for_ws_actions: Arc::new(Mutex::new(BTreeMap::new())),
+            time_last_n_games: Arc::new(Mutex::new(vec![
+                tokio::time::Instant::now();
+                average_time_over_n_games
+            ])),
+        }
+    }
+
+    pub async fn games_per_second(&self) -> f32 {
+        let locked_times = self.time_last_n_games.lock().await;
+        let last = locked_times.last().unwrap();
+        let first = locked_times.first().unwrap();
+        let difference = last.duration_since(*first);
+        locked_times.len() as f32 / difference.as_secs_f32()
+    }
 }
 
 pub async fn organize_new_game(
@@ -109,7 +130,7 @@ pub async fn organize_new_game(
             }
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }
 
@@ -147,7 +168,7 @@ pub async fn organize_random_game(
                 // update_results(game_results.clone(), ranking).await // todo should we update the result for these kind of test games?
             }
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
 }
 
@@ -230,6 +251,11 @@ pub fn spawn_game(
         });
 
         let ranking = game_handle.await.unwrap();
+
+        let mut timed_games = ws_lobby.time_last_n_games.lock().await;
+        timed_games.push(tokio::time::Instant::now());
+        timed_games.remove(0);
+
         ranking
     })
 }

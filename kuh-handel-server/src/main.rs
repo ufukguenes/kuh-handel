@@ -12,7 +12,7 @@ use axum::{Router, routing};
 
 use tracing_subscriber::util::SubscriberInitExt;
 
-use backend_api::{pvp_websocket_handler, random_websocket_handler};
+use backend_api::{games_per_second_handler, pvp_websocket_handler, random_websocket_handler};
 use model::match_making::{WebsocketLobby, organize_new_game};
 
 use std::net::SocketAddr;
@@ -60,8 +60,8 @@ async fn main() {
         Err(_) => JsonLog::new("game_results.json".to_string()).await.unwrap(),
     };
 
-    let pvp_ws_lobby = WebsocketLobby::default();
-    let random_ws_lobby = WebsocketLobby::default();
+    let pvp_ws_lobby = WebsocketLobby::new_default(10);
+    let random_ws_lobby = WebsocketLobby::new_default(10);
     // start the game in a separate thread, so that server can handle connections
     tokio::spawn(organize_new_game(
         pvp_ws_lobby.clone(),
@@ -91,6 +91,10 @@ async fn main() {
         .route(
             "/kuh-handel/get_results",
             routing::get(stats_handler).with_state(game_results.clone()),
+        )
+        .route(
+            "/kuh-handel/games_per_second",
+            routing::get(games_per_second_handler).with_state(pvp_ws_lobby.clone()),
         )
         .route(
             "/kuh-handel/game",

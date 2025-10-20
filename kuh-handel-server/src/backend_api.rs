@@ -5,7 +5,7 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::StatusCode,
-    response::IntoResponse,
+    response::{Html, IntoResponse},
 };
 pub use axum_macros::debug_handler;
 
@@ -121,6 +121,11 @@ pub async fn stats_handler(State(game_results): State<JsonLog<Vec<usize>>>) -> S
         Ok(json) => json,
         Err(e) => e.to_string(),
     }
+}
+
+#[debug_handler]
+pub async fn games_per_second_handler(State(state): State<WebsocketLobby>) -> Html<String> {
+    axum::response::Html(format!("{}", state.games_per_second().await))
 }
 
 #[debug_handler]

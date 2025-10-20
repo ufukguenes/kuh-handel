@@ -102,7 +102,7 @@ async fn main() {
             routing::get(random_websocket_handler)
                 .with_state((random_ws_lobby.clone(), authentication.clone())),
         );
-    let address = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let address = SocketAddr::from(([127, 0, 0, 1], 2000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

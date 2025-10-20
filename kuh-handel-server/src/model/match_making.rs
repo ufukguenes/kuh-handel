@@ -14,12 +14,14 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::Mutex;
 use tokio::task::JoinError;
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
+use tower_http::follow_redirect::policy::PolicyExt;
 use tracing::{Level, error, info};
 
 #[derive(Clone)]
@@ -27,24 +29,27 @@ pub struct WebsocketLobby {
     pub channels_for_ws_actions:
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Instant>>>,
+    pub average_time_over_n_games: usize,
 }
 
 impl WebsocketLobby {
     pub fn new_default(average_time_over_n_games: usize) -> Self {
         WebsocketLobby {
             channels_for_ws_actions: Arc::new(Mutex::new(BTreeMap::new())),
-            time_last_n_games: Arc::new(Mutex::new(vec![
-                tokio::time::Instant::now();
-                average_time_over_n_games
-            ])),
+            time_last_n_games: Arc::new(Mutex::new(Vec::new())),
+            average_time_over_n_games: average_time_over_n_games,
         }
     }
 
     pub async fn games_per_second(&self) -> f32 {
         let locked_times = self.time_last_n_games.lock().await;
-        let last = locked_times.last().unwrap();
-        let first = locked_times.first().unwrap();
-        let difference = last.duration_since(*first);
+        let last = locked_times.last();
+        let first = locked_times.first();
+        if last.is_none() || first.is_none() {
+            return 0f32;
+        }
+
+        let difference = last.unwrap().duration_since(*first.unwrap());
         locked_times.len() as f32 / difference.as_secs_f32()
     }
 }
@@ -253,8 +258,10 @@ pub fn spawn_game(
         let ranking = game_handle.await.unwrap();
 
         let mut timed_games = ws_lobby.time_last_n_games.lock().await;
+        if timed_games.len() == ws_lobby.average_time_over_n_games {
+            timed_games.remove(0);
+        }
         timed_games.push(tokio::time::Instant::now());
-        timed_games.remove(0);
 
         ranking
     })

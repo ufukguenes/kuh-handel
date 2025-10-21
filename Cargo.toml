@@ -2,7 +2,8 @@
 members = [
     "kuh-handel-server",
     "kuh-handel-lib",
-    "kuh-handel-test-client"
+    "kuh-handel-test-client",
+    "pyhandel"
 ]
 
 [workspace.dependencies]

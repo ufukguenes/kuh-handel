@@ -132,12 +132,12 @@ impl Game {
         self.trading_phase();
 
         if !self.validate_players_animals() {
-            print!("gl | game failed animal check at the end");
+            // print!("gl | game failed animal check at the end");
             return Err(GameError::InvalidAnimalsAtEnd);
         };
 
         if !self.validate_players_money() {
-            print!("gl | game failed money check at the end");
+            // print!("gl | game failed money check at the end");
             return Err(GameError::InvalidMoneyAtEnd);
         };
 
@@ -189,10 +189,10 @@ impl Game {
     }
 
     pub fn validate_players_animals(&self) -> bool {
+        let mut beginning_animals = self.animal_sets.clone();
         for (i, player) in self.players.iter().enumerate() {
             let binding = player.borrow();
             let current_animals = binding.clone_owned_animals();
-            let mut beginning_animals = self.animal_sets.clone();
             // check if animal occurs the right amount of times
             for (animal, count) in current_animals.into_iter() {
                 let pos = beginning_animals
@@ -238,13 +238,6 @@ impl Game {
                 }
             }
 
-            if beginning_animals.len() > 0 {
-                error!(
-                    "gl | validation: animals that existed are now missing {:?}",
-                    beginning_animals
-                );
-            }
-
             // check that no two players share the same animal
             for other in self.players[i + 1..].iter() {
                 let binding = other.borrow();
@@ -258,11 +251,11 @@ impl Game {
                     .keys()
                     .all(|animal| player.borrow().clone_owned_animals().contains_key(animal));
                 if has_shared {
-                    println!(
-                        "{} and {} share animals",
-                        other.borrow().id(),
-                        player.borrow().id()
-                    );
+                    // println!(
+                    //    "{} and {} share animals",
+                    //    other.borrow().id(),
+                    //    player.borrow().id()
+                    //);
                     error!(
                         "gl | validation: {} and {} share animals",
                         other.borrow().id(),
@@ -282,6 +275,14 @@ impl Game {
                     return false;
                 }
             }
+        }
+
+        if beginning_animals.len() > 0 {
+            error!(
+                "gl | validation: animals that existed are now missing {:?}",
+                beginning_animals
+            );
+            return false;
         }
 
         true
@@ -308,11 +309,11 @@ impl Game {
         let host_id = player.borrow().id().clone();
 
         let auction_players = self.get_players_excluding(vec![&host_id]);
-        print!("gl | \t host {}, auction_player: ", host_id);
+        // print!("gl | \t host {}, auction_player: ", host_id);
         for p in auction_players.clone() {
-            print!("{}, ", p.borrow().id().name);
+            // print!("{}, ", p.borrow().id().name);
         }
-        println!();
+        // println!();
 
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
         let mut pass_count = 0usize;
@@ -334,12 +335,12 @@ impl Game {
 
             bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
-            println!(
-                "gl | \t\t Player {} bids {:?} in auction for animal {}",
-                bidder.borrow().id(),
-                player_decision,
-                animal
-            );
+            // println!(
+            //    "gl | \t\t Player {} bids {:?} in auction for animal {}",
+            //    bidder.borrow().id(),
+            //    player_decision,
+            //    animal
+            // );
 
             if let Bidding::Pass = player_decision {
                 // todo should we be able to re join? and the pass count should be reset in this loop then, anyway currently just because a player passed doesnt exclude it from rebidding
@@ -376,18 +377,18 @@ impl Game {
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy => {
-                        println!(
-                            "gl | \t Host {} buys animal {} from {} with bid {}",
-                            host_id, animal, max_bidder_id, max_bid
-                        );
+                        // println!(
+                        //    "gl | \t Host {} buys animal {} from {} with bid {}",
+                        //    host_id, animal, max_bidder_id, max_bid
+                        //);
 
                         (player, Rc::clone(auction_winner))
                     }
                     AuctionDecision::Sell => {
-                        println!(
-                            "gl | \t Host {} sells animal {} to {} with bid {}",
-                            host_id, animal, max_bidder_id, max_bid
-                        );
+                        // println!(
+                        //    "gl | \t Host {} sells animal {} to {} with bid {}",
+                        //    host_id, animal, max_bidder_id, max_bid
+                        //);
 
                         (Rc::clone(auction_winner), player)
                     }
@@ -427,11 +428,11 @@ impl Game {
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
                 Self::update_multiple_players(&self.players, update);
                 let host = self.get_by_id(&final_auction_round.host).unwrap();
-                println!(
-                    "gl | \t player {} bluffed, exposed value {}",
-                    sender.borrow().id(),
-                    sender.borrow().clone_wallet().total_money(),
-                );
+                // println!(
+                //    "gl | \t player {} bluffed, exposed value {}",
+                //    sender.borrow().id(),
+                //    sender.borrow().clone_wallet().total_money(),
+                // );
 
                 self.auction(host, &final_auction_round.animal);
             }
@@ -444,12 +445,12 @@ impl Game {
                     min_value: max_bid, // ToDo: calculate the min value
                 };
 
-                println!(
-                    "gl | \t player {} sends {} bills to {}",
-                    sender.borrow().id(),
-                    amount.len(),
-                    receiver.borrow().id().clone()
-                );
+                // println!(
+                //    "gl | \t player {} sends {} bills to {}",
+                //    sender.borrow().id(),
+                //    amount.len(),
+                //    receiver.borrow().id().clone()
+                //);
 
                 let update = |transfer_kind| {
                     GameUpdate::Auction(AuctionKind::NormalAuction {
@@ -533,15 +534,15 @@ impl Game {
         let (opponent_total_value, opponent_card_count, opponent_offer_vec) = match player_decision
         {
             TradeOpponentDecision::Accept => {
-                println!("gl | \t Trade accepted by {}", opponent.borrow().id());
+                // println!("gl | \t Trade accepted by {}", opponent.borrow().id());
                 (0, None, None)
             }
             TradeOpponentDecision::CounterOffer(amount) => {
-                println!(
-                    "gl | \t Trade countered by {} with amount {}",
-                    opponent.borrow().id(),
-                    amount.iter().map(|m| m.as_usize()).sum::<usize>(),
-                );
+                // println!(
+                //    "gl | \t Trade countered by {} with amount {}",
+                //    opponent.borrow().id(),
+                //    amount.iter().map(|m| m.as_usize()).sum::<usize>(),
+                //);
                 (
                     amount.iter().map(|money| money.as_usize()).sum(),
                     Some(amount.len()),
@@ -585,7 +586,7 @@ impl Game {
     }
 
     fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
-        println!("gl | {} must trade", player.borrow().id());
+        // println!("gl | {} must trade", player.borrow().id());
 
         let state_msg = StateMessage::Trade;
         let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
@@ -602,19 +603,19 @@ impl Game {
                     .unwrap_or(&0)
                     .clone();
 
-                println!(
-                    "gl | \t {} trades {}-{} for {}, against {} who has {} many",
-                    player.borrow().id(),
-                    player_decision.animal_count,
-                    player_decision.animal,
-                    player_decision
-                        .amount
-                        .iter()
-                        .map(|m| m.as_usize())
-                        .sum::<usize>(),
-                    player_decision.opponent,
-                    opponent_count
-                );
+                // println!(
+                //   "gl | \t {} trades {}-{} for {}, against {} who has {} many",
+                //   player.borrow().id(),
+                ////   player_decision.animal_count,
+                //   player_decision.animal,
+                //   player_decision
+                //       .amount
+                //      .iter()
+                //      .map(|m| m.as_usize())
+                //      .sum::<usize>(),
+                //    player_decision.opponent,
+                //   opponent_count
+                //);
 
                 self.offer_trade_to_opponent(
                     player,
@@ -635,7 +636,7 @@ impl Game {
         //   in the auction ask each player to bid, and provide the current transaction state = tuple of player and his/her current/highest bid
         //
         while !self.game_stack.is_empty() {
-            println!("gl | --- New turn ---");
+            // println!("gl | --- New turn ---");
 
             let player: Rc<RefCell<SupervisedPlayer>> =
                 Rc::clone(self.players.get(current_player_idx).unwrap());
@@ -647,11 +648,11 @@ impl Game {
             match player_decision {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
-                    println!(
-                        "gl | \t Player {} drew card: {}",
-                        player.borrow().id(),
-                        card
-                    );
+                    // println!(
+                    //    "gl | \t Player {} drew card: {}",
+                    //    player.borrow().id(),
+                    //    card
+                    // );
                     self.auction(player, &card)
                 }
                 PlayerTurnDecision::Trade(InitialTrade {
@@ -672,15 +673,15 @@ impl Game {
                                 .unwrap_or(&0)
                                 .clone();
 
-                            println!(
-                                "gl | \t {} trades {}-{} for {}, against {} who has {} many",
-                                player.borrow().id(),
-                                animal_count,
-                                animal,
-                                amount.iter().map(|m| m.as_usize()).sum::<usize>(),
-                                opponent.borrow().id(),
-                                opponent_count
-                            );
+                            // println!(
+                            //   "gl | \t {} trades {}-{} for {}, against {} who has {} many",
+                            //   player.borrow().id(),
+                            //    animal_count,
+                            //   animal,
+                            //   amount.iter().map(|m| m.as_usize()).sum::<usize>(),
+                            //   opponent.borrow().id(),
+                            //   opponent_count
+                            //);
                             self.offer_trade_to_opponent(
                                 player,
                                 opponent,
@@ -694,7 +695,7 @@ impl Game {
                 }
             };
             current_player_idx = (current_player_idx + 1) % self.players.len();
-            println!("");
+            // println!("");
 
             // ToDo: a lot of stuff to do here
         }
@@ -707,14 +708,14 @@ impl Game {
         for (i, player) in self.players.iter().cycle().enumerate() {
             let current_cycle = i / self.players.len();
             if current_cycle >= max_cycles {
-                println!(
-                    "gl | game ended after maximum number of iterations in trading phase was reached "
-                );
+                // println!(
+                //    "gl | game ended after maximum number of iterations in trading phase was reached "
+                //);
                 break;
             }
 
             if skip_players.len() == self.players.len() {
-                println!("gl | game ended as no player can trade anymore");
+                // println!("gl | game ended as no player can trade anymore");
                 break;
             }
 
@@ -722,10 +723,10 @@ impl Game {
                 if player.borrow().can_trade().is_some() {
                     self.player_must_trade(Rc::clone(player));
                 } else {
-                    println!(
-                        "gl | player will be {} skipped in trading",
-                        player.borrow().id()
-                    );
+                    // println!(
+                    //    "gl | player will be {} skipped in trading",
+                    //    player.borrow().id()
+                    //);
                     skip_players.push(player.borrow().id().clone());
                 }
             }

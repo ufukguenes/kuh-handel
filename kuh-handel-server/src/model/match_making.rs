@@ -13,7 +13,9 @@ use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
+use std::ops::Div;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task::JoinError;
 use tokio::{
@@ -26,7 +28,7 @@ use tracing::{Level, error, info};
 pub struct WebsocketLobby {
     pub channels_for_ws_actions:
         Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
-    pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Instant>>>,
+    pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
 }
 
@@ -41,14 +43,8 @@ impl WebsocketLobby {
 
     pub async fn games_per_second(&self) -> f32 {
         let locked_times = self.time_last_n_games.lock().await;
-        let last = locked_times.last();
-        let first = locked_times.first();
-        if locked_times.len() <= 1 || last.is_none() || first.is_none() {
-            return 0f32;
-        }
-
-        let difference = last.unwrap().duration_since(*first.unwrap());
-        (locked_times.len() - 1) as f32 / difference.as_secs_f32()
+        let summed_times = locked_times.iter().sum::<Duration>().as_secs_f32();
+        locked_times.len() as f32 / summed_times
     }
 }
 
@@ -201,6 +197,8 @@ pub fn spawn_game(
     random_players: Vec<String>,
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
     tokio::spawn(async move {
+        let start_time = tokio::time::Instant::now();
+
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
         all_ids.extend(random_players.clone());
@@ -259,7 +257,8 @@ pub fn spawn_game(
         if timed_games.len() == ws_lobby.average_time_over_n_games {
             timed_games.remove(0);
         }
-        timed_games.push(tokio::time::Instant::now());
+        let time_diff = tokio::time::Instant::now().duration_since(start_time);
+        timed_games.push(time_diff);
 
         ranking
     })

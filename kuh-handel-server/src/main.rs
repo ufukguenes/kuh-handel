@@ -10,6 +10,7 @@ mod server_side_player;
 
 use axum::{Router, routing};
 
+use tracing::Level;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use backend_api::{games_per_second_handler, pvp_websocket_handler, random_websocket_handler};
@@ -45,6 +46,7 @@ async fn main() {
         .with_ansi(false)
         .finish()
         .init();
+    // diable tracing of info! with: .with_max_level(Level::ERROR)
 
     let authentication = match JsonLog::<String>::from_file("authentication.json".to_string()).await
     {

@@ -58,7 +58,7 @@ impl Game {
             })
             .collect();
 
-        Game::new(players, wallet, game_stack, seed)
+        Game::new(players, wallet, game_stack, seed, 15)
     }
 
     pub fn new_random_game(
@@ -128,6 +128,6 @@ impl Game {
             })
             .collect();
 
-        Game::new(players, wallet, game_stack, seed)
+        Game::new(players, wallet, game_stack, seed, 15)
     }
 }

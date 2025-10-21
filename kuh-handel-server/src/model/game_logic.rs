@@ -21,6 +21,7 @@ use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 use tracing::error;
 
+use core::num;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -35,6 +36,7 @@ pub struct Game {
     animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>>,
     animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
+    num_bidding_rounds: usize,
     start_wallet: Wallet,
 }
 
@@ -66,6 +68,7 @@ impl Game {
         start_wallet: Wallet,
         animal_sets: Vec<Rc<AnimalSet>>,
         seed: u64,
+        num_bidding_rounds: usize,
     ) -> Self {
         let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
@@ -124,6 +127,7 @@ impl Game {
             animal_sets: animal_sets,
             num_players: num_players,
             start_wallet: start_wallet,
+            num_bidding_rounds: num_bidding_rounds,
         }
     }
 
@@ -316,35 +320,32 @@ impl Game {
         // println!();
 
         let mut bids = Vec::<(PlayerId, Bidding)>::new();
-        let mut pass_count = 0usize;
 
-        let max_bids: usize = 100; // todo find a better limit, maybe 10*player_num?
-        for (i, bidder) in auction_players.iter().cycle().enumerate() {
-            if i >= max_bids {
-                break;
-            }
-            let auction_round = AuctionRound {
-                animal: Rc::clone(&animal),
-                host: host_id.clone(),
-                bids: bids.clone(),
-            };
-            let state_msg = StateMessage::ProvideBidding {
-                state: auction_round,
-            };
-            let player_decision: Bidding = bidder.borrow_mut().map_to_action_inner(state_msg);
+        for _ in 0..self.num_bidding_rounds {
+            let mut pass_count = 0usize;
+            for bidder in auction_players.iter() {
+                let auction_round = AuctionRound {
+                    animal: Rc::clone(&animal),
+                    host: host_id.clone(),
+                    bids: bids.clone(),
+                };
+                let state_msg = StateMessage::ProvideBidding {
+                    state: auction_round,
+                };
+                let player_decision: Bidding = bidder.borrow_mut().map_to_action_inner(state_msg);
 
-            bids.push((bidder.borrow().id().clone(), player_decision.clone()));
+                bids.push((bidder.borrow().id().clone(), player_decision.clone()));
 
-            // println!(
-            //    "gl | \t\t Player {} bids {:?} in auction for animal {}",
-            //    bidder.borrow().id(),
-            //    player_decision,
-            //    animal
-            // );
+                // println!(
+                //    "gl | \t\t Player {} bids {:?} in auction for animal {}",
+                //    bidder.borrow().id(),
+                //    player_decision,
+                //    animal
+                // );
 
-            if let Bidding::Pass = player_decision {
-                // todo should we be able to re join? and the pass count should be reset in this loop then, anyway currently just because a player passed doesnt exclude it from rebidding
-                pass_count += 1;
+                if let Bidding::Pass = player_decision {
+                    pass_count += 1;
+                }
             }
 
             if pass_count == auction_players.len() {

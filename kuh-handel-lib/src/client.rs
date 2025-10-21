@@ -1,6 +1,3 @@
-use std::cmp::min;
-use std::str::FromStr;
-
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Client as HttpClient;
 use tokio_tungstenite::connect_async;
@@ -39,7 +36,7 @@ impl Client {
 
     pub async fn start(mut self) {
         let (ws_stream, _) = connect_async(format!(
-            "wss://ufuk-guenes.com/kuh-handel/game?player_id={}&token={}",
+            "ws://127.0.0.1:2000/kuh-handel/game?player_id={}&token={}",
             self.name, self.token
         ))
         .await

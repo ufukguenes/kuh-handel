@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::animals;
-
 use super::money::value::Value;
 use std::fmt;
 use std::fmt::Display;

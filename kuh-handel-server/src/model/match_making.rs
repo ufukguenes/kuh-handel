@@ -7,13 +7,11 @@ use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::extract::ws::Message;
-pub use axum_macros::debug_handler;
 
 use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
-use std::ops::Div;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -85,7 +83,7 @@ pub async fn organize_new_game(
                 .enumerate()
                 .min_by(|&(_, a), &(_, b)| a.cmp(b))
                 .unwrap();
-            let (max_index, &max_value) = remainders
+            let (max_index, _) = remainders
                 .iter()
                 .enumerate()
                 .max_by(|&(_, a), &(_, b)| a.cmp(b))

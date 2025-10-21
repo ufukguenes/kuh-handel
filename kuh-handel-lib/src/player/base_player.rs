@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::messages::actions::{FromActionMessage, InitialTrade};
 
-use crate::animals::{Animal, AnimalSet};
+use crate::animals::{self, Animal, AnimalSet};
 use crate::messages::game_updates::Points;
 use crate::messages::message_protocol::StateMessage;
 
@@ -61,11 +61,18 @@ impl Player {
     }
 
     pub fn calculate_points(&self) -> Points {
-        let mut animal_sum: Points = 0;
-        for (animal, _) in self.owned_animals.iter() {
-            animal_sum += animal.value().value();
+        let mut full_stacks: usize = 0;
+        let mut total_points: usize = 0;
+        for (animal, current_animal_count) in self.owned_animals.iter() {
+            let animal_set = self.game_stack.iter().find(|set| set.animal() == animal);
+            if let Some(animal_set) = animal_set {
+                if animal_set.occurrences() == *current_animal_count {
+                    total_points += animal.value().value();
+                    full_stacks += 1;
+                }
+            }
         }
-        return animal_sum * self.owned_animals.len();
+        full_stacks * total_points
     }
 
     pub fn can_trade(&self, opponents: &Vec<Rc<RefCell<Player>>>) -> Option<InitialTrade> {

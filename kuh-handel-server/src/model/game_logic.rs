@@ -295,7 +295,7 @@ impl Game {
     }
 
     pub fn num_players(&mut self) -> usize {
-        self.num_players = self.players.len(); // todo if a player drops, we need to think about how we validate if the game is still valid
+        self.num_players = self.players.len();
         self.num_players
     }
 
@@ -305,10 +305,6 @@ impl Game {
             all_ids.push(player.borrow().id().to_string());
         }
         return all_ids;
-    }
-
-    pub fn remove_player(&mut self, id: String) {
-        todo!()
     }
 
     fn auction(&mut self, player: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {

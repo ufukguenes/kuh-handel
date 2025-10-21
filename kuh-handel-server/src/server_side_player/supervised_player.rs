@@ -7,14 +7,12 @@ use kuh_handel_lib::animals::Animal;
 use kuh_handel_lib::messages::actions::*;
 use kuh_handel_lib::messages::game_updates::*;
 use kuh_handel_lib::messages::message_protocol::StateMessage;
-use kuh_handel_lib::money::money::Money;
-use kuh_handel_lib::money::value::Value;
-use kuh_handel_lib::money::wallet::Affordability::*;
-use kuh_handel_lib::money::wallet::Wallet;
 use kuh_handel_lib::player::{
     base_player::{Player, PlayerId},
     player_actions::PlayerActions,
+    wallet::{Affordability::*, Wallet},
 };
+use kuh_handel_lib::{Money, Value};
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:

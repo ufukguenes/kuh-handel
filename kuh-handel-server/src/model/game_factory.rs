@@ -1,8 +1,8 @@
 use super::game_logic::Game;
 use kuh_handel_lib::{
+    Money,
     animals::AnimalSet,
-    money::{money::Money, value::Value, wallet::Wallet},
-    player::{base_player::Player, player_actions::PlayerActions},
+    player::{base_player::Player, player_actions::PlayerActions, wallet::Wallet},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -15,9 +15,9 @@ impl Game {
         seed: u64,
     ) -> Self {
         let mut bank_notes: BTreeMap<Money, usize> = BTreeMap::new();
-        bank_notes.insert(Money::new(Value::new(0)), 2);
-        bank_notes.insert(Money::new(Value::new(10)), 4);
-        bank_notes.insert(Money::new(Value::new(50)), 1);
+        bank_notes.insert(0, 2);
+        bank_notes.insert(10, 4);
+        bank_notes.insert(50, 1);
 
         let chicken = AnimalSet::new(10, vec![0; 4]);
         let goose = AnimalSet::new(40, vec![0; 4]);
@@ -72,12 +72,12 @@ impl Game {
 
         let mut bank_notes: BTreeMap<Money, usize> = BTreeMap::new();
 
-        let zero = Money::new_usize(0);
-        let ten = Money::new_usize(10);
-        let fifty = Money::new_usize(50);
-        let hundred = Money::new_usize(100);
-        let twohundred = Money::new_usize(200);
-        let fivehundred = Money::new_usize(500);
+        let zero = 0;
+        let ten = 10;
+        let fifty = 50;
+        let hundred = 100;
+        let twohundred = 200;
+        let fivehundred = 500;
 
         let all_notes = [zero, ten, fifty, hundred, twohundred, fivehundred];
 
@@ -104,7 +104,7 @@ impl Game {
                 if use_inflation {
                     for i in 0..count_of_animal {
                         let random_inflation_idx = rng.random_range(0..all_notes.len());
-                        inflation[i] = all_notes[random_inflation_idx].as_usize();
+                        inflation[i] = all_notes[random_inflation_idx];
                     }
                     inflation.sort();
                 }

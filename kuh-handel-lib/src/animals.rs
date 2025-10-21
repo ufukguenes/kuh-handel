@@ -1,6 +1,7 @@
+use serde::de::value;
 use serde::{Deserialize, Serialize};
 
-use super::money::value::Value;
+use crate::Value;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -29,9 +30,8 @@ impl Display for AnimalSet {
 }
 
 impl AnimalSet {
-    pub fn new(value_number: usize, inflation_numbers: Vec<usize>) -> AnimalSet {
-        let inflation: Vec<Value> = inflation_numbers.iter().map(|e| Value::new(*e)).collect();
-        let value = Value::new(value_number);
+    pub fn new(value: usize, inflation_numbers: Vec<usize>) -> AnimalSet {
+        let inflation: Vec<Value> = inflation_numbers.iter().map(|e| *e).collect();
 
         let animal = Animal::new(value);
         let animals = inflation

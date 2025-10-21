@@ -8,10 +8,11 @@ use kuh_handel_lib::messages::game_updates::{
 
 use kuh_handel_lib::animals::{Animal, AnimalSet};
 use kuh_handel_lib::messages::message_protocol::StateMessage;
-use kuh_handel_lib::money::money::Money;
-use kuh_handel_lib::money::value::Value;
-use kuh_handel_lib::money::wallet::Wallet;
-use kuh_handel_lib::player::base_player::{Player, PlayerId};
+use kuh_handel_lib::player::{
+    base_player::{Player, PlayerId},
+    wallet::Wallet,
+};
+use kuh_handel_lib::{Money, Value};
 
 use crate::game_error::GameError;
 
@@ -370,7 +371,7 @@ impl Game {
                 let auction_winner = auction_winner;
 
                 let max_bid = match max_bid {
-                    Bidding::Pass => Value::new(0),
+                    Bidding::Pass => 0,
                     Bidding::Bid(value) => *value,
                 };
 
@@ -516,7 +517,7 @@ impl Game {
         animal: Animal,
         animal_count: usize,
     ) {
-        let challenger_total_value: usize = amount.iter().map(|money| money.as_usize()).sum();
+        let challenger_total_value: usize = amount.iter().map(|money| money).sum();
         let challenger_card_count = amount.len();
         let challenger_offer_vec = amount;
         let offer: TradeOffer = TradeOffer {
@@ -543,7 +544,7 @@ impl Game {
                 //    amount.iter().map(|m| m.as_usize()).sum::<usize>(),
                 //);
                 (
-                    amount.iter().map(|money| money.as_usize()).sum(),
+                    amount.iter().map(|money| money).sum(),
                     Some(amount.len()),
                     Some(amount),
                 )

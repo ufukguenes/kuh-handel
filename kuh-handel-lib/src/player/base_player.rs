@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::messages::actions::{FromActionMessage, InitialTrade};
 
-use crate::animals::{self, Animal, AnimalSet};
+use crate::animals::{Animal, AnimalSet};
 use crate::messages::game_updates::Points;
 use crate::messages::message_protocol::StateMessage;
 
-use crate::money::wallet::Wallet;
 use crate::player::player_actions::PlayerActions;
 use crate::player::player_error::PlayerError;
+use crate::player::wallet::Wallet;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -67,7 +67,7 @@ impl Player {
             let animal_set = self.game_stack.iter().find(|set| set.animal() == animal);
             if let Some(animal_set) = animal_set {
                 if animal_set.occurrences() == *current_animal_count {
-                    total_points += animal.value().value();
+                    total_points += animal.value();
                     full_stacks += 1;
                 }
             }

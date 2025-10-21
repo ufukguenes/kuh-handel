@@ -15,9 +15,11 @@ use crate::messages::game_updates::{
 use crate::player::player_error::PlayerError;
 
 use crate::{
-    animals::Animal, money::value::Value, money::wallet::Wallet, player::base_player::PlayerId,
-    player::player_actions::PlayerActions,
+    animals::Animal, player::base_player::PlayerId, player::player_actions::PlayerActions,
 };
+
+use crate::Value;
+use crate::player::wallet::Wallet;
 
 // todo: should this wrap the base player and use the functions of that, here is already duplicate code
 pub struct RandomPlayerActions {
@@ -128,10 +130,10 @@ impl PlayerActions for RandomPlayerActions {
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         let mut new_val = 1;
         if let Some((_, value)) = Self::get_highest_bid(&state.bids) {
-            let temp = value.value() as f32 * 1.1;
+            let temp = *value as f32 * 1.1;
             new_val = new_val + temp as usize;
         }
-        let random_bid = Bidding::Bid(Value::new(new_val));
+        let random_bid = Bidding::Bid(new_val);
 
         return vec![Bidding::Pass, random_bid]
             .choose(&mut self.rng)
@@ -160,10 +162,8 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        let random_value = self.rng.random_range(0..=self.wallet.total_money().value());
-        let combination = self
-            .wallet
-            .propose_bill_combinations(Value::new(random_value), false);
+        let random_value = self.rng.random_range(0..=self.wallet.total_money());
+        let combination = self.wallet.propose_bill_combinations(random_value, false);
         let counter_offer =
             TradeOpponentDecision::CounterOffer(combination.get(0).unwrap().1.clone());
         return vec![TradeOpponentDecision::Accept, counter_offer]

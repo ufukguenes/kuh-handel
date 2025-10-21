@@ -1,6 +1,6 @@
 use crate::messages::message_protocol::ActionMessage;
-use crate::money::value::Value;
-use crate::{animals::Animal, money::money::Money, player::base_player::PlayerId};
+use crate::{Money, Value};
+use crate::{animals::Animal, player::base_player::PlayerId};
 use serde::{Deserialize, Serialize};
 
 pub trait FromActionMessage: Sized {

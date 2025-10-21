@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use crate::money::money::Money;
-use crate::money::value::Value;
-use crate::player::player_error::PlayerError;
+use crate::{Money, Value, player::player_error::PlayerError};
 use std::collections::BTreeMap;
 
 #[serde_as]
@@ -67,12 +65,12 @@ impl Wallet {
     }
 
     pub fn total_money(&self) -> Value {
-        let mut total: usize = 0;
+        let mut total: Value = 0;
 
         for (money, amount) in &self.bank_notes {
-            total += money.as_usize() * amount;
+            total += money * amount;
         }
-        Value::new(total)
+        total
     }
 
     pub fn check_if_exact(&self, bill_combination: &Vec<Money>) -> bool {
@@ -92,8 +90,8 @@ impl Wallet {
         let mut possible_payments: Vec<(usize, Vec<Money>)> = vec![(0, Vec::new())];
 
         for (bill, count) in &self.bank_notes {
-            if bill.value() >= amount {
-                possible_payments.push((bill.as_usize(), vec![bill.clone()]));
+            if *bill >= amount {
+                possible_payments.push((*bill, vec![bill.clone()]));
                 break;
             }
 
@@ -104,11 +102,11 @@ impl Wallet {
                     let mut new_bills = combination.clone();
                     new_bills.push(bill.clone());
 
-                    let new_value = old_value + bill.as_usize();
+                    let new_value = old_value + bill;
 
                     new_combinations.push((new_value, new_bills));
 
-                    if new_value >= amount.value() {
+                    if new_value >= amount {
                         break;
                     }
                 }
@@ -120,8 +118,8 @@ impl Wallet {
 
         let mut out: Vec<(Value, Vec<Money>)> = possible_payments
             .into_iter()
-            .filter(|(val, _)| also_suggest_smaller_values || *val >= amount.value())
-            .map(|(val, combination)| (Value::new(val), combination))
+            .filter(|(val, _)| also_suggest_smaller_values || *val >= amount)
+            .map(|(val, combination)| (val, combination))
             .collect();
         out.sort_by(|(a, _), (b, _)| a.cmp(b));
 
@@ -129,10 +127,10 @@ impl Wallet {
     }
 
     pub fn can_afford(&self, payment_amount: &Vec<Money>) -> Affordability {
-        let total_payed: usize = payment_amount.iter().map(|money| money.as_usize()).sum();
+        let total_payed: Value = payment_amount.iter().map(|money| money).sum();
         let total_owned = self.total_money();
 
-        if total_owned.value() < total_payed {
+        if total_owned < total_payed {
             return Affordability::CannotAfford;
         };
 
@@ -144,7 +142,7 @@ impl Wallet {
 
         // just pick the bill combination with the smallest overhead
         let alternative = self
-            .propose_bill_combinations(Value::new(total_payed), false)
+            .propose_bill_combinations(total_payed, false)
             .get(0)
             .unwrap()
             .1

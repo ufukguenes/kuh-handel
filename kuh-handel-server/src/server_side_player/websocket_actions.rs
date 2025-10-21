@@ -7,7 +7,7 @@ use kuh_handel_lib::messages::actions::{
 use kuh_handel_lib::messages::game_updates::{AuctionRound, GameUpdate};
 use kuh_handel_lib::messages::message_protocol::{ActionMessage, StateMessage};
 
-use kuh_handel_lib::money::value::Value;
+use kuh_handel_lib::Value;
 use kuh_handel_lib::player::base_player::PlayerId;
 
 use kuh_handel_lib::player::player_actions::PlayerActions;

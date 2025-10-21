@@ -1,11 +1,12 @@
 use std::fmt::Display;
 
+use crate::Value;
 use crate::messages::actions::{
     AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
-use crate::{money::value::Value, player::base_player::PlayerId};
+use crate::player::base_player::PlayerId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

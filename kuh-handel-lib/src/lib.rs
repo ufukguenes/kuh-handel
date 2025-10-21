@@ -6,17 +6,16 @@ pub mod messages {
 pub mod animals;
 pub mod client;
 
-pub mod money {
-    pub mod money;
-    pub mod value;
-    pub mod wallet;
-}
 pub mod player {
     pub mod base_player;
     pub mod player_actions;
     pub mod player_error;
     pub mod random_player;
+    pub mod wallet;
 }
+
+pub type Money = usize;
+pub type Value = usize;
 
 #[cfg(test)]
 mod tests {}

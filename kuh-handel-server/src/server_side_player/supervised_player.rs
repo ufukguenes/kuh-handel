@@ -37,6 +37,10 @@ impl SupervisedPlayer {
         }
     }
 
+    pub fn add_inflation(&mut self, value: Value) {
+        self.player.borrow_mut().add_inflation(value);
+    }
+
     pub fn clone_wallet(&self) -> Wallet {
         self.player.borrow().wallet().clone()
     }
@@ -299,6 +303,10 @@ impl PlayerActions for SupervisedPlayer {
                 if &player == self.player.borrow().id() {
                     self.limit_bidding_until_next_auction = true;
                 }
+            }
+
+            GameUpdate::Inflation(inflation) => {
+                self.add_inflation(inflation);
             }
 
             _ => {}

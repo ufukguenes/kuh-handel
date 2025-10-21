@@ -18,6 +18,13 @@ impl Wallet {
         }
     }
 
+    pub fn add_money(&mut self, money: Money) {
+        self.bank_notes
+            .entry(money)
+            .and_modify(|curr| *curr += 1)
+            .or_insert(1);
+    }
+
     pub fn withdraw(&mut self, amount: &Vec<Money>) -> Result<(), PlayerError> {
         let backup_notes = self.bank_notes.clone();
 

@@ -629,6 +629,18 @@ impl Game {
         }
     }
 
+    fn process_card_inflation(&mut self, card: &Animal) {
+        let animal_set = self.animal_usage.get(card).unwrap(); // must not fail as all animals of the game are in the mapping
+
+        let inflation = animal_set.get_next_inflation();
+        if inflation > 0 {
+            self.start_wallet.add_money(inflation);
+            let update = GameUpdate::Inflation(inflation);
+            Self::update_multiple_players(&self.players, update);
+        }
+        animal_set.increase_draw_count();
+    }
+
     fn draw_phase(&mut self) {
         let mut current_player_idx = 0usize;
         // get player order and iterate over them
@@ -648,6 +660,9 @@ impl Game {
             match player_decision {
                 PlayerTurnDecision::Draw => {
                     let card = self.game_stack.pop().unwrap();
+
+                    self.process_card_inflation(&card);
+
                     // println!(
                     //    "gl | \t Player {} drew card: {}",
                     //    player.borrow().id(),

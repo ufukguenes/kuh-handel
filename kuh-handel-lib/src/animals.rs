@@ -1,7 +1,7 @@
-use serde::de::value;
 use serde::{Deserialize, Serialize};
 
 use crate::Value;
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -13,13 +13,11 @@ pub enum AnimalError {
     InvalidDraw,
 }
 
-type AnimalResult<T> = Result<T, AnimalError>;
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
     animal: Animal,
     inflation: Vec<Value>,
-    draw_count: usize,
+    draw_count: RefCell<usize>,
     animals: Vec<Rc<Animal>>,
 }
 
@@ -31,10 +29,8 @@ impl Display for AnimalSet {
 
 impl AnimalSet {
     pub fn new(value: usize, inflation_numbers: Vec<usize>) -> AnimalSet {
-        let inflation: Vec<Value> = inflation_numbers.iter().map(|e| *e).collect();
-
         let animal = Animal::new(value);
-        let animals = inflation
+        let animals = inflation_numbers
             .clone()
             .iter()
             .map(|_| Rc::new(animal.clone()))
@@ -42,14 +38,22 @@ impl AnimalSet {
 
         AnimalSet {
             animal: animal,
-            inflation: inflation,
-            draw_count: 0,
+            inflation: inflation_numbers,
+            draw_count: RefCell::new(0),
             animals: animals,
         }
     }
 
+    pub fn get_next_inflation(&self) -> Value {
+        self.inflation[*self.draw_count.borrow()]
+    }
+
     pub fn occurrences(&self) -> usize {
         self.inflation.len()
+    }
+
+    pub fn increase_draw_count(&self) {
+        *self.draw_count.borrow_mut() += 1;
     }
 
     pub fn animal(&self) -> &Animal {
@@ -58,14 +62,6 @@ impl AnimalSet {
 
     pub fn animals(&self) -> &Vec<Rc<Animal>> {
         &self.animals
-    }
-
-    fn draw_animal(&mut self) -> Result<Value, AnimalError> {
-        if self.draw_count == self.occurrences() {
-            return Err(AnimalError::InvalidDraw);
-        }
-        self.draw_count += 1;
-        return Ok(self.inflation[self.draw_count - 1]);
     }
 }
 

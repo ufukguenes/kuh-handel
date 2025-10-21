@@ -253,6 +253,11 @@ impl PlayerActions for RandomPlayerActions {
             GameUpdate::End { ranking } => {
                 self.final_ranking = ranking;
             }
+
+            GameUpdate::Inflation(value) => {
+                self.wallet.add_money(value);
+            }
+
             _ => {}
         }
 

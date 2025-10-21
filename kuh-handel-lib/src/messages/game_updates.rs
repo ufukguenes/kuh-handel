@@ -45,6 +45,7 @@ pub enum GameUpdate {
         player: PlayerId,
         wallet: Wallet,
     },
+    Inflation(Money),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

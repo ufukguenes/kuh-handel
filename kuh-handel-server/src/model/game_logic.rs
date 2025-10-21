@@ -21,7 +21,6 @@ use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 use tracing::error;
 
-use core::num;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -37,6 +36,7 @@ pub struct Game {
     animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
     num_bidding_rounds: usize,
+    num_trading_rounds: usize,
     start_wallet: Wallet,
 }
 
@@ -69,6 +69,7 @@ impl Game {
         animal_sets: Vec<Rc<AnimalSet>>,
         seed: u64,
         num_bidding_rounds: usize,
+        num_trading_rounds: usize,
     ) -> Self {
         let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
@@ -128,6 +129,7 @@ impl Game {
             num_players: num_players,
             start_wallet: start_wallet,
             num_bidding_rounds: num_bidding_rounds,
+            num_trading_rounds: num_trading_rounds,
         }
     }
 
@@ -443,7 +445,7 @@ impl Game {
                 let rounds = final_auction_round.clone();
                 let public_kind = MoneyTransfer::Public {
                     card_amount: amount.len(),
-                    min_value: max_bid, // ToDo: calculate the min value
+                    min_value: max_bid,
                 };
 
                 // println!(
@@ -696,39 +698,29 @@ impl Game {
                 }
             };
             current_player_idx = (current_player_idx + 1) % self.players.len();
-            // println!("");
-
-            // ToDo: a lot of stuff to do here
         }
     }
 
     fn trading_phase(&mut self) {
-        let max_cycles = 1000; // todo find a better limit based on game stack
         let mut skip_players: Vec<PlayerId> = Vec::new();
 
-        for (i, player) in self.players.iter().cycle().enumerate() {
-            let current_cycle = i / self.players.len();
-            if current_cycle >= max_cycles {
-                // println!(
-                //    "gl | game ended after maximum number of iterations in trading phase was reached "
-                //);
-                break;
-            }
+        for _ in 0..self.num_trading_rounds {
+            for player in self.players.iter() {
+                if skip_players.len() == self.players.len() {
+                    // println!("gl | game ended as no player can trade anymore");
+                    break;
+                }
 
-            if skip_players.len() == self.players.len() {
-                // println!("gl | game ended as no player can trade anymore");
-                break;
-            }
-
-            if !skip_players.contains(&player.borrow().id()) {
-                if player.borrow().can_trade().is_some() {
-                    self.player_must_trade(Rc::clone(player));
-                } else {
-                    // println!(
-                    //    "gl | player will be {} skipped in trading",
-                    //    player.borrow().id()
-                    //);
-                    skip_players.push(player.borrow().id().clone());
+                if !skip_players.contains(&player.borrow().id()) {
+                    if player.borrow().can_trade().is_some() {
+                        self.player_must_trade(Rc::clone(player));
+                    } else {
+                        // println!(
+                        //    "gl | player will be {} skipped in trading",
+                        //    player.borrow().id()
+                        //);
+                        skip_players.push(player.borrow().id().clone());
+                    }
                 }
             }
         }

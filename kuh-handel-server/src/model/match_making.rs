@@ -133,7 +133,7 @@ pub async fn organize_new_game(
             }
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 
@@ -171,7 +171,7 @@ pub async fn organize_random_game(
                 // update_results(game_results.clone(), ranking).await // todo should we update the result for these kind of test games?
             }
         }
-        //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 

@@ -235,29 +235,30 @@ pub fn spawn_game(
             );
 
             let mut game = Game::new_default_game(all_ids, all_actions, seed);
-            game.num_players();
             println!("{}", game);
 
-            game.num_players();
+            let ranking = game.play();
 
-            let ranking = game.play().unwrap();
-
-            println!("ranking: {:?}", ranking);
-            tracing::event!(target: "ranking", Level::INFO, "{:?}", ranking);
-
-            print!("game is done");
             ranking
         });
 
         let ranking = game_handle.await.unwrap();
+        match ranking {
+            Ok(ranking) => {
+                let mut timed_games = ws_lobby.time_last_n_games.lock().await;
+                if timed_games.len() == ws_lobby.average_time_over_n_games {
+                    timed_games.remove(0);
+                }
+                let time_diff = tokio::time::Instant::now().duration_since(start_time);
+                timed_games.push(time_diff);
 
-        let mut timed_games = ws_lobby.time_last_n_games.lock().await;
-        if timed_games.len() == ws_lobby.average_time_over_n_games {
-            timed_games.remove(0);
+                tracing::event!(target: "ranking", Level::INFO, "{:?}", ranking);
+                ranking
+            }
+            Err(err) => {
+                println!("{:?}", err);
+                Vec::new()
+            }
         }
-        let time_diff = tokio::time::Instant::now().duration_since(start_time);
-        timed_games.push(time_diff);
-
-        ranking
     })
 }

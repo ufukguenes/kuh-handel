@@ -57,6 +57,7 @@ pub async fn organize_new_game(
     let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
 
     loop {
+        // todo can i get matched with players already in another game?
         if ws_lobby.channels_for_ws_actions.lock().await.len() < 3 {
             info!("og | waiting for more players to join");
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;

@@ -62,7 +62,7 @@ impl WebsocketActions {
         let try_send_to_backend = self.state_sender.blocking_send(serialized_obj);
 
         if let Err(e) = try_send_to_backend {
-            error!("wsp | Player: {}, {}", self.id, e);
+            info!("wsp | Player: {}, {}", self.id, e);
             return None;
         }
 
@@ -96,7 +96,7 @@ impl WebsocketActions {
         let action_msg: ActionMessage = match serde_json::from_str(&msg_text) {
             Ok(action_msg) => action_msg,
             Err(e) => {
-                error!("wsp | Player: {}, {}", self.id, e);
+                info!("wsp | Player: {}, {}", self.id, e);
                 return None;
             }
         };

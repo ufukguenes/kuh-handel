@@ -46,7 +46,7 @@ impl Client {
                     match res {
                         Ok(_) => Ok(()),
                         Err(err) => {
-                            println!("{:?}", err);
+                            println!("{:?}", err); //todo should we do proper error handling here?
                             Ok(())
                         }
                     }
@@ -59,10 +59,7 @@ impl Client {
     pub fn start<'p>(&mut self, py: Python<'p>) -> PyResult<Bound<'p, PyAny>> {
         let client_arc = self.inner.take().unwrap();
         let inner = match Arc::try_unwrap(client_arc) {
-            Ok(inner) => {
-                println!("take worked");
-                inner
-            }
+            Ok(inner) => inner,
             Err(_) => panic!("could not take"),
         };
         future_into_py(py, async move {

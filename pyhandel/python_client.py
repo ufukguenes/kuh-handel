@@ -1,8 +1,9 @@
 import threading
-import pyhandel
 import asyncio
+import pyhandel.pyhandel as pyh
 threads = []
 clients = []
+
 
 def run(client):
     async def main():
@@ -10,27 +11,26 @@ def run(client):
 
     asyncio.run(main())
 
-
-bot = pyhandel.player.random_player.RandomPlayerActions("ufuk", 0)
-client = pyhandel.client.Client("ufuk", "abcd", bot)
+bot = pyh.player.random_player.RandomPlayerActions("ufuk", 0)
+client = pyh.client.Client("ufuk", "abcd", bot)
 res = asyncio.run(client.register())
 
 clients.append(client)
 
 
-bot = pyhandel.player.random_player.RandomPlayerActions("viola", 0)
-client = pyhandel.client.Client("viola", "abcd", bot)
+bot = pyh.player.random_player.RandomPlayerActions("viola", 0)
+client = pyh.client.Client("viola", "abcd", bot)
 res = asyncio.run(client.register())
 clients.append(client)
 
-bot = pyhandel.player.random_player.RandomPlayerActions("johannes", 0)
-client = pyhandel.client.Client("johannes", "abcd", bot)
+bot = pyh.player.random_player.RandomPlayerActions("johannes", 0)
+client = pyh.client.Client("johannes", "abcd", bot)
 res = asyncio.run(client.register())
 clients.append(client)
 
 
-bot = pyhandel.player.random_player.RandomPlayerActions("leon", 0)
-client = pyhandel.client.Client("leon", "abcd", bot)
+bot = pyh.player.random_player.RandomPlayerActions("leon", 0)
+client = pyh.client.Client("leon", "abcd", bot)
 res = asyncio.run(client.register())
 clients.append(client)
 

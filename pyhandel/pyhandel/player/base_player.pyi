@@ -1,0 +1,3 @@
+class PlayerId: 
+    def __init__(self, name): ...
+

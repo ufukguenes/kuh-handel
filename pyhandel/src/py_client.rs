@@ -35,7 +35,7 @@ impl Client {
         }
     }
 
-    pub async fn register(&self) -> PyResult<()> {
+    pub async fn register(&self) {
         let local = tokio::task::LocalSet::new();
 
         let result = local.block_on(&self.runtime, async {
@@ -43,8 +43,8 @@ impl Client {
         });
 
         match result {
-            Ok(_) => Ok(()),
-            Err(err) => Err(PyRuntimeError::new_err(format!("{:?}", err))),
+            Ok(_) => (),
+            Err(err) => println!("{:?}", PyRuntimeError::new_err(format!("{:?}", err))),
         }
     }
 

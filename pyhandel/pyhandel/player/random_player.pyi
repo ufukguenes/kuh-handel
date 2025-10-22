@@ -1,0 +1,3 @@
+class RandomPlayerActions: 
+    def __init__(self, id, seed): ...
+

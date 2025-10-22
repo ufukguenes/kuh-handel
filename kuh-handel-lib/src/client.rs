@@ -12,6 +12,7 @@ pub struct Client {
     pub name: String,
     pub token: String,
     pub bot: RandomPlayerActions,
+    pub base_url: String,
 }
 
 impl Client {
@@ -20,8 +21,8 @@ impl Client {
         println!("Registering bot {} ...", self.name);
         let response = http
             .post(format!(
-                "http://127.0.0.1:2000/kuh-handel/register?player_id={}&token={}",
-                self.name, self.token
+                "http{}/kuh-handel/register?player_id={}&token={}",
+                self.base_url, self.name, self.token
             ))
             .send()
             .await?;
@@ -37,8 +38,8 @@ impl Client {
 
     pub async fn start(mut self) {
         let (ws_stream, _) = connect_async(format!(
-            "ws://127.0.0.1:2000/kuh-handel/game?player_id={}&token={}",
-            self.name, self.token
+            "ws{}/kuh-handel/game?player_id={}&token={}",
+            self.base_url, self.name, self.token
         ))
         .await
         .expect("Failed to connect");

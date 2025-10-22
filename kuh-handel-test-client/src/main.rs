@@ -3,11 +3,14 @@ use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 #[tokio::main]
 async fn main() {
+    let base_url = "://127.0.0.1:2000".to_string();
+
     let ufuk_string = "ufuk".to_string();
     let ufuk_client = Client {
         name: ufuk_string.clone(),
         token: "abcd".to_string(),
         bot: RandomPlayerActions::new(ufuk_string, 3),
+        base_url: base_url.clone(),
     };
 
     let leon_string = "leon".to_string();
@@ -15,6 +18,7 @@ async fn main() {
         name: leon_string.clone(),
         token: "efgh".to_string(),
         bot: RandomPlayerActions::new(leon_string, 42),
+        base_url: base_url.clone(),
     };
 
     let johannes_string = "johannes".to_string();
@@ -22,6 +26,7 @@ async fn main() {
         name: johannes_string.clone(),
         token: "ijkl".to_string(),
         bot: RandomPlayerActions::new(johannes_string, 42),
+        base_url: base_url.clone(),
     };
 
     let viola_string = "viola".to_string();
@@ -29,6 +34,7 @@ async fn main() {
         name: viola_string.clone(),
         token: "mnop".to_string(),
         bot: RandomPlayerActions::new(viola_string, 42),
+        base_url: base_url.clone(),
     };
 
     let _ = ufuk_client.register().await;

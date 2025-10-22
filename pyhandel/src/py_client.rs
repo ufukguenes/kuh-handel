@@ -21,12 +21,18 @@ pub struct Client {
 #[pymethods]
 impl Client {
     #[new]
-    pub fn new(name: String, token: String, bot: &mut RandomPlayerActions) -> Self {
+    pub fn new(
+        name: String,
+        token: String,
+        bot: &mut RandomPlayerActions,
+        base_url: String,
+    ) -> Self {
         Client {
             inner: Some(Arc::new(CoreClient {
                 name: name,
                 token: token,
                 bot: bot.inner.take().unwrap(),
+                base_url: base_url,
             })),
         }
     }

@@ -7,6 +7,7 @@ use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
 use crate::player::random_player::RandomPlayerActions;
 
+#[derive(Debug)]
 pub struct Client {
     pub name: String,
     pub token: String,

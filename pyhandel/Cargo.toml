@@ -9,6 +9,5 @@ name = "pyhandel"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = {version = "0.25.0", features = ["extension-module"]}
+pyo3 = {version = "0.25.0", features = ["extension-module", "experimental-async"]}
 kuh-handel-lib = {path = "../kuh-handel-lib"}
-

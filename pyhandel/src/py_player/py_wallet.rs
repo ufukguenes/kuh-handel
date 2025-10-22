@@ -1,9 +1,8 @@
 use crate::{Money, Value};
 use kuh_handel_lib::player::{
-    player_error::PlayerError, wallet::Affordability as CoreAffordability,
-    wallet::Wallet as CoreWallet,
+    wallet::Affordability as CoreAffordability, wallet::Wallet as CoreWallet,
 };
-use pyo3::{exceptions::PyRuntimeError, prelude::*, PyErrArguments};
+use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use std::collections::BTreeMap;
 
 #[pymodule]

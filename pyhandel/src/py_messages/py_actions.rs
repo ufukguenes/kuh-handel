@@ -1,6 +1,7 @@
-use crate::py_animals::Animal;
+use crate::py_animals::{animal_module_entry, Animal};
 use crate::py_player::py_base_player::PlayerId;
 use crate::{Money, Value};
+use kuh_handel_lib::messages::actions::InitialTrade as CoreInitialTrade;
 use pyo3::prelude::*;
 
 #[pymodule]
@@ -30,6 +31,35 @@ pub struct InitialTrade {
     pub animal: Animal,
     pub animal_count: usize,
     pub amount: Vec<Money>,
+}
+
+#[pymethods]
+impl InitialTrade {
+    #[new]
+    pub fn new(
+        opponent: PlayerId,
+        animal: Animal,
+        animal_count: usize,
+        amount: Vec<Money>,
+    ) -> Self {
+        InitialTrade {
+            opponent: opponent,
+            animal: animal,
+            animal_count: animal_count,
+            amount: amount,
+        }
+    }
+}
+
+impl InitialTrade {
+    pub fn convert(from: CoreInitialTrade) -> InitialTrade {
+        InitialTrade::new(
+            PlayerId::new(from.opponent.name),
+            Animal::new(from.animal.value()),
+            from.animal_count,
+            from.amount,
+        )
+    }
 }
 
 #[pyclass]

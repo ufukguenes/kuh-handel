@@ -1,0 +1,41 @@
+use crate::py_player::py_random_player::RandomPlayerActions;
+use kuh_handel_lib::client::Client as CoreClient;
+use pyo3::{exceptions::PyRuntimeError, prelude::*};
+
+#[pymodule]
+pub fn client_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use super::*;
+    m.add_class::<Client>();
+
+    Ok(())
+}
+
+#[pyclass]
+pub struct Client {
+    inner: Option<CoreClient>,
+}
+
+#[pymethods]
+impl Client {
+    #[new]
+    pub fn new(name: String, token: String, bot: &mut RandomPlayerActions) -> Self {
+        Client {
+            inner: Some(CoreClient {
+                name: name,
+                token: token,
+                bot: bot.inner.take().unwrap(),
+            }),
+        }
+    }
+
+    pub async fn register(&self) -> PyResult<()> {
+        match self.inner.as_ref().unwrap().register().await {
+            Ok(_) => Ok(()),
+            Err(err) => Err(PyRuntimeError::new_err(format!("{:?}", err))),
+        }
+    }
+
+    pub async fn start(&mut self) {
+        self.inner.take().unwrap().start().await;
+    }
+}

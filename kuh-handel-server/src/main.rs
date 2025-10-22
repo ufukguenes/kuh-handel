@@ -28,6 +28,7 @@ use crate::{
 };
 
 // TODO:
+// - set time out for requests to bot, because if bot drops without closing connection, server stops
 // - should we remove money and value and make them type renames?
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
@@ -44,7 +45,6 @@ async fn main() {
     fmt()
         .with_writer(log_writer)
         .with_ansi(false)
-        .with_max_level(Level::ERROR)
         .finish()
         .init();
     // diable tracing of info! with: .with_max_level(Level::ERROR)

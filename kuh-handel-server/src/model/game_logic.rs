@@ -426,6 +426,7 @@ impl Game {
                     wallet: sender.borrow().clone_wallet(),
                 };
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
+                // todo should we track how often this recursion is called and how deep it goes?
                 Self::update_multiple_players(&self.players, update);
                 let host = self.get_by_id(&final_auction_round.host).unwrap();
                 // println!(

@@ -37,6 +37,10 @@ use crate::{
 // - documentation
 // - minimize bloated logging
 
+// BUGS:
+// i think there is a bug where a player is requested to send money, even though the player passed, resulting in a bluff, and then forcing a new round every time?
+// i dont understand why the total number of games for some players is higher than 1 even though only 1 round was played?
+
 #[tokio::main]
 async fn main() {
     let game_log_file = tracing_appender::rolling::minutely("logs", "app.log");

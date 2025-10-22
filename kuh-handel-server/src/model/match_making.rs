@@ -22,6 +22,7 @@ use tokio::{
 };
 use tracing::{Level, error, info};
 
+//todo i think a bot might be joining multiple games, check that the ws_actions are taken out of the btreemap because that is how i thought i check if someone is in a game?
 #[derive(Clone)]
 pub struct WebsocketLobby {
     pub channels_for_ws_actions:

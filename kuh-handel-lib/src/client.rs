@@ -19,7 +19,7 @@ impl Client {
         println!("Registering bot {} ...", self.name);
         let response = http
             .post(format!(
-                "https://ufuk-guenes.com/kuh-handel/register?player_id={}&token={}",
+                "http://127.0.0.1:2000/kuh-handel/register?player_id={}&token={}",
                 self.name, self.token
             ))
             .send()
@@ -36,7 +36,7 @@ impl Client {
 
     pub async fn start(mut self) {
         let (ws_stream, _) = connect_async(format!(
-            "wss://ufuk-guenes.com/kuh-handel/game?player_id={}&token={}",
+            "ws://127.0.0.1:2000/kuh-handel/game?player_id={}&token={}",
             self.name, self.token
         ))
         .await

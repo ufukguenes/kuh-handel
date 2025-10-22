@@ -643,6 +643,7 @@ impl Game {
 
     fn draw_phase(&mut self) {
         let mut current_player_idx = 0usize;
+        println!("hello");
         // get player order and iterate over them
         // draw a card and trigger the auction
         //   in the auction ask each player to bid, and provide the current transaction state = tuple of player and his/her current/highest bid

@@ -30,6 +30,7 @@ pub struct RandomPlayerActions {
     id: PlayerId,
     rng: ChaCha8Rng,
     final_ranking: Vec<(PlayerId, Points)>,
+    has_passed_this_auction_round: bool,
 }
 
 impl RandomPlayerActions {
@@ -41,6 +42,7 @@ impl RandomPlayerActions {
             id: PlayerId { name: my_id },
             rng: ChaCha8Rng::seed_from_u64(seed),
             final_ranking: Vec::new(),
+            has_passed_this_auction_round: false,
         }
     }
 
@@ -136,10 +138,23 @@ impl PlayerActions for RandomPlayerActions {
         }
         let random_bid = Bidding::Bid(new_val);
 
-        return vec![Bidding::Pass, random_bid]
+        let decision = vec![Bidding::Pass, random_bid]
             .choose(&mut self.rng)
             .unwrap()
             .clone();
+
+        match decision {
+            Bidding::Pass => {
+                self.has_passed_this_auction_round = true;
+                decision
+            }
+            Bidding::Bid(_) => {
+                if self.has_passed_this_auction_round {
+                    return Bidding::Pass;
+                }
+                decision
+            }
+        }
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
@@ -176,6 +191,8 @@ impl PlayerActions for RandomPlayerActions {
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
         match update.clone() {
             GameUpdate::Auction(auction_kind) => {
+                self.has_passed_this_auction_round = false;
+
                 match auction_kind {
                     AuctionKind::NoBiddings { host_id, animal } => {
                         if host_id == self.id {

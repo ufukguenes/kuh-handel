@@ -1,7 +1,8 @@
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Client as HttpClient;
 use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::protocol::Message;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+use tokio_tungstenite::tungstenite::protocol::{CloseFrame, Message};
 
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
@@ -96,14 +97,20 @@ impl Client {
                 action_msg = self.bot.map_to_action(state_message);
             }
 
-            println!(
-                "bot {} picked action: {}",
-                self.name,
-                serde_json::to_string(&action_msg).unwrap()
-            );
-            let send_status = send
-                .send(Message::Text(serde_json::to_string(&action_msg).unwrap()))
-                .await;
+            let action_str = serde_json::to_string(&action_msg).unwrap();
+            println!("bot {} picked action: {}", self.name, action_str);
+
+            let message;
+            if game_ended {
+                message = Message::Close(Some(CloseFrame {
+                    code: CloseCode::Normal,
+                    reason: action_str.into(),
+                }));
+            } else {
+                message = Message::Text(action_str)
+            }
+
+            let send_status = send.send(message).await;
 
             match send_status {
                 Ok(_) => println!("action of bot {} has been send to game", self.name,),
@@ -118,11 +125,10 @@ impl Client {
 
             println!("bot {}, finished sending action", self.name);
             if game_ended {
+                let _ = send.close().await;
                 break;
             }
         }
-
-        let _ = send.close().await;
 
         println!(
             "ranking: {:?}",

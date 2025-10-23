@@ -68,6 +68,14 @@ async fn main() {
         Err(_) => JsonLog::new("game_results.json".to_string()).await.unwrap(),
     };
 
+    let random_results =
+        match JsonLog::<Vec<usize>>::from_file("random_results.json".to_string()).await {
+            Ok(game_results) => game_results,
+            Err(_) => JsonLog::new("random_results.json".to_string())
+                .await
+                .unwrap(),
+        };
+
     let pvp_ws_lobby = WebsocketLobby::new_default(10);
     let random_ws_lobby = WebsocketLobby::new_default(10);
     // start the game in a separate thread, so that server can handle connections
@@ -79,7 +87,7 @@ async fn main() {
     ));
     tokio::spawn(organize_random_game(
         random_ws_lobby.clone(),
-        game_results.clone(),
+        random_results.clone(),
         0,
         (3, 6),
     ));

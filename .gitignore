@@ -3,3 +3,5 @@ Cargo.lock
 /logs
 authentication.json
 game_results.json
+random_results.json
+scratch.txt

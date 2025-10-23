@@ -109,10 +109,6 @@ impl Client {
             }
 
             println!("bot {}, finished sending action", self.name);
-            if self.bot.final_ranking().len() > 0 {
-                let _ = send.close().await;
-                break;
-            }
         }
 
         println!(

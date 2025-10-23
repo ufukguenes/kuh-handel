@@ -11,6 +11,7 @@ use axum::extract::ws::Message;
 use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use std::cmp::min;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -102,8 +103,8 @@ pub async fn organize_new_game(
             let mut new_games = Vec::new();
 
             for _ in (0..num_players).step_by(players_per_game) {
-                let current_players: Vec<String> =
-                    all_player_ids.drain(0..players_per_game).collect();
+                let last_value = min(players_per_game, all_player_ids.len());
+                let current_players: Vec<String> = all_player_ids.drain(0..last_value).collect();
                 let new_ws_lobby = ws_lobby.clone();
 
                 let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
@@ -114,7 +115,7 @@ pub async fn organize_new_game(
                 let random_players: Vec<String> = (0..num_random_player)
                     .map(|i| String::from(format!("random_player_{}", i)))
                     .collect();
-
+                info!("og| create game with {:?}", current_players);
                 let new_game = spawn_game(new_ws_lobby.clone(), current_players, random_players);
 
                 new_games.push(new_game);

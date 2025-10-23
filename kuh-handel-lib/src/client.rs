@@ -47,6 +47,7 @@ impl Client {
         println!("Connected to server!");
 
         let (mut send, mut recv) = ws_stream.split();
+        let mut game_ended = false;
 
         // Spawn a task to listen for incoming messages
         loop {
@@ -85,7 +86,6 @@ impl Client {
                 let mut state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 println!("bot {} received message: {}", self.name, state_message);
 
-                let mut game_ended = false;
                 if let StateMessage::GameUpdate {
                     update: crate::messages::game_updates::GameUpdate::End { ranking },
                 } = &state_message
@@ -94,9 +94,6 @@ impl Client {
                 };
 
                 action_msg = self.bot.map_to_action(state_message);
-                if game_ended {
-                    break;
-                }
             }
 
             println!(
@@ -120,6 +117,9 @@ impl Client {
             }
 
             println!("bot {}, finished sending action", self.name);
+            if game_ended {
+                break;
+            }
         }
 
         let _ = send.close().await;

@@ -36,7 +36,7 @@ impl Client {
         Ok(())
     }
 
-    pub async fn start(mut self) {
+    pub async fn play_one_round(&mut self) {
         let (ws_stream, _) = connect_async(format!(
             "ws{}/kuh-handel/game?player_id={}&token={}",
             self.base_url, self.name, self.token
@@ -82,10 +82,21 @@ impl Client {
 
             let action_msg: ActionMessage;
             {
-                let state_message: StateMessage = serde_json::from_str(&text).unwrap();
+                let mut state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 println!("bot {} received message: {}", self.name, state_message);
 
+                let mut game_ended = false;
+                if let StateMessage::GameUpdate {
+                    update: crate::messages::game_updates::GameUpdate::End { ranking },
+                } = &state_message
+                {
+                    game_ended = true;
+                };
+
                 action_msg = self.bot.map_to_action(state_message);
+                if game_ended {
+                    break;
+                }
             }
 
             println!(
@@ -110,6 +121,8 @@ impl Client {
 
             println!("bot {}, finished sending action", self.name);
         }
+
+        let _ = send.close().await;
 
         println!(
             "ranking: {:?}",

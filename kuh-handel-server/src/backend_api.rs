@@ -277,6 +277,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             },
 
             Message::Close(_) => {
+                let _ = action_sender.send(action_msg).await;
                 info!("bck | Closing WebSocket connection of bot {}.", player_id);
                 break;
             }

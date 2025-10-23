@@ -98,7 +98,7 @@ pub async fn register_handler(
     {
         let mut credentials = authentication.data.lock().await;
         if credentials.contains_key(&params.player_id) {
-            info!(
+            error!(
                 "bck | Registration failed: Player ID {} already exists.",
                 params.player_id
             );
@@ -109,7 +109,7 @@ pub async fn register_handler(
 
     let _ = authentication.to_file().await;
 
-    info!(
+    error!(
         "bck | Successfully registered new player: {}",
         params.player_id.clone()
     );
@@ -138,11 +138,11 @@ pub async fn pvp_websocket_handler(
     let (ws_lobby, authentication) = state;
 
     if !authenticate(authentication, &params).await {
-        info!("bck | Authentication failed for player: {}", player_id);
+        error!("bck | Authentication failed for player: {}", player_id);
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
-    info!("bck | Player {} authenticated successfully.", player_id);
+    error!("bck | Player {} authenticated successfully.", player_id);
     ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
 
@@ -156,16 +156,16 @@ pub async fn random_websocket_handler(
     let (ws_lobby, authentication) = state;
 
     if !authenticate(authentication, &params).await {
-        info!("bck | Authentication failed for player: {}", player_id);
+        error!("bck | Authentication failed for player: {}", player_id);
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
-    info!("bck | Player {} authenticated successfully.", player_id);
+    error!("bck | Player {} authenticated successfully.", player_id);
     ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
 
 async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: String) {
-    info!("bck | New bot connecting...");
+    error!("bck | New bot connecting...");
 
     let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
 
@@ -175,7 +175,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         .get(&player_id)
         .is_some()
     {
-        info!(
+        error!(
             "bck | Already connected bot tried to connect again {}",
             player_id
         );
@@ -197,12 +197,12 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
     // 2. to send the game state and possible actions that that are called from the server on the bot (from state_sender to state_receiver)
     // to the websocket so it can send it to the client-bot
 
-    info!("bck | Bot connected with ID: {}", player_id.clone());
+    error!("bck | Bot connected with ID: {}", player_id.clone());
 
     loop {
         // send state and possible actions to client-bot
 
-        info!(
+        error!(
             "bck | waiting to receive game state info for bot {}",
             player_id
         );
@@ -210,7 +210,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
 
         let state_msg = match recv_state {
             Some(msg) => {
-                info!(
+                error!(
                     "bck | received game state info for bot {}: {}",
                     player_id,
                     msg.to_text().unwrap()
@@ -218,7 +218,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
                 msg
             }
             None => {
-                info!(
+                error!(
                     "bck | game closed connection to bot {}, ending loop",
                     player_id
                 );
@@ -226,13 +226,13 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             }
         };
 
-        info!("bck | waiting to send state to client of bot {}", player_id);
+        error!("bck | waiting to send state to client of bot {}", player_id);
         if let Err(e) = socket.send(state_msg).await {
             error!("bck | Error sending message: {}", e);
             break;
         };
 
-        info!(
+        error!(
             "bck | finished sending state to client of bot {}",
             player_id
         );
@@ -241,12 +241,12 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
 
         let action_msg = match action_msg {
             Some(Ok(msg)) => {
-                info!(
+                error!(
                     "bck | bot {} action: {}",
                     player_id,
                     msg.clone().to_text().unwrap()
                 );
-                info!(
+                error!(
                     "bck | finished receiving action from client of bot {}",
                     player_id
                 );
@@ -257,7 +257,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
                 break;
             }
             None => {
-                info!("bck | bot {} disconnected.", player_id);
+                error!("bck | bot {} disconnected.", player_id);
                 break;
             }
         };
@@ -265,7 +265,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         match action_msg {
             Message::Text(_) => match action_sender.send(action_msg).await {
                 Ok(_) => {
-                    info!("bck | action of bot {} has been send to game", player_id)
+                    error!("bck | action of bot {} has been send to game", player_id)
                 }
                 Err(_) => {
                     error!(
@@ -277,7 +277,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             },
 
             Message::Close(_) => {
-                info!("bck | Closing WebSocket connection of bot {}.", player_id);
+                error!("bck | Closing WebSocket connection of bot {}.", player_id);
                 break;
             }
             _ => {
@@ -290,12 +290,11 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         }
     }
 
-    info!("bck | Bot ID {} disconnected.", player_id);
-
     arc_channels_for_ws_actions
         .lock()
         .await
         .remove(&player_id.clone());
 
     state_receiver.close();
+    error!("bck | Bot ID {} disconnected.", player_id);
 }

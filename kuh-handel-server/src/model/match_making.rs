@@ -102,11 +102,8 @@ pub async fn organize_new_game(
             let mut new_games = Vec::new();
 
             for _ in (0..num_players).step_by(players_per_game) {
-                let current_players: Vec<String> = all_player_ids
-                    .iter()
-                    .take(players_per_game)
-                    .cloned()
-                    .collect();
+                let current_players: Vec<String> =
+                    all_player_ids.drain(0..players_per_game).collect();
                 let new_ws_lobby = ws_lobby.clone();
 
                 let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
@@ -164,7 +161,7 @@ pub async fn organize_random_game(
 
             for game in new_games {
                 let ranking = game.await;
-                // update_results(game_results.clone(), ranking).await // todo should we update the result for these kind of test games?
+                update_results(game_results.clone(), ranking).await
             }
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -181,7 +178,7 @@ async fn update_results(
             for (rank, (player, points)) in ranking.iter().enumerate() {
                 result_map
                     .entry(player.name.clone())
-                    .or_insert(vec![rank])
+                    .or_insert(Vec::new())
                     .push(rank);
             }
         }
@@ -223,7 +220,6 @@ pub fn spawn_game(
 
         let seed: u64 = 0; //todo change seed
         let game_handle = tokio::task::spawn_blocking(move || {
-            println!("-------Default game--------\n");
             let mut all_actions: Vec<Box<dyn PlayerActions>> = Vec::new();
             all_actions.extend(
                 ws_actions
@@ -237,7 +233,6 @@ pub fn spawn_game(
             );
 
             let mut game = Game::new_default_game(all_ids, all_actions, seed);
-            println!("{}", game);
 
             let ranking = game.play();
 

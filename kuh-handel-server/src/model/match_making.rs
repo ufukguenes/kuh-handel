@@ -8,11 +8,10 @@ use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use axum::extract::ws::Message;
 
-use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::cmp::min;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -23,11 +22,11 @@ use tokio::{
 };
 use tracing::{Level, error, info};
 
-//todo i think a bot might be joining multiple games, check that the ws_actions are taken out of the btreemap because that is how i thought i check if someone is in a game?
 #[derive(Clone)]
 pub struct WebsocketLobby {
     pub channels_for_ws_actions:
-        Arc<Mutex<BTreeMap<String, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
+        Arc<Mutex<BTreeMap<PlayerId, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
+    pub players_in_game: Arc<Mutex<BTreeSet<PlayerId>>>,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
 }
@@ -35,8 +34,9 @@ pub struct WebsocketLobby {
 impl WebsocketLobby {
     pub fn new_default(average_time_over_n_games: usize) -> Self {
         WebsocketLobby {
-            channels_for_ws_actions: Arc::new(Mutex::new(BTreeMap::new())),
-            time_last_n_games: Arc::new(Mutex::new(Vec::new())),
+            channels_for_ws_actions: Arc::default(),
+            players_in_game: Arc::default(),
+            time_last_n_games: Arc::default(),
             average_time_over_n_games: average_time_over_n_games,
         }
     }
@@ -48,6 +48,8 @@ impl WebsocketLobby {
     }
 }
 
+// todo: this now allows for bots to join all the time and not only when a round of games is done, but this can be a problem
+// it can happen that players might never be paired against if their games finish offset.
 pub async fn organize_new_game(
     ws_lobby: WebsocketLobby,
     game_results: JsonLog<Vec<usize>>,
@@ -59,14 +61,12 @@ pub async fn organize_new_game(
     let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
 
     loop {
-        // todo can i get matched with players already in another game?
         if ws_lobby.channels_for_ws_actions.lock().await.len() < 3 {
             info!("og | waiting for more players to join");
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         } else {
             info!("og | creating new round of games");
 
-            // todo how to handle if player drops connection? -> just use the backup action in the websocket actions?
             let mut all_player_ids: Vec<String> = ws_lobby
                 .channels_for_ws_actions
                 .lock()
@@ -75,7 +75,10 @@ pub async fn organize_new_game(
                 .cloned()
                 .collect();
 
-            all_player_ids.shuffle(&mut rng);
+            {
+                let players_in_game = ws_lobby.players_in_game.lock().await;
+                all_player_ids.retain(|id| !players_in_game.contains(id));
+            }
 
             let num_players = all_player_ids.len();
 
@@ -100,12 +103,16 @@ pub async fn organize_new_game(
                 players_per_game = *valid_game_sizes.get(max_index).unwrap();
             }
 
-            let mut new_games = Vec::new();
-
             for _ in (0..num_players).step_by(players_per_game) {
                 let last_value = min(players_per_game, all_player_ids.len());
                 let current_players: Vec<String> = all_player_ids.drain(0..last_value).collect();
+
                 let new_ws_lobby = ws_lobby.clone();
+                let current_players_in_game = ws_lobby.players_in_game.clone();
+                current_players_in_game
+                    .lock()
+                    .await
+                    .extend(current_players.iter().cloned());
 
                 let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
                 let max_random_players = max_game_size.checked_sub(players_per_game).unwrap_or(0);
@@ -116,14 +123,19 @@ pub async fn organize_new_game(
                     .map(|i| String::from(format!("random_player_{}", i)))
                     .collect();
                 info!("og| create game with {:?}", current_players);
-                let new_game = spawn_game(new_ws_lobby.clone(), current_players, random_players);
+                let game_handle = spawn_game(new_ws_lobby.clone(), current_players, random_players);
 
-                new_games.push(new_game);
-            }
+                let cloned_game_results = game_results.clone();
 
-            for game in new_games {
-                let ranking = game.await;
-                update_results(game_results.clone(), ranking).await
+                tokio::spawn(async move {
+                    let ranking = game_handle.await;
+                    update_results(cloned_game_results, &ranking).await;
+                    if ranking.is_ok() {
+                        for (player, _) in ranking.unwrap().iter() {
+                            let _ = current_players_in_game.lock().await.remove(player);
+                        }
+                    }
+                });
             }
         }
 
@@ -131,6 +143,7 @@ pub async fn organize_new_game(
     }
 }
 
+// todo this is duplicate code, we should use the code from the method above
 pub async fn organize_random_game(
     ws_lobby: WebsocketLobby,
     game_results: JsonLog<Vec<usize>>,
@@ -162,7 +175,7 @@ pub async fn organize_random_game(
 
             for game in new_games {
                 let ranking = game.await;
-                update_results(game_results.clone(), ranking).await
+                update_results(game_results.clone(), &ranking).await
             }
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -171,7 +184,7 @@ pub async fn organize_random_game(
 
 async fn update_results(
     game_results: JsonLog<Vec<usize>>,
-    ranking: Result<Vec<(PlayerId, usize)>, JoinError>,
+    ranking: &Result<Vec<(PlayerId, usize)>, JoinError>,
 ) {
     match ranking {
         Ok(ranking) => {
@@ -196,6 +209,7 @@ pub fn spawn_game(
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
+        println!("{:?}", ws_players);
 
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
@@ -239,7 +253,6 @@ pub fn spawn_game(
 
             ranking
         });
-
         let ranking = game_handle.await.unwrap();
         match ranking {
             Ok(ranking) => {

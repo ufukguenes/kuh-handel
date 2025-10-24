@@ -126,10 +126,6 @@ impl Player {
         None
     }
 
-    pub fn add_inflation(&mut self, value: Value) {
-        self.wallet_mut().add_money(value);
-    }
-
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
         let action_msg = self.player_actions.map_to_action(state_msg);
         T::extract(action_msg)

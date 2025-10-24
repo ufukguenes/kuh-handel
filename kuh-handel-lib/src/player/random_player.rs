@@ -242,9 +242,6 @@ impl PlayerActions for RandomPlayerActions {
                     if player_id == receiver {
                         self.add_animals(&animal, animal_count);
                     } else {
-                        if self.id == "ufuk_1".to_string() {
-                            error!("rdm rmv animal {}: {:?} {}", self.id, &animal, animal_count);
-                        }
                         self.remove_animals(&animal, animal_count);
                     }
                 }

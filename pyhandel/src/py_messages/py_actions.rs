@@ -54,7 +54,7 @@ impl InitialTrade {
 impl InitialTrade {
     pub fn convert(from: CoreInitialTrade) -> InitialTrade {
         InitialTrade::new(
-            PlayerId::new(from.opponent.name),
+            PlayerId::new(from.opponent),
             Animal::new(from.animal.value()),
             from.animal_count,
             from.amount,

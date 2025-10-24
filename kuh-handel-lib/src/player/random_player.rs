@@ -22,6 +22,9 @@ use crate::Value;
 use crate::player::wallet::Wallet;
 
 // todo: should this wrap the base player and use the functions of that, here is already duplicate code
+// yes we should,this also duplicates code form supervised player
+
+// todo check if this bot maybe changes its state somewhere where the supervisor does not, this will go away when i just remove the code duplication
 #[derive(Debug)]
 pub struct RandomPlayerActions {
     opponents: Vec<PlayerId>,
@@ -34,12 +37,12 @@ pub struct RandomPlayerActions {
 }
 
 impl RandomPlayerActions {
-    pub fn new(my_id: String, seed: u64) -> RandomPlayerActions {
+    pub fn new(id: String, seed: u64) -> RandomPlayerActions {
         RandomPlayerActions {
             opponents: Vec::new(),
             owned_animals: BTreeMap::new(),
             wallet: Wallet::new(BTreeMap::new()),
-            id: PlayerId { name: my_id },
+            id: id,
             rng: ChaCha8Rng::seed_from_u64(seed),
             final_ranking: Vec::new(),
             has_passed_this_auction_round: false,
@@ -93,19 +96,24 @@ impl RandomPlayerActions {
     }
 
     pub fn remove_animals(&mut self, animal: &Animal, count: usize) -> Result<(), PlayerError> {
+        let backup_animals = self.owned_animals.clone();
         let current_count = self.owned_animals.get_mut(animal);
         match current_count {
             Some(current_count) => {
                 let res: isize = *current_count as isize - count as isize;
                 if res > 0 {
                     *current_count -= count;
-                } else if *current_count == 0 {
+                } else if *current_count == 0 || res == 0 {
                     self.owned_animals.remove(animal);
                 } else {
+                    self.owned_animals = backup_animals;
                     return Result::Err(PlayerError::AnimalsNotAvailable);
                 }
             }
-            None => return Result::Err(PlayerError::AnimalsNotAvailable),
+            None => {
+                self.owned_animals = backup_animals;
+                return Result::Err(PlayerError::AnimalsNotAvailable);
+            }
         }
 
         Ok(())
@@ -230,12 +238,15 @@ impl PlayerActions for RandomPlayerActions {
             } => {
                 let animal_count: usize = animal_count.clone();
                 let player_id = self.id.clone();
-                if (player_id == challenger || player_id == opponent) && player_id == receiver {
-                    self.add_animals(&animal, animal_count);
-                } else if (player_id == challenger || player_id == opponent)
-                    && player_id != receiver
-                {
-                    self.remove_animals(&animal, animal_count);
+                if player_id == challenger || player_id == opponent {
+                    if player_id == receiver {
+                        self.add_animals(&animal, animal_count);
+                    } else {
+                        if self.id == "ufuk_1".to_string() {
+                            error!("rdm rmv animal {}: {:?} {}", self.id, &animal, animal_count);
+                        }
+                        self.remove_animals(&animal, animal_count);
+                    }
                 }
                 match money_trade {
                     MoneyTrade::Private {
@@ -262,7 +273,7 @@ impl PlayerActions for RandomPlayerActions {
                 self.opponents = players_in_turn_order
                     .iter()
                     .cloned()
-                    .filter(|p| p.name != self.id.name)
+                    .filter(|p| *p != self.id)
                     .collect();
                 self.wallet = wallet;
                 self.owned_animals = BTreeMap::new();

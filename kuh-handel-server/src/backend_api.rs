@@ -98,7 +98,8 @@ pub async fn register_handler(
 ) -> Result<impl IntoResponse, StatusCode> {
     {
         let mut credentials = authentication.data.lock().await;
-        if credentials.contains_key(&params.player_id) {
+        if credentials.contains_key(&params.player_id) || params.player_id.contains("random_player")
+        {
             info!(
                 "bck | Registration failed: Player ID {} already exists.",
                 params.player_id

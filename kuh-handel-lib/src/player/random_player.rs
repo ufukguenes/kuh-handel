@@ -84,7 +84,8 @@ impl RandomPlayerActions {
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
         match bids.iter().max_by_key(|(_, bid)| bid) {
             Some((player_id, Bidding::Bid(value))) => Some((player_id, value)),
-            _ => None,
+            Some(&(_, Bidding::Pass)) => None,
+            None => None,
         }
     }
 
@@ -212,20 +213,20 @@ impl PlayerActions for RandomPlayerActions {
                         from,
                         to,
                         money_transfer,
-                    } => {
-                        match money_transfer {
-                            // check if what animal, not necessary to check if host, because is checked with from to
-                            MoneyTransfer::Private { amount } => {
-                                if self.id == from {
-                                    self.wallet.withdraw(&amount);
-                                    self.add_animals(&rounds.animal, 1);
-                                } else if self.id == to {
-                                    self.wallet.deposit(&amount);
-                                }
+                    } => match money_transfer {
+                        MoneyTransfer::Private { amount } => {
+                            if self.id == from {
+                                self.wallet.withdraw(&amount);
+                                self.add_animals(&rounds.animal, 1);
+                            } else if self.id == to {
+                                self.wallet.deposit(&amount);
                             }
-                            _ => {}
                         }
-                    }
+                        MoneyTransfer::Public {
+                            card_amount,
+                            min_value,
+                        } => {}
+                    },
                 }
             }
             GameUpdate::Trade {
@@ -258,10 +259,12 @@ impl PlayerActions for RandomPlayerActions {
                             self.wallet.deposit(&challenger_card_offer);
                         }
                     }
-                    _ => {}
+                    MoneyTrade::Public {
+                        challenger_card_offer,
+                        opponent_card_offer,
+                    } => {}
                 }
             }
-
             GameUpdate::Start {
                 wallet,
                 players_in_turn_order,
@@ -275,16 +278,13 @@ impl PlayerActions for RandomPlayerActions {
                 self.wallet = wallet;
                 self.owned_animals = BTreeMap::new();
             }
-
             GameUpdate::End { ranking } => {
                 self.final_ranking = ranking;
             }
-
             GameUpdate::Inflation(value) => {
                 self.wallet.add_money(value);
             }
-
-            _ => {}
+            GameUpdate::ExposePlayer { player, wallet } => {}
         }
 
         NoAction::Ok

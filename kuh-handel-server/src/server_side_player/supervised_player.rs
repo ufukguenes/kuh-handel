@@ -13,6 +13,7 @@ use kuh_handel_lib::player::{
     wallet::{Affordability::*, Wallet},
 };
 use kuh_handel_lib::{Money, Value};
+use tracing::{error, info};
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:
@@ -231,7 +232,6 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
         match update.clone() {
             GameUpdate::Auction(auction_kind) => {
                 self.limit_bidding_until_next_auction = false;
@@ -256,7 +256,10 @@ impl PlayerActions for SupervisedPlayer {
                                 player.wallet_mut().deposit(&amount);
                             }
                         }
-                        _ => {}
+                        MoneyTransfer::Public {
+                            card_amount,
+                            min_value,
+                        } => {}
                     },
                 }
             }
@@ -291,21 +294,26 @@ impl PlayerActions for SupervisedPlayer {
                             player.wallet_mut().deposit(&challenger_card_offer);
                         }
                     }
-                    _ => {}
+                    MoneyTrade::Public {
+                        challenger_card_offer,
+                        opponent_card_offer,
+                    } => {}
                 }
             }
-
             GameUpdate::ExposePlayer { player, wallet } => {
                 if &player == self.player.borrow().id() {
                     self.limit_bidding_until_next_auction = true;
                 }
             }
-
             GameUpdate::Inflation(inflation) => {
                 self.player.borrow_mut().wallet_mut().add_money(inflation);
             }
-
-            _ => {}
+            GameUpdate::Start {
+                wallet,
+                players_in_turn_order,
+                animals,
+            } => {} // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
+            GameUpdate::End { ranking } => {} // nothing to do
         }
 
         self.player

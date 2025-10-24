@@ -135,7 +135,7 @@ impl Client {
             self.bot
                 .final_ranking()
                 .iter()
-                .map(|ranking| (ranking.0.name.clone(), ranking.1))
+                .map(|ranking| (ranking.0.clone(), ranking.1))
                 .collect::<Vec<_>>(),
         );
     }

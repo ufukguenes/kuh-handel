@@ -16,22 +16,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PlayerId {
-    pub name: String,
-}
-
-impl PlayerId {
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-impl Display for PlayerId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
+pub type PlayerId = String;
 
 pub struct Player {
     id: PlayerId,
@@ -49,7 +34,7 @@ impl Player {
         player_actions: Box<dyn PlayerActions>,
     ) -> Self {
         Player {
-            id: PlayerId { name: id },
+            id: id,
             wallet: wallet,
             game_stack: game_stack,
             owned_animals: BTreeMap::new(),

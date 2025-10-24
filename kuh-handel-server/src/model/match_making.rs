@@ -178,7 +178,7 @@ async fn update_results(
             let mut result_map = game_results.data.lock().await;
             for (rank, (player, points)) in ranking.iter().enumerate() {
                 result_map
-                    .entry(player.name.clone())
+                    .entry(player.clone())
                     .or_insert(Vec::new())
                     .push(rank);
             }

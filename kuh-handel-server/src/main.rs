@@ -99,12 +99,6 @@ async fn main() {
             routing::post(register_handler).with_state(authentication.clone()),
         )
         .route(
-            "/kuh-handel/results",
-            routing::get(|| async {
-                axum::response::Html(tokio::fs::read_to_string("results.html").await.unwrap())
-            }),
-        )
-        .route(
             "/kuh-handel/get_results",
             routing::get(stats_handler).with_state(game_results.clone()),
         )

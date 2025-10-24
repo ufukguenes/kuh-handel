@@ -146,6 +146,7 @@ pub async fn pvp_websocket_handler(
     ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
 
+// todo this is duplicate code
 #[debug_handler]
 pub async fn random_websocket_handler(
     ws: WebSocketUpgrade,

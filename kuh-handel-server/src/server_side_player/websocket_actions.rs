@@ -88,7 +88,10 @@ impl WebsocketActions {
 
             Message::Close(_) => {
                 self.action_receiver.blocking_lock().close();
-                return None;
+                let act_msg = ActionMessage::NoAction {
+                    decision: NoAction::Ok,
+                };
+                return Some(T::extract(act_msg));
             }
             _ => return None,
         };

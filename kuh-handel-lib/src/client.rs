@@ -73,6 +73,13 @@ impl Client {
                 Message::Text(text) => text,
 
                 Message::Close(_) => {
+                    let message = Message::Close(Some(CloseFrame {
+                        code: CloseCode::Normal,
+                        reason: "".into(),
+                    }));
+                    if let Err(e) = send.send(message).await {
+                        println!("Failed to close connection: {}", e);
+                    }
                     println!("Connection closed by server");
                     break;
                 }
@@ -125,7 +132,7 @@ impl Client {
 
             println!("bot {}, finished sending action", self.name);
             if game_ended {
-                let _ = send.close().await;
+                println!("game has ended");
                 break;
             }
         }

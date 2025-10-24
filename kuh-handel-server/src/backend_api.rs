@@ -2,7 +2,7 @@ use crate::model::match_making::WebsocketLobby;
 use axum::{
     extract::{
         Query, State,
-        ws::{Message, WebSocket, WebSocketUpgrade},
+        ws::{CloseCode, CloseFrame, Message, WebSocket, WebSocketUpgrade},
     },
     http::StatusCode,
     response::{Html, IntoResponse},
@@ -283,7 +283,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
                 break;
             }
             _ => {
-                error!(
+                info!(
                     "bck | received unknown message type from client of bot {}, closing WebSocket connection",
                     player_id
                 );
@@ -292,11 +292,25 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         }
     }
 
+    action_sender.closed().await;
+    state_receiver.close();
+
     arc_channels_for_ws_actions
         .lock()
         .await
         .remove(&player_id.clone());
 
-    state_receiver.close();
+    let close_msg = Message::Close(Some(CloseFrame {
+        code: 100 as CloseCode,
+        reason: "".into(),
+    }));
+
+    if let Err(e) = socket.send(close_msg).await {
+        tracing::info!(
+            "bck | Failed to send final close frame to bot {}: {}",
+            player_id,
+            e
+        );
+    }
     info!("bck | Bot ID {} disconnected.", player_id);
 }

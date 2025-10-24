@@ -37,10 +37,6 @@ impl SupervisedPlayer {
         }
     }
 
-    pub fn add_inflation(&mut self, value: Value) {
-        self.player.borrow_mut().add_inflation(value);
-    }
-
     pub fn clone_wallet(&self) -> Wallet {
         self.player.borrow().wallet().clone()
     }
@@ -306,7 +302,7 @@ impl PlayerActions for SupervisedPlayer {
             }
 
             GameUpdate::Inflation(inflation) => {
-                self.add_inflation(inflation);
+                self.player.borrow_mut().wallet_mut().add_money(inflation);
             }
 
             _ => {}

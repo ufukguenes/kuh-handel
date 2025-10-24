@@ -114,7 +114,13 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<Bidding> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._provide_bidding(state),
+            None => {
+                info!(
+                    "wsp | {} provide_bidding switched to backup action",
+                    self.id
+                );
+                self.backup_actions._provide_bidding(state)
+            }
         }
     }
 
@@ -123,7 +129,10 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<PlayerTurnDecision> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._draw_or_trade(),
+            None => {
+                info!("wsp | {} draw_or_trade switched to backup action", self.id);
+                self.backup_actions._draw_or_trade()
+            }
         }
     }
 
@@ -134,7 +143,10 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<AuctionDecision> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._buy_or_sell(state),
+            None => {
+                info!("wsp | {} buy_or_sell switched to backup action", self.id);
+                self.backup_actions._buy_or_sell(state)
+            }
         }
     }
 
@@ -149,7 +161,10 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<NoAction> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => backup_decision,
+            None => {
+                info!("wsp | {} game_update switched to backup action", self.id);
+                backup_decision
+            }
         }
     }
 
@@ -161,7 +176,10 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<SendMoney> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._send_money_to_player(player, amount),
+            None => {
+                info!("wsp | {} send_money switched to backup action", self.id);
+                self.backup_actions._send_money_to_player(player, amount)
+            }
         }
     }
 
@@ -172,7 +190,13 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<TradeOpponentDecision> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._respond_to_trade(offer),
+            None => {
+                info!(
+                    "wsp | {} respond_to_trade switched to backup action",
+                    self.id
+                );
+                self.backup_actions._respond_to_trade(offer)
+            }
         }
     }
 
@@ -181,7 +205,10 @@ impl PlayerActions for WebsocketActions {
         let decision: Option<InitialTrade> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
-            None => self.backup_actions._trade(),
+            None => {
+                info!("wsp | {} trade switched to backup action", self.id);
+                self.backup_actions._trade()
+            }
         }
     }
 }

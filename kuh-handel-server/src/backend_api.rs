@@ -64,6 +64,7 @@ where
 
         let mut json = serde_json::to_string(&*data)?;
         json = json.replace("],", "],\n");
+        json = json.replace("\",\"", "\",\n\"");
         json = json.replace("{", "{\n");
         json = json.replace("}", "\n}");
 

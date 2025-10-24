@@ -905,6 +905,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tokio-tungstenite 0.21.0",
+ "tracing",
 ]
 
 [[package]]

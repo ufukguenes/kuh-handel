@@ -36,6 +36,8 @@ use crate::{
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - documentation
 // - minimize bloated logging
+// - new rankings: sum of all points, heatmap of all players against all players, squared sum of all positions of one player 
+
 
 // BUGS:
 // i think there is a bug where a player is requested to send money, even though the player passed, resulting in a bluff, and then forcing a new round every time?

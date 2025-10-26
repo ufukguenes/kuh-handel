@@ -196,7 +196,17 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             "bck | waiting to receive game state info for bot {}",
             player_id
         );
-        let recv_state = state_receiver.recv().await;
+
+        let timeout_state =
+            tokio::time::timeout(lobby.player_time_out, state_receiver.recv()).await;
+
+        let recv_state = match timeout_state {
+            Ok(recv_state) => recv_state,
+            Err(_) => {
+                error!("bck | timeout for bot {}", player_id);
+                break;
+            }
+        };
 
         let state_msg = match recv_state {
             Some(msg) => {

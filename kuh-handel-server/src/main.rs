@@ -10,6 +10,7 @@ mod server_side_player;
 
 use axum::{Router, routing};
 
+use serde::{Deserialize, Serialize};
 use tracing::Level;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -25,7 +26,6 @@ use tracing_subscriber::fmt;
 use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
 // TODO:
-// - set time out for requests to bot, because if bot drops without closing connection, server stops
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
 // - documentation
@@ -53,37 +53,34 @@ async fn main() {
             .unwrap(),
     };
 
-    let game_results = match JsonLog::<Vec<usize>>::from_file("game_results.json".to_string()).await
-    {
-        Ok(game_results) => game_results,
-        Err(_) => JsonLog::new("game_results.json".to_string()).await.unwrap(),
-    };
+    let bot_time_out = tokio::time::Duration::from_millis(500);
+    let interactive_player_time_out_min = tokio::time::Duration::from_secs(5 * 60);
 
-    let random_results =
-        match JsonLog::<Vec<usize>>::from_file("random_results.json".to_string()).await {
-            Ok(game_results) => game_results,
-            Err(_) => JsonLog::new("random_results.json".to_string())
-                .await
-                .unwrap(),
-        };
+    let (pvp_ws_lobby, game_results, _) =
+        create_lobby_log_handle_pair(10, "game_results".into(), 0, (3, 6), 3, false, bot_time_out)
+            .await;
 
-    let pvp_ws_lobby = WebsocketLobby::new_default(10);
-    let random_ws_lobby = WebsocketLobby::new_default(10);
-    // start the game in a separate thread, so that server can handle connections
-    tokio::spawn(organize_new_game(
-        pvp_ws_lobby.clone(),
-        game_results.clone(),
+    let (random_ws_lobby, _, _) = create_lobby_log_handle_pair(
+        10,
+        "random_results".into(),
         0,
         (3, 6),
+        1,
         false,
-    ));
-    tokio::spawn(organize_new_game(
-        random_ws_lobby.clone(),
-        random_results.clone(),
+        bot_time_out,
+    )
+    .await;
+
+    let (interactive_ws_lobby, _, _) = create_lobby_log_handle_pair(
+        10,
+        "interactive_results".into(),
         0,
         (3, 6),
-        true,
-    ));
+        2,
+        false,
+        interactive_player_time_out_min,
+    )
+    .await;
 
     // init websocket through http websocket upgrade
     let app: Router = Router::new()
@@ -108,8 +105,48 @@ async fn main() {
             "/kuh-handel/random_game",
             routing::get(websocket_handler)
                 .with_state((random_ws_lobby.clone(), authentication.clone())),
+        )
+        .route(
+            "/kuh-handel/interactive_game",
+            routing::get(websocket_handler)
+                .with_state((interactive_ws_lobby.clone(), authentication.clone())),
         );
+
     let address = SocketAddr::from(([127, 0, 0, 1], 2000));
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+pub async fn create_lobby_log_handle_pair(
+    average_time_over_n_games: usize,
+    file_name: String,
+    seed: u64,
+    (min_game_size, max_game_size): (usize, usize),
+    min_ws_player_amount: usize,
+    play_only_against_random_bots: bool,
+    time_out: tokio::time::Duration,
+) -> (
+    WebsocketLobby,
+    JsonLog<Vec<usize>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let file_path = format!("{}.json", file_name);
+    let log = match JsonLog::from_file(file_path.clone()).await {
+        Ok(log) => log,
+        Err(_) => JsonLog::new(file_path).await.unwrap(),
+    };
+
+    let lobby = WebsocketLobby::new_default(average_time_over_n_games, time_out);
+
+    // start the game in a separate thread, so that server can handle connections
+    let handle = tokio::spawn(organize_new_game(
+        lobby.clone(),
+        log.clone(),
+        seed,
+        (min_game_size, max_game_size),
+        min_ws_player_amount,
+        play_only_against_random_bots,
+    ));
+
+    return (lobby, log, handle);
 }

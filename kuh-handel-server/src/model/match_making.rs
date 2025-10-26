@@ -37,15 +37,20 @@ pub struct WebsocketLobby {
     pub players_in_game: Arc<Mutex<BTreeSet<PlayerId>>>,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
+    pub player_time_out: tokio::time::Duration,
 }
 
 impl WebsocketLobby {
-    pub fn new_default(average_time_over_n_games: usize) -> Self {
+    pub fn new_default(
+        average_time_over_n_games: usize,
+        player_time_out: tokio::time::Duration,
+    ) -> Self {
         WebsocketLobby {
             channels_for_ws_actions: Arc::default(),
             players_in_game: Arc::default(),
             time_last_n_games: Arc::default(),
             average_time_over_n_games: average_time_over_n_games,
+            player_time_out,
         }
     }
 
@@ -63,6 +68,7 @@ pub async fn organize_new_game(
     game_results: JsonLog<Vec<usize>>,
     seed: u64,
     (min_game_size, max_game_size): (usize, usize),
+    min_ws_player_amount: usize,
     play_only_against_random_bots: bool,
 ) {
     info!("og | enough players joined");
@@ -70,88 +76,89 @@ pub async fn organize_new_game(
     let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
 
     loop {
-        if ws_lobby.channels_for_ws_actions.lock().await.len() < 3 {
-            info!("og | waiting for more players to join");
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        } else {
-            info!("og | creating new round of games");
+        info!("og | creating new round of games");
 
-            let mut all_player_ids: Vec<String> = ws_lobby
-                .channels_for_ws_actions
+        let mut all_player_ids: Vec<String> = ws_lobby
+            .channels_for_ws_actions
+            .lock()
+            .await
+            .keys()
+            .cloned()
+            .collect();
+
+        {
+            let players_in_game = ws_lobby.players_in_game.lock().await;
+            all_player_ids.retain(|id| !players_in_game.contains(id));
+        }
+
+        if min_ws_player_amount > all_player_ids.len() {
+            info!("og | not enough players have joined, waiting");
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            continue;
+        }
+
+        all_player_ids.shuffle(&mut rng);
+
+        let num_players = all_player_ids.len();
+
+        let players_per_game;
+
+        if play_only_against_random_bots {
+            players_per_game = 1;
+        } else {
+            let remainders: Vec<usize> = valid_game_sizes.iter().map(|i| num_players % i).collect();
+
+            let (min_index, &min_value) = remainders
+                .iter()
+                .enumerate()
+                .min_by(|&(_, a), &(_, b)| a.cmp(b))
+                .unwrap();
+            let (max_index, _) = remainders
+                .iter()
+                .enumerate()
+                .max_by(|&(_, a), &(_, b)| a.cmp(b))
+                .unwrap();
+
+            if min_value == 0 {
+                players_per_game = *valid_game_sizes.get(min_index).unwrap();
+            } else {
+                players_per_game = *valid_game_sizes.get(max_index).unwrap();
+            }
+        }
+
+        for _ in (0..num_players).step_by(players_per_game) {
+            let last_value = min(players_per_game, all_player_ids.len());
+            let current_players: Vec<String> = all_player_ids.drain(0..last_value).collect();
+
+            let new_ws_lobby = ws_lobby.clone();
+            let current_players_in_game = ws_lobby.players_in_game.clone();
+            current_players_in_game
                 .lock()
                 .await
-                .keys()
-                .cloned()
+                .extend(current_players.iter().cloned());
+
+            let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
+            let max_random_players = max_game_size.checked_sub(players_per_game).unwrap_or(0);
+
+            let num_random_player = rng.random_range(min_random_players..=max_random_players);
+
+            let random_players: Vec<String> = (0..num_random_player)
+                .map(|i| String::from(format!("random_player_{}", i)))
                 .collect();
+            info!("og| create game with {:?}", current_players);
+            let game_handle = spawn_game(new_ws_lobby.clone(), current_players, random_players);
 
-            {
-                let players_in_game = ws_lobby.players_in_game.lock().await;
-                all_player_ids.retain(|id| !players_in_game.contains(id));
-            }
-            all_player_ids.shuffle(&mut rng);
+            let cloned_game_results = game_results.clone();
 
-            let num_players = all_player_ids.len();
-
-            let players_per_game;
-
-            if play_only_against_random_bots {
-                players_per_game = 1;
-            } else {
-                let remainders: Vec<usize> =
-                    valid_game_sizes.iter().map(|i| num_players % i).collect();
-
-                let (min_index, &min_value) = remainders
-                    .iter()
-                    .enumerate()
-                    .min_by(|&(_, a), &(_, b)| a.cmp(b))
-                    .unwrap();
-                let (max_index, _) = remainders
-                    .iter()
-                    .enumerate()
-                    .max_by(|&(_, a), &(_, b)| a.cmp(b))
-                    .unwrap();
-
-                if min_value == 0 {
-                    players_per_game = *valid_game_sizes.get(min_index).unwrap();
-                } else {
-                    players_per_game = *valid_game_sizes.get(max_index).unwrap();
-                }
-            }
-
-            for _ in (0..num_players).step_by(players_per_game) {
-                let last_value = min(players_per_game, all_player_ids.len());
-                let current_players: Vec<String> = all_player_ids.drain(0..last_value).collect();
-
-                let new_ws_lobby = ws_lobby.clone();
-                let current_players_in_game = ws_lobby.players_in_game.clone();
-                current_players_in_game
-                    .lock()
-                    .await
-                    .extend(current_players.iter().cloned());
-
-                let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
-                let max_random_players = max_game_size.checked_sub(players_per_game).unwrap_or(0);
-
-                let num_random_player = rng.random_range(min_random_players..=max_random_players);
-
-                let random_players: Vec<String> = (0..num_random_player)
-                    .map(|i| String::from(format!("random_player_{}", i)))
-                    .collect();
-                info!("og| create game with {:?}", current_players);
-                let game_handle = spawn_game(new_ws_lobby.clone(), current_players, random_players);
-
-                let cloned_game_results = game_results.clone();
-
-                tokio::spawn(async move {
-                    let ranking = game_handle.await;
-                    update_results(cloned_game_results, &ranking).await;
-                    if ranking.is_ok() {
-                        for (player, _) in ranking.unwrap().iter() {
-                            let _ = current_players_in_game.lock().await.remove(player);
-                        }
+            tokio::spawn(async move {
+                let ranking = game_handle.await;
+                update_results(cloned_game_results, &ranking).await;
+                if ranking.is_ok() {
+                    for (player, _) in ranking.unwrap().iter() {
+                        let _ = current_players_in_game.lock().await.remove(player);
                     }
-                });
-            }
+                }
+            });
         }
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await; // todo should we still wait when we allow games to start async?

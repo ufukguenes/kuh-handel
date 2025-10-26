@@ -1,6 +1,7 @@
 use crate::Value;
 use kuh_handel_lib::animals::Animal as CoreAnimal;
 use pyo3::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[pymodule]
 pub fn animal_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -11,7 +12,7 @@ pub fn animal_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyclass]
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Animal {
     inner: CoreAnimal,
 }

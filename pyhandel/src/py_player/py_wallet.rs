@@ -3,6 +3,7 @@ use kuh_handel_lib::player::{
     wallet::Affordability as CoreAffordability, wallet::Wallet as CoreWallet,
 };
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[pymodule]
@@ -15,6 +16,7 @@ pub fn wallet_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyclass]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {
     pub inner: CoreWallet,
 }

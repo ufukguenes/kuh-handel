@@ -1218,6 +1218,7 @@ dependencies = [
  "kuh-handel-lib",
  "pyo3",
  "pyo3-async-runtimes",
+ "serde",
  "tokio",
 ]
 

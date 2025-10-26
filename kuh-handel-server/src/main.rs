@@ -65,7 +65,7 @@ async fn main() {
         0,
         (3, 6),
         1,
-        false,
+        true,
         bot_time_out,
     )
     .await;

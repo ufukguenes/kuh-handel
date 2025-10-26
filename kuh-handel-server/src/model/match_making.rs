@@ -142,8 +142,10 @@ pub async fn organize_new_game(
                 .await
                 .extend(current_players.iter().cloned());
 
-            let min_random_players = min_game_size.checked_sub(players_per_game).unwrap_or(0);
-            let max_random_players = max_game_size.checked_sub(players_per_game).unwrap_or(0);
+            let num_current_players = current_players.len();
+
+            let min_random_players = min_game_size.checked_sub(num_current_players).unwrap_or(0);
+            let max_random_players = max_game_size.checked_sub(num_current_players).unwrap_or(0);
 
             let num_random_player = rng.random_range(min_random_players..=max_random_players);
 

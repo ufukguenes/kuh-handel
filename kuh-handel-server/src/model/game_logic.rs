@@ -364,7 +364,7 @@ impl Game {
                 let auction_winner = auction_players
                     .iter()
                     .find(|p| p.borrow().id() == *max_bidder_id)
-                    .unwrap();
+                    .unwrap(); // if there is a bid there will also always be a player who made that bid
                 let auction_winner = auction_winner;
 
                 let max_bid = match max_bid {
@@ -425,7 +425,7 @@ impl Game {
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
 
                 Self::update_multiple_players(&self.players, update);
-                let host = self.get_by_id(&final_auction_round.host).unwrap();
+                let host = self.get_by_id(&final_auction_round.host).unwrap(); // player always exists
                 // println!(
                 //    "gl | \t player {} bluffed, exposed value {}",
                 //    sender.borrow().id(),

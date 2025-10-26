@@ -70,7 +70,7 @@ impl SupervisedPlayer {
 
     fn rectify_initial_trade(&self, trade: &InitialTrade) -> InitialTrade {
         if self.id() == trade.opponent {
-            return self.can_trade().unwrap();
+            return self.can_trade().unwrap(); // todo remove unwrap if return is changed to option
         }
 
         let new_amount = self.rectify_money_combination(&trade.amount);
@@ -90,7 +90,7 @@ impl SupervisedPlayer {
                     )
                 }
             }
-            None => return self.can_trade().unwrap(), // player does not have animal
+            None => return self.can_trade().unwrap(), // player does not have animal, todo remove unwrap if return is changed to option
         };
 
         let opponent: Option<&Rc<RefCell<Player>>> = self
@@ -100,7 +100,7 @@ impl SupervisedPlayer {
 
         let opponent = match opponent {
             Some(opponent) => opponent,
-            None => return self.can_trade().unwrap(), // opponent does not exist
+            None => return self.can_trade().unwrap(), // opponent does not exist, todo remove unwrap if return is changed to option
         };
 
         let opponent_animal_count = match opponent.borrow().owned_animals().get(&trade_animal) {
@@ -115,7 +115,7 @@ impl SupervisedPlayer {
                     )
                 }
             }
-            None => return self.can_trade().unwrap(), // opponent does not have animal
+            None => return self.can_trade().unwrap(), // opponent does not have animal, todo remove unwrap if return is changed to option
         };
         // is never 0
 

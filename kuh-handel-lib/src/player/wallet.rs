@@ -151,7 +151,7 @@ impl Wallet {
         let alternative = self
             .propose_bill_combinations(total_payed, false)
             .get(0)
-            .unwrap()
+            .unwrap() // can not fail as test for smaller amount is rejected above
             .1
             .clone();
         return Affordability::Alternative(alternative);

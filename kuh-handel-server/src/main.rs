@@ -27,7 +27,6 @@ use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
 // TODO:
 // - create python client/ wrapper
-// - remove dangerous unwraps, ?, etc...
 // - documentation
 // - minimize bloated logging
 // - new rankings: sum of all points, heatmap of all players against all players, squared sum of all positions of one player

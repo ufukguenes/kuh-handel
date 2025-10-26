@@ -107,7 +107,7 @@ impl Player {
                     .iter()
                     .find(|set| set.animal() == &animal)
                     .map(|set| set.occurrences())
-                    .unwrap()
+                    .unwrap_or(0)
             {
                 let binding = opponent.borrow();
                 let opponent_animals = binding.owned_animals();

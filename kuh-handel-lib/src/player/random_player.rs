@@ -50,31 +50,27 @@ impl RandomPlayerActions {
     }
 
     pub fn get_random_trade(&mut self) -> Option<InitialTrade> {
-        let random_opponent = self.opponents.choose(&mut self.rng).unwrap();
+        let random_opponent = self.opponents.choose(&mut self.rng)?;
 
-        if let Some((&random_animal, &animal_count)) =
-            self.owned_animals.iter().choose(&mut self.rng)
-        {
-            let random_animal_count = self.rng.random_range(1..=animal_count) as usize;
-            let value = self.wallet.total_money();
-            let random_amount = self
-                .wallet
-                .propose_bill_combinations(value, false)
-                .get(0)
-                .unwrap()
-                .1
-                .clone();
+        let (&random_animal, &animal_count) = self.owned_animals.iter().choose(&mut self.rng)?;
 
-            let trade_choice = InitialTrade {
-                opponent: random_opponent.clone(),
-                animal: random_animal,
-                animal_count: random_animal_count,
-                amount: random_amount,
-            };
+        let random_animal_count = self.rng.random_range(1..=animal_count) as usize;
+        let value = self.wallet.total_money();
+        let random_amount = self
+            .wallet
+            .propose_bill_combinations(value, false)
+            .get(0)?
+            .1
+            .clone();
 
-            return Some(trade_choice);
-        }
-        None
+        let trade_choice = InitialTrade {
+            opponent: random_opponent.clone(),
+            animal: random_animal,
+            animal_count: random_animal_count,
+            amount: random_amount,
+        };
+
+        return Some(trade_choice);
     }
 
     pub fn final_ranking(&self) -> &Vec<(PlayerId, Points)> {
@@ -136,7 +132,7 @@ impl PlayerActions for RandomPlayerActions {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        self.get_random_trade().unwrap()
+        self.get_random_trade().unwrap() // todo remove this unwrap if we return option 
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
@@ -189,12 +185,16 @@ impl PlayerActions for RandomPlayerActions {
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         let random_value = self.rng.random_range(0..=self.wallet.total_money());
         let combination = self.wallet.propose_bill_combinations(random_value, false);
-        let counter_offer =
-            TradeOpponentDecision::CounterOffer(combination.get(0).unwrap().1.clone());
-        return vec![TradeOpponentDecision::Accept, counter_offer]
-            .choose(&mut self.rng)
-            .unwrap()
-            .clone();
+        match combination.get(0) {
+            Some((_, combination)) => {
+                let counter_offer = TradeOpponentDecision::CounterOffer(combination.clone());
+                return vec![TradeOpponentDecision::Accept, counter_offer]
+                    .choose(&mut self.rng)
+                    .unwrap()
+                    .clone();
+            }
+            None => TradeOpponentDecision::Accept,
+        }
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {

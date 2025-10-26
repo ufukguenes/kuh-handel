@@ -26,18 +26,11 @@ use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
 // TODO:
 // - set time out for requests to bot, because if bot drops without closing connection, server stops
-// - should we remove money and value and make them type renames?
 // - create python client/ wrapper
 // - remove dangerous unwraps, ?, etc...
-// - we might not need AnimalSet, consider removing that
-// - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - documentation
 // - minimize bloated logging
 // - new rankings: sum of all points, heatmap of all players against all players, squared sum of all positions of one player
-
-// BUGS:
-// i think there is a bug where a player is requested to send money, even though the player passed, resulting in a bluff, and then forcing a new round every time?
-// i dont understand why the total number of games for some players is higher than 1 even though only 1 round was played?
 
 #[tokio::main]
 async fn main() {

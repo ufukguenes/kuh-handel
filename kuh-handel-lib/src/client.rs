@@ -95,15 +95,15 @@ impl Client {
             {
                 let state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 println!("bot {} received message: {}", self.name, state_message);
+                action_msg = self.bot.map_to_action(state_message);
 
+                let state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 if let StateMessage::GameUpdate {
                     update: crate::messages::game_updates::GameUpdate::End { ranking: _ },
                 } = &state_message
                 {
                     break;
                 };
-
-                action_msg = self.bot.map_to_action(state_message);
             }
 
             let action_str = serde_json::to_string(&action_msg).unwrap();

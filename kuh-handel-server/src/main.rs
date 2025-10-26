@@ -118,7 +118,7 @@ async fn main() {
 
 pub async fn create_lobby_log_handle_pair(
     average_time_over_n_games: usize,
-    file_name: String,
+    lobby_name: String,
     seed: u64,
     (min_game_size, max_game_size): (usize, usize),
     min_ws_player_amount: usize,
@@ -129,13 +129,13 @@ pub async fn create_lobby_log_handle_pair(
     JsonLog<Vec<usize>>,
     tokio::task::JoinHandle<()>,
 ) {
-    let file_path = format!("{}.json", file_name);
+    let file_path = format!("{}.json", lobby_name);
     let log = match JsonLog::from_file(file_path.clone()).await {
         Ok(log) => log,
         Err(_) => JsonLog::new(file_path).await.unwrap(),
     };
 
-    let lobby = WebsocketLobby::new_default(average_time_over_n_games, time_out);
+    let lobby = WebsocketLobby::new_default(lobby_name, average_time_over_n_games, time_out);
 
     // start the game in a separate thread, so that server can handle connections
     let handle = tokio::spawn(organize_new_game(

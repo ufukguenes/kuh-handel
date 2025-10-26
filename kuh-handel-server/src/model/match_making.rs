@@ -23,6 +23,7 @@ use tracing::{Level, error, info};
 
 #[derive(Clone)]
 pub struct WebsocketLobby {
+    pub lobby_name: String,
     pub channels_for_ws_actions: Arc<
         Mutex<
             BTreeMap<
@@ -42,10 +43,12 @@ pub struct WebsocketLobby {
 
 impl WebsocketLobby {
     pub fn new_default(
+        lobby_name: String,
         average_time_over_n_games: usize,
         player_time_out: tokio::time::Duration,
     ) -> Self {
         WebsocketLobby {
+            lobby_name,
             channels_for_ws_actions: Arc::default(),
             players_in_game: Arc::default(),
             time_last_n_games: Arc::default(),
@@ -71,12 +74,11 @@ pub async fn organize_new_game(
     min_ws_player_amount: usize,
     play_only_against_random_bots: bool,
 ) {
-    info!("og | enough players joined");
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
 
     loop {
-        info!("og | creating new round of games");
+        info!("og | creating new round of games {}", ws_lobby.lobby_name);
 
         let mut all_player_ids: Vec<String> = ws_lobby
             .channels_for_ws_actions
@@ -92,7 +94,10 @@ pub async fn organize_new_game(
         }
 
         if min_ws_player_amount > all_player_ids.len() {
-            info!("og | not enough players have joined, waiting");
+            info!(
+                "og | not enough players have joined, waiting {}",
+                ws_lobby.lobby_name
+            );
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             continue;
         }
@@ -145,7 +150,10 @@ pub async fn organize_new_game(
             let random_players: Vec<String> = (0..num_random_player)
                 .map(|i| String::from(format!("random_player_{}", i)))
                 .collect();
-            info!("og| create game with {:?}", current_players);
+            info!(
+                "og| {} create game with {:?}",
+                ws_lobby.lobby_name, current_players
+            );
             let game_handle = spawn_game(new_ws_lobby.clone(), current_players, random_players);
 
             let cloned_game_results = game_results.clone();

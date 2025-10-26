@@ -182,7 +182,7 @@ async fn update_results(
     match ranking {
         Ok(ranking) => {
             let mut result_map = game_results.data.lock().await;
-            for (rank, (player, points)) in ranking.iter().enumerate() {
+            for (rank, (player, _points)) in ranking.iter().enumerate() {
                 result_map
                     .entry(player.clone())
                     .or_insert(Vec::new())
@@ -192,7 +192,7 @@ async fn update_results(
         Err(_) => error!("og | game not properly finished"),
     }
 
-    game_results.to_file().await;
+    let _ = game_results.to_file().await;
 }
 
 pub fn spawn_game(

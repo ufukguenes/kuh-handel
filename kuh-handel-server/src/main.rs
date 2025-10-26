@@ -10,7 +10,6 @@ mod server_side_player;
 
 use axum::{Router, routing};
 
-use serde::{Deserialize, Serialize};
 use tracing::Level;
 use tracing_subscriber::util::SubscriberInitExt;
 

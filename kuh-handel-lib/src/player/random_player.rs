@@ -175,14 +175,14 @@ impl PlayerActions for RandomPlayerActions {
         AuctionDecision::Sell
     }
 
-    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
+    fn _send_money_to_player(&mut self, _player: &PlayerId, amount: Value) -> SendMoney {
         if let Some(combination) = self.wallet.propose_bill_combinations(amount, false).get(0) {
             return SendMoney::Amount(combination.1.clone());
         }
         SendMoney::WasBluff
     }
 
-    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+    fn _respond_to_trade(&mut self, _offer: TradeOffer) -> TradeOpponentDecision {
         let random_value = self.rng.random_range(0..=self.wallet.total_money());
         let combination = self.wallet.propose_bill_combinations(random_value, false);
         match combination.get(0) {
@@ -216,15 +216,15 @@ impl PlayerActions for RandomPlayerActions {
                     } => match money_transfer {
                         MoneyTransfer::Private { amount } => {
                             if self.id == from {
-                                self.wallet.withdraw(&amount);
+                                let _ = self.wallet.withdraw(&amount);
                                 self.add_animals(&rounds.animal, 1);
                             } else if self.id == to {
                                 self.wallet.deposit(&amount);
                             }
                         }
                         MoneyTransfer::Public {
-                            card_amount,
-                            min_value,
+                            card_amount: _,
+                            min_value: _,
                         } => {}
                     },
                 }
@@ -243,7 +243,7 @@ impl PlayerActions for RandomPlayerActions {
                     if player_id == receiver {
                         self.add_animals(&animal, animal_count);
                     } else {
-                        self.remove_animals(&animal, animal_count);
+                        let _ = self.remove_animals(&animal, animal_count);
                     }
                 }
                 match money_trade {
@@ -252,7 +252,7 @@ impl PlayerActions for RandomPlayerActions {
                         opponent_card_offer,
                     } => {
                         if player_id == challenger {
-                            self.wallet.withdraw(&challenger_card_offer);
+                            let _ = self.wallet.withdraw(&challenger_card_offer);
                             opponent_card_offer.map(|amount| self.wallet.deposit(&amount));
                         } else {
                             opponent_card_offer.map(|amount| self.wallet.withdraw(&amount));
@@ -260,15 +260,15 @@ impl PlayerActions for RandomPlayerActions {
                         }
                     }
                     MoneyTrade::Public {
-                        challenger_card_offer,
-                        opponent_card_offer,
+                        challenger_card_offer: _,
+                        opponent_card_offer: _,
                     } => {}
                 }
             }
             GameUpdate::Start {
                 wallet,
                 players_in_turn_order,
-                animals,
+                animals: _,
             } => {
                 self.opponents = players_in_turn_order
                     .iter()
@@ -284,7 +284,10 @@ impl PlayerActions for RandomPlayerActions {
             GameUpdate::Inflation(value) => {
                 self.wallet.add_money(value);
             }
-            GameUpdate::ExposePlayer { player, wallet } => {}
+            GameUpdate::ExposePlayer {
+                player: _,
+                wallet: _,
+            } => {}
         }
 
         NoAction::Ok

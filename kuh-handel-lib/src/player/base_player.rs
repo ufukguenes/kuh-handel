@@ -1,12 +1,9 @@
-use serde::{Deserialize, Serialize};
-
 use crate::messages::actions::{FromActionMessage, InitialTrade};
 
 use crate::animals::{Animal, AnimalSet};
 use crate::messages::game_updates::Points;
 use crate::messages::message_protocol::StateMessage;
 
-use crate::Value;
 use crate::player::player_actions::PlayerActions;
 use crate::player::player_error::PlayerError;
 use crate::player::wallet::Wallet;

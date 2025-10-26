@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use kuh_handel_lib::messages::actions::{
     AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
     SendMoney, TradeOffer, TradeOpponentDecision,
@@ -13,9 +11,8 @@ use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
-use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{error, info};
+use tracing::info;
 
 pub struct WebsocketActions {
     // for each bot, create two channels
@@ -52,7 +49,7 @@ impl WebsocketActions {
         );
 
         if let StateMessage::GameUpdate {
-            update: GameUpdate::End { ranking },
+            update: GameUpdate::End { ranking: _ },
         } = &msg
         {
             close_channel = true;

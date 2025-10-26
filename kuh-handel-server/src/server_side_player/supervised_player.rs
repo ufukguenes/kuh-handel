@@ -13,7 +13,6 @@ use kuh_handel_lib::player::{
     wallet::{Affordability::*, Wallet},
 };
 use kuh_handel_lib::{Money, Value};
-use tracing::{error, info};
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:
@@ -46,9 +45,6 @@ impl SupervisedPlayer {
         self.player.borrow().id().clone()
     }
 
-    pub fn can_trade_against(&self, opponent: Rc<RefCell<Player>>) -> Option<InitialTrade> {
-        self.player.borrow().can_trade_against(opponent)
-    }
     pub fn can_trade(&self) -> Option<InitialTrade> {
         self.player.borrow().can_trade(&self.opponents)
     }
@@ -250,15 +246,15 @@ impl PlayerActions for SupervisedPlayer {
                         MoneyTransfer::Private { amount } => {
                             let mut player = self.player.borrow_mut();
                             if player.id() == &from {
-                                player.wallet_mut().withdraw(&amount);
+                                let _ = player.wallet_mut().withdraw(&amount);
                                 player.add_animals(&rounds.animal, 1);
                             } else if player.id() == &to {
                                 player.wallet_mut().deposit(&amount);
                             }
                         }
                         MoneyTransfer::Public {
-                            card_amount,
-                            min_value,
+                            card_amount: _,
+                            min_value: _,
                         } => {}
                     },
                 }
@@ -278,7 +274,7 @@ impl PlayerActions for SupervisedPlayer {
                     if player_id == receiver {
                         player.add_animals(&animal, animal_count);
                     } else {
-                        player.remove_animals(&animal, animal_count);
+                        let _ = player.remove_animals(&animal, animal_count);
                     }
                 }
                 match money_trade {
@@ -287,7 +283,7 @@ impl PlayerActions for SupervisedPlayer {
                         opponent_card_offer,
                     } => {
                         if player_id == challenger {
-                            player.wallet_mut().withdraw(&challenger_card_offer);
+                            let _ = player.wallet_mut().withdraw(&challenger_card_offer);
                             opponent_card_offer.map(|amount| player.wallet_mut().deposit(&amount));
                         } else {
                             opponent_card_offer.map(|amount| player.wallet_mut().withdraw(&amount));
@@ -295,12 +291,12 @@ impl PlayerActions for SupervisedPlayer {
                         }
                     }
                     MoneyTrade::Public {
-                        challenger_card_offer,
-                        opponent_card_offer,
+                        challenger_card_offer: _,
+                        opponent_card_offer: _,
                     } => {}
                 }
             }
-            GameUpdate::ExposePlayer { player, wallet } => {
+            GameUpdate::ExposePlayer { player, wallet: _ } => {
                 if &player == self.player.borrow().id() {
                     self.limit_bidding_until_next_auction = true;
                 }
@@ -309,11 +305,11 @@ impl PlayerActions for SupervisedPlayer {
                 self.player.borrow_mut().wallet_mut().add_money(inflation);
             }
             GameUpdate::Start {
-                wallet,
-                players_in_turn_order,
-                animals,
+                wallet: _,
+                players_in_turn_order: _,
+                animals: _,
             } => {} // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
-            GameUpdate::End { ranking } => {} // nothing to do
+            GameUpdate::End { ranking: _ } => {} // nothing to do
         }
 
         self.player

@@ -93,11 +93,11 @@ impl Client {
 
             let action_msg: ActionMessage;
             {
-                let mut state_message: StateMessage = serde_json::from_str(&text).unwrap();
+                let state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 println!("bot {} received message: {}", self.name, state_message);
 
                 if let StateMessage::GameUpdate {
-                    update: crate::messages::game_updates::GameUpdate::End { ranking },
+                    update: crate::messages::game_updates::GameUpdate::End { ranking: _ },
                 } = &state_message
                 {
                     break;

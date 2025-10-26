@@ -1,4 +1,3 @@
-from . import *
-from .base_player import *
-from .random_player import *
-from .wallet import *
+from . import base_player
+from . import random_player
+from . import wallet

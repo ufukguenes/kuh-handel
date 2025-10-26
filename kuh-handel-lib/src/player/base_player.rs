@@ -126,7 +126,10 @@ impl Player {
         None
     }
 
-    pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
+    pub fn map_to_action_inner<T: FromActionMessage>(
+        &mut self,
+        state_msg: StateMessage,
+    ) -> Option<T> {
         let action_msg = self.player_actions.map_to_action(state_msg);
         T::extract(action_msg)
     }

@@ -80,7 +80,7 @@ impl WebsocketActions {
             let act_msg = ActionMessage::NoAction {
                 decision: NoAction::Ok,
             };
-            return Some(T::extract(act_msg));
+            return T::extract(act_msg);
         }
 
         info!(
@@ -105,7 +105,7 @@ impl WebsocketActions {
             }
         };
 
-        Some(T::extract(action_msg))
+        T::extract(action_msg)
     }
 }
 

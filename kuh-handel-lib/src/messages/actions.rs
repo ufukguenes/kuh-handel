@@ -2,9 +2,10 @@ use crate::messages::message_protocol::ActionMessage;
 use crate::{Money, Value};
 use crate::{animals::Animal, player::base_player::PlayerId};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 pub trait FromActionMessage: Sized {
-    fn extract(action: ActionMessage) -> Self;
+    fn extract(action: ActionMessage) -> Option<Self>;
 }
 // todo switch these panics to results, so that when client sends wrong response game doesnt crash
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -12,10 +13,13 @@ pub enum NoAction {
     Ok,
 }
 impl FromActionMessage for NoAction {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::NoAction { decision } => decision,
-            _ => panic!("Expected ActionMessage::NoAction"),
+            ActionMessage::NoAction { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::NoAction");
+                None
+            }
         }
     }
 }
@@ -27,10 +31,13 @@ pub enum PlayerTurnDecision {
 }
 
 impl FromActionMessage for PlayerTurnDecision {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::PlayerTurnDecision { decision } => decision,
-            _ => panic!("Expected ActionMessage::PlayerTurnDecision"),
+            ActionMessage::PlayerTurnDecision { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::PlayerTurnDecision");
+                None
+            }
         }
     }
 }
@@ -44,10 +51,13 @@ pub struct InitialTrade {
 }
 
 impl FromActionMessage for InitialTrade {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::InitialTrade { decision } => decision,
-            _ => panic!("Expected ActionMessage::InitialTrade"),
+            ActionMessage::InitialTrade { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::InitialTrade");
+                None
+            }
         }
     }
 }
@@ -66,10 +76,13 @@ pub enum AuctionDecision {
     Sell,
 }
 impl FromActionMessage for AuctionDecision {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::AuctionDecision { decision } => decision,
-            _ => panic!("Expected ActionMessage::AuctionDecision"),
+            ActionMessage::AuctionDecision { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::AuctionDecision");
+                None
+            }
         }
     }
 }
@@ -81,10 +94,13 @@ pub enum TradeOpponentDecision {
 }
 
 impl FromActionMessage for TradeOpponentDecision {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::TradeOpponentDecision { decision } => decision,
-            _ => panic!("Expected ActionMessage::TradeOpponentDecision"),
+            ActionMessage::TradeOpponentDecision { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::TradeOpponentDecision");
+                None
+            }
         }
     }
 }
@@ -96,10 +112,13 @@ pub enum SendMoney {
 }
 
 impl FromActionMessage for SendMoney {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::SendMoney { decision } => decision,
-            _ => panic!("Expected ActionMessage::SendMoney"),
+            ActionMessage::SendMoney { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::SendMoney");
+                None
+            }
         }
     }
 }
@@ -139,10 +158,13 @@ impl PartialOrd for Bidding {
 }
 
 impl FromActionMessage for Bidding {
-    fn extract(action: ActionMessage) -> Self {
+    fn extract(action: ActionMessage) -> Option<Self> {
         match action {
-            ActionMessage::Bidding { decision } => decision,
-            _ => panic!("Expected ActionMessage::Bidding"),
+            ActionMessage::Bidding { decision } => Some(decision),
+            _ => {
+                error!("Expected ActionMessage::Bidding");
+                None
+            }
         }
     }
 }

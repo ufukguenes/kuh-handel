@@ -146,7 +146,7 @@ impl SupervisedPlayer {
 
     pub fn map_to_action_inner<T: FromActionMessage>(&mut self, state_msg: StateMessage) -> T {
         let action_msg = self.map_to_action(state_msg);
-        T::extract(action_msg)
+        T::extract(action_msg).unwrap()
     }
 }
 

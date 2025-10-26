@@ -41,7 +41,6 @@ pub struct Game {
     start_wallet: Wallet,
 }
 
-// todo inflation
 impl Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -164,8 +163,6 @@ impl Game {
     }
 
     pub fn validate_players_money(&self) -> bool {
-        //todo also validate new money gotten from inflation
-
         let mut all_money_from_players: BTreeMap<Money, usize> = BTreeMap::new();
         for player in self.players.iter() {
             let binding = player.borrow().clone_wallet();
@@ -426,7 +423,7 @@ impl Game {
                     wallet: sender.borrow().clone_wallet(),
                 };
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
-                // todo should we track how often this recursion is called and how deep it goes?
+
                 Self::update_multiple_players(&self.players, update);
                 let host = self.get_by_id(&final_auction_round.host).unwrap();
                 // println!(

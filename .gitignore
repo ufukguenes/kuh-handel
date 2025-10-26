@@ -4,5 +4,5 @@ Cargo.lock
 authentication.json
 game_results.json
 random_results.json
-interactive_result.json
+interactive_results.json
 scratch.txt

@@ -98,7 +98,7 @@ pub async fn organize_new_game(
                 "og | not enough players have joined, waiting {}",
                 ws_lobby.lobby_name
             );
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             continue;
         }
 
@@ -200,7 +200,6 @@ pub fn spawn_game(
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
-        println!("{:?}", ws_players);
 
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());

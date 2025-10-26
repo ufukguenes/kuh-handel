@@ -2,12 +2,14 @@ use crate::model::match_making::WebsocketLobby;
 use axum::{
     extract::{
         Query, State,
-        ws::{CloseCode, CloseFrame, Message, WebSocket, WebSocketUpgrade},
+        ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade},
     },
     http::StatusCode,
     response::{Html, IntoResponse},
 };
 pub use axum_macros::debug_handler;
+use futures_util::SinkExt;
+use kuh_handel_lib::messages::actions::NoAction;
 
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::fs::File;
@@ -144,6 +146,20 @@ pub async fn pvp_websocket_handler(
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
+    if ws_lobby
+        .channels_for_ws_actions
+        .lock()
+        .await
+        .get(&player_id)
+        .is_some()
+    {
+        error!(
+            "bck | Already connected bot tried to connect again {}",
+            player_id
+        );
+        return StatusCode::CONFLICT.into_response();
+    }
+
     info!("bck | Player {} authenticated successfully.", player_id);
     ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
@@ -163,6 +179,20 @@ pub async fn random_websocket_handler(
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
+    if ws_lobby
+        .channels_for_ws_actions
+        .lock()
+        .await
+        .get(&player_id)
+        .is_some()
+    {
+        error!(
+            "bck | Already connected bot tried to connect again {}",
+            player_id
+        );
+        return StatusCode::CONFLICT.into_response();
+    }
+
     info!("bck | Player {} authenticated successfully.", player_id);
     ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
 }
@@ -170,25 +200,15 @@ pub async fn random_websocket_handler(
 async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: String) {
     info!("bck | New bot connecting...");
 
+    let (state_sender, mut state_receiver): (
+        Sender<serde_json::Value>,
+        Receiver<serde_json::Value>,
+    ) = mpsc::channel(1);
+    let (action_sender, action_receiver): (Sender<serde_json::Value>, Receiver<serde_json::Value>) =
+        mpsc::channel(1);
+
     let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
-
-    if arc_channels_for_ws_actions
-        .lock()
-        .await
-        .get(&player_id)
-        .is_some()
-    {
-        info!(
-            "bck | Already connected bot tried to connect again {}",
-            player_id
-        );
-        return;
-    }
-
-    let (state_sender, mut state_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
-    let (action_sender, action_receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel(1);
-
-    let channels_for_this_bot = (state_sender, Arc::new(Mutex::new(action_receiver)));
+    let channels_for_this_bot = (state_sender, Option::Some(action_receiver));
 
     arc_channels_for_ws_actions
         .lock()
@@ -209,14 +229,13 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             "bck | waiting to receive game state info for bot {}",
             player_id
         );
-        let recv_state: Option<Message> = state_receiver.recv().await;
+        let recv_state = state_receiver.recv().await;
 
         let state_msg = match recv_state {
             Some(msg) => {
                 info!(
                     "bck | received game state info for bot {}: {}",
-                    player_id,
-                    msg.to_text().unwrap()
+                    player_id, msg
                 );
                 msg
             }
@@ -230,7 +249,9 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         };
 
         info!("bck | waiting to send state to client of bot {}", player_id);
-        if let Err(e) = socket.send(state_msg).await {
+
+        let msg = Message::Text(Utf8Bytes::from(state_msg.to_string()));
+        if let Err(e) = socket.send(msg).await {
             error!("bck | Error sending message: {}", e);
             break;
         };
@@ -265,25 +286,9 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
             }
         };
 
-        match action_msg {
-            Message::Text(_) => match action_sender.send(action_msg).await {
-                Ok(_) => {
-                    info!("bck | action of bot {} has been send to game", player_id)
-                }
-                Err(_) => {
-                    error!(
-                        "bck | failure sending action of bot {} to game, closing connection",
-                        player_id
-                    );
-                    break;
-                }
-            },
-
-            Message::Close(_) => {
-                let _ = action_sender.send(action_msg).await;
-                info!("bck | Closing WebSocket connection of bot {}.", player_id);
-                break;
-            }
+        let action_parsing_result: Result<serde_json::Value, serde_json::Error> = match action_msg {
+            Message::Text(action) => serde_json::from_str(&action),
+            Message::Close(_) => break,
             _ => {
                 info!(
                     "bck | received unknown message type from client of bot {}, closing WebSocket connection",
@@ -291,28 +296,45 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
                 );
                 break;
             }
+        };
+
+        let action = match action_parsing_result {
+            Ok(action) => action,
+            Err(_) => {
+                error!(
+                    "bck | could not parse message of bot {} to json, closing connection",
+                    player_id
+                );
+                break;
+            }
+        };
+
+        match action_sender.send(action).await {
+            Ok(_) => {
+                info!("bck | action of bot {} has been send to game", player_id)
+            }
+            Err(_) => {
+                error!(
+                    "bck | failure sending action of bot {} to game, closing connection",
+                    player_id
+                );
+                break;
+            }
         }
     }
 
-    action_sender.closed().await;
+    let _ = action_sender
+        .send(serde_json::to_value(NoAction::Ok).unwrap())
+        .await;
+
+    let _ = socket.close().await;
     state_receiver.close();
+    action_sender.closed().await;
 
     arc_channels_for_ws_actions
         .lock()
         .await
         .remove(&player_id.clone());
 
-    let close_msg = Message::Close(Some(CloseFrame {
-        code: 100 as CloseCode,
-        reason: "".into(),
-    }));
-
-    if let Err(e) = socket.send(close_msg).await {
-        tracing::info!(
-            "bck | Failed to send final close frame to bot {}: {}",
-            player_id,
-            e
-        );
-    }
-    info!("bck | Bot ID {} disconnected.", player_id);
+    error!("bck | Bot ID {} disconnected.", player_id);
 }

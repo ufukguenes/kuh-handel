@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub trait FromActionMessage: Sized {
     fn extract(action: ActionMessage) -> Self;
 }
-
+// todo switch these panics to results, so that when client sends wrong response game doesnt crash
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NoAction {
     Ok,

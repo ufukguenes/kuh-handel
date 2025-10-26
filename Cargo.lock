@@ -904,6 +904,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "tokio",
  "tokio-tungstenite 0.21.0",
  "tracing",
 ]

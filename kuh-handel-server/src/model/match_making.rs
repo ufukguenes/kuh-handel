@@ -6,8 +6,7 @@ use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
-use axum::extract::ws::Message;
-
+use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::cmp::min;
@@ -24,8 +23,17 @@ use tracing::{Level, error, info};
 
 #[derive(Clone)]
 pub struct WebsocketLobby {
-    pub channels_for_ws_actions:
-        Arc<Mutex<BTreeMap<PlayerId, (Sender<Message>, Arc<Mutex<Receiver<Message>>>)>>>,
+    pub channels_for_ws_actions: Arc<
+        Mutex<
+            BTreeMap<
+                PlayerId,
+                (
+                    Sender<serde_json::Value>,
+                    Option<Receiver<serde_json::Value>>,
+                ),
+            >,
+        >,
+    >,
     pub players_in_game: Arc<Mutex<BTreeSet<PlayerId>>>,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
@@ -79,6 +87,7 @@ pub async fn organize_new_game(
                 let players_in_game = ws_lobby.players_in_game.lock().await;
                 all_player_ids.retain(|id| !players_in_game.contains(id));
             }
+            all_player_ids.shuffle(&mut rng);
 
             let num_players = all_player_ids.len();
 
@@ -218,11 +227,11 @@ pub fn spawn_game(
         let mut ws_actions: Vec<WebsocketActions> = Vec::new();
 
         {
-            let channel_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
+            let mut channel_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
 
             for id in &ws_players {
-                let (sender, receiver) = channel_for_ws_actions.get(id).unwrap();
-                let channels = (sender.clone(), Arc::clone(&receiver));
+                let (sender, receiver) = channel_for_ws_actions.get_mut(id).unwrap();
+                let channels = (sender.clone(), receiver.take().unwrap());
 
                 ws_actions.push(WebsocketActions::new(id.clone(), channels));
             }

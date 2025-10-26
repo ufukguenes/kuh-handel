@@ -1,8 +1,7 @@
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Client as HttpClient;
 use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
-use tokio_tungstenite::tungstenite::protocol::{CloseFrame, Message};
+use tokio_tungstenite::tungstenite::protocol::Message;
 
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
@@ -48,15 +47,25 @@ impl Client {
         println!("Connected to server!");
 
         let (mut send, mut recv) = ws_stream.split();
-        let mut game_ended = false;
+
+        let ctrl_c_signal = tokio::signal::ctrl_c();
+        tokio::pin!(ctrl_c_signal);
 
         // Spawn a task to listen for incoming messages
         loop {
             println!("waiting for next action request");
-            let msg = match recv.next().await {
-                Some(msg) => msg,
-                None => {
-                    println!("game closed connection to game, ending loop");
+            let msg = tokio::select! {
+                msg = recv.next() => {
+                    match msg {
+                        Some(msg) => msg,
+                        None => {
+                            println!("game closed connection to game, ending loop {}", self.name);
+                            break;
+                        }
+                    }
+                },
+                _ = &mut ctrl_c_signal => {
+                    println!("keyboard interrupt, ending loop {}", self.name);
                     break;
                 }
             };
@@ -64,7 +73,7 @@ impl Client {
             let msg_type = match msg {
                 Ok(msg_type) => msg_type,
                 Err(e) => {
-                    println!("error receiving from game: {}", e);
+                    println!("error receiving from game: {}, {}", self.name, e);
                     break;
                 }
             };
@@ -73,18 +82,11 @@ impl Client {
                 Message::Text(text) => text,
 
                 Message::Close(_) => {
-                    let message = Message::Close(Some(CloseFrame {
-                        code: CloseCode::Normal,
-                        reason: "".into(),
-                    }));
-                    if let Err(e) = send.send(message).await {
-                        println!("Failed to close connection: {}", e);
-                    }
                     println!("Connection closed by server");
                     break;
                 }
                 other => {
-                    println!("Received other message: {:?}", other);
+                    println!("Received other message: {}, {:?}", self.name, other);
                     break;
                 }
             };
@@ -98,7 +100,7 @@ impl Client {
                     update: crate::messages::game_updates::GameUpdate::End { ranking },
                 } = &state_message
                 {
-                    game_ended = true;
+                    break;
                 };
 
                 action_msg = self.bot.map_to_action(state_message);
@@ -106,16 +108,7 @@ impl Client {
 
             let action_str = serde_json::to_string(&action_msg).unwrap();
             println!("bot {} picked action: {}", self.name, action_str);
-
-            let message;
-            if game_ended {
-                message = Message::Close(Some(CloseFrame {
-                    code: CloseCode::Normal,
-                    reason: action_str.into(),
-                }));
-            } else {
-                message = Message::Text(action_str)
-            }
+            let message: Message = Message::Text(action_str);
 
             let send_status = send.send(message).await;
 
@@ -131,11 +124,10 @@ impl Client {
             }
 
             println!("bot {}, finished sending action", self.name);
-            if game_ended {
-                println!("game has ended");
-                break;
-            }
         }
+
+        let res = send.close().await;
+        println!("res: {}, {:?}", self.name, res);
 
         println!(
             "ranking: {:?}",

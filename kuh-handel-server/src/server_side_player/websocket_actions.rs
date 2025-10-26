@@ -13,7 +13,6 @@ use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
-use axum::extract::ws::{Message, Utf8Bytes};
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info};
@@ -25,8 +24,8 @@ pub struct WebsocketActions {
     // to the websocket so it can send it to the client-bot
 
     // used by the player
-    state_sender: Sender<Message>,
-    action_receiver: Arc<Mutex<Receiver<Message>>>,
+    state_sender: Sender<serde_json::Value>,
+    action_receiver: Receiver<serde_json::Value>,
     id: String,
     backup_actions: RandomPlayerActions,
 }
@@ -34,7 +33,7 @@ pub struct WebsocketActions {
 impl WebsocketActions {
     pub fn new(
         id: String,
-        (state_sender, action_receiver): (Sender<Message>, Arc<Mutex<Receiver<Message>>>),
+        (state_sender, action_receiver): (Sender<serde_json::Value>, Receiver<serde_json::Value>),
     ) -> WebsocketActions {
         WebsocketActions {
             state_sender: state_sender,
@@ -44,18 +43,23 @@ impl WebsocketActions {
         }
     }
 
-    pub async fn close_connections(&mut self) {
-        self.action_receiver.lock().await.close();
-    }
-
     pub fn send_and_recv<T: FromActionMessage>(&mut self, msg: StateMessage) -> Option<T> {
+        let mut close_channel = false;
+
         info!(
             "wsp | going to send state from game to backend {}, {}",
             self.id, msg
         );
 
-        let serialized_obj = match serde_json::to_string(&msg) {
-            Ok(text) => Message::Text(Utf8Bytes::from(text)),
+        if let StateMessage::GameUpdate {
+            update: GameUpdate::End { ranking },
+        } = &msg
+        {
+            close_channel = true;
+        }
+
+        let serialized_obj = match serde_json::to_value(&msg) {
+            Ok(text) => text,
             Err(_) => return None,
         };
 
@@ -71,11 +75,21 @@ impl WebsocketActions {
             self.id, msg
         );
 
+        if close_channel {
+            self.action_receiver.close();
+            let act_msg = ActionMessage::NoAction {
+                decision: NoAction::Ok,
+            };
+            return Some(T::extract(act_msg));
+        }
+
         info!(
             "wsp | waiting for action from backend for game {}, {}",
             self.id, msg
         );
-        let msg: Option<Message> = self.action_receiver.blocking_lock().blocking_recv();
+
+        info!("wsp | waiting for lock {}", self.id,);
+        let msg = self.action_receiver.blocking_recv();
         info!("wsp | finished, receiving action from backend {}", self.id,);
 
         let msg = match msg {
@@ -83,20 +97,7 @@ impl WebsocketActions {
             None => return None,
         };
 
-        let msg_text = match msg {
-            Message::Text(text) => text,
-
-            Message::Close(_) => {
-                self.action_receiver.blocking_lock().close();
-                let act_msg = ActionMessage::NoAction {
-                    decision: NoAction::Ok,
-                };
-                return Some(T::extract(act_msg));
-            }
-            _ => return None,
-        };
-
-        let action_msg: ActionMessage = match serde_json::from_str(&msg_text) {
+        let action_msg: ActionMessage = match serde_json::from_value(msg) {
             Ok(action_msg) => action_msg,
             Err(e) => {
                 info!("wsp | Player: {}, {}", self.id, e);

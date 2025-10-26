@@ -154,46 +154,7 @@ pub async fn organize_new_game(
             }
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-    }
-}
-
-// todo this is duplicate code, we should use the code from the method above
-pub async fn organize_random_game(
-    ws_lobby: WebsocketLobby,
-    game_results: JsonLog<Vec<usize>>,
-    seed: u64,
-    (min_game_size, max_game_size): (usize, usize),
-) {
-    info!("og | starting to create random games");
-    let mut rng = ChaCha8Rng::seed_from_u64(seed);
-
-    loop {
-        if ws_lobby.channels_for_ws_actions.lock().await.len() < 1 {
-            info!("og | waiting for someone to join random game");
-        } else {
-            info!("og | creating new random games");
-
-            let mut new_games = Vec::new();
-            for player in ws_lobby.channels_for_ws_actions.lock().await.keys() {
-                let new_ws_lobby = ws_lobby.clone();
-
-                let num_random_players = rng.random_range(min_game_size..=max_game_size) as usize;
-                let random_players: Vec<String> = (0..num_random_players)
-                    .map(|i| String::from(format!("random_player_{}", i)))
-                    .collect();
-
-                let random_game =
-                    spawn_game(new_ws_lobby.clone(), vec![player.clone()], random_players);
-                new_games.push(random_game);
-            }
-
-            for game in new_games {
-                let ranking = game.await;
-                update_results(game_results.clone(), &ranking).await
-            }
-        }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await; // todo should we still wait when we allow games to start async?
     }
 }
 

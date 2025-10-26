@@ -13,7 +13,7 @@ use axum::{Router, routing};
 use tracing::Level;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use backend_api::{games_per_second_handler, pvp_websocket_handler, random_websocket_handler};
+use backend_api::{games_per_second_handler, websocket_handler};
 use model::match_making::{WebsocketLobby, organize_new_game};
 
 use std::net::SocketAddr;
@@ -36,8 +36,7 @@ use crate::{
 // - maybe also provide test people can make so that they can see what goes wrong? (actually we have that already, we have the supervisor, who checks if a move is valid)
 // - documentation
 // - minimize bloated logging
-// - new rankings: sum of all points, heatmap of all players against all players, squared sum of all positions of one player 
-
+// - new rankings: sum of all points, heatmap of all players against all players, squared sum of all positions of one player
 
 // BUGS:
 // i think there is a bug where a player is requested to send money, even though the player passed, resulting in a bluff, and then forcing a new round every time?
@@ -110,12 +109,12 @@ async fn main() {
         )
         .route(
             "/kuh-handel/game",
-            routing::get(pvp_websocket_handler)
+            routing::get(websocket_handler)
                 .with_state((pvp_ws_lobby.clone(), authentication.clone())),
         )
         .route(
             "/kuh-handel/random_game",
-            routing::get(random_websocket_handler)
+            routing::get(websocket_handler)
                 .with_state((random_ws_lobby.clone(), authentication.clone())),
         );
     let address = SocketAddr::from(([127, 0, 0, 1], 2000));

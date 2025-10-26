@@ -133,40 +133,7 @@ pub async fn games_per_second_handler(State(state): State<WebsocketLobby>) -> Ht
 }
 
 #[debug_handler]
-pub async fn pvp_websocket_handler(
-    ws: WebSocketUpgrade,
-    Query(params): Query<AuthParams>,
-    State(state): State<(WebsocketLobby, JsonLog<String>)>,
-) -> impl IntoResponse {
-    let player_id = params.player_id.clone();
-    let (ws_lobby, authentication) = state;
-
-    if !authenticate(authentication, &params).await {
-        info!("bck | Authentication failed for player: {}", player_id);
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
-
-    if ws_lobby
-        .channels_for_ws_actions
-        .lock()
-        .await
-        .get(&player_id)
-        .is_some()
-    {
-        error!(
-            "bck | Already connected bot tried to connect again {}",
-            player_id
-        );
-        return StatusCode::CONFLICT.into_response();
-    }
-
-    info!("bck | Player {} authenticated successfully.", player_id);
-    ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
-}
-
-// todo this is duplicate code
-#[debug_handler]
-pub async fn random_websocket_handler(
+pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     Query(params): Query<AuthParams>,
     State(state): State<(WebsocketLobby, JsonLog<String>)>,

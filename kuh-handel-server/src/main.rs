@@ -22,10 +22,7 @@ use tokio;
 use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
 
-use crate::{
-    backend_api::{JsonLog, register_handler, stats_handler},
-    model::match_making::organize_random_game,
-};
+use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
 // TODO:
 // - set time out for requests to bot, because if bot drops without closing connection, server stops

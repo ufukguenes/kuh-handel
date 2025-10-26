@@ -63,6 +63,7 @@ pub async fn organize_new_game(
     game_results: JsonLog<Vec<usize>>,
     seed: u64,
     (min_game_size, max_game_size): (usize, usize),
+    play_only_against_random_bots: bool,
 ) {
     info!("og | enough players joined");
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
@@ -91,25 +92,30 @@ pub async fn organize_new_game(
 
             let num_players = all_player_ids.len();
 
-            let remainders: Vec<usize> = valid_game_sizes.iter().map(|i| num_players % i).collect();
-
-            let (min_index, &min_value) = remainders
-                .iter()
-                .enumerate()
-                .min_by(|&(_, a), &(_, b)| a.cmp(b))
-                .unwrap();
-            let (max_index, _) = remainders
-                .iter()
-                .enumerate()
-                .max_by(|&(_, a), &(_, b)| a.cmp(b))
-                .unwrap();
-
             let players_per_game;
 
-            if min_value == 0 {
-                players_per_game = *valid_game_sizes.get(min_index).unwrap();
+            if play_only_against_random_bots {
+                players_per_game = 1;
             } else {
-                players_per_game = *valid_game_sizes.get(max_index).unwrap();
+                let remainders: Vec<usize> =
+                    valid_game_sizes.iter().map(|i| num_players % i).collect();
+
+                let (min_index, &min_value) = remainders
+                    .iter()
+                    .enumerate()
+                    .min_by(|&(_, a), &(_, b)| a.cmp(b))
+                    .unwrap();
+                let (max_index, _) = remainders
+                    .iter()
+                    .enumerate()
+                    .max_by(|&(_, a), &(_, b)| a.cmp(b))
+                    .unwrap();
+
+                if min_value == 0 {
+                    players_per_game = *valid_game_sizes.get(min_index).unwrap();
+                } else {
+                    players_per_game = *valid_game_sizes.get(max_index).unwrap();
+                }
             }
 
             for _ in (0..num_players).step_by(players_per_game) {

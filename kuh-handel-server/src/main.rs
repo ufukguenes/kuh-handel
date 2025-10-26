@@ -85,12 +85,14 @@ async fn main() {
         game_results.clone(),
         0,
         (3, 6),
+        false,
     ));
-    tokio::spawn(organize_random_game(
+    tokio::spawn(organize_new_game(
         random_ws_lobby.clone(),
         random_results.clone(),
         0,
         (3, 6),
+        true,
     ));
 
     // init websocket through http websocket upgrade

@@ -2,7 +2,6 @@ use crate::PlayerId;
 use crate::Value;
 use kuh_handel_lib::messages::{actions::*, game_updates::*, message_protocol::*};
 use kuh_handel_lib::player::player_actions::PlayerActions as CorePlayerActions;
-use kuh_handel_lib::player::random_player::RandomPlayerActions as CoreRandomPlayerActions;
 use pyo3::prelude::*;
 
 #[pymodule]
@@ -12,19 +11,16 @@ pub fn player_actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
-#[pyclass(unsendable)]
+
+#[pyclass(unsendable, subclass, name = "PlayerActions")]
 #[derive(Clone)]
-pub struct PlayerActions {
-    inner: CoreRandomPlayerActions,
-}
+pub struct PlayerActions;
 
 #[pymethods]
 impl PlayerActions {
     #[new]
-    pub fn new(id: String) -> Self {
-        PlayerActions {
-            inner: CoreRandomPlayerActions::new(id, 0),
-        }
+    pub fn new() -> Self {
+        PlayerActions {}
     }
 
     fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
@@ -53,66 +49,116 @@ impl PlayerActions {
         }
     }
 
-    //todo remove randomplayer, the clone from randomplayer
-    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        self.inner._draw_or_trade()
+    pub fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _trade(&mut self) -> InitialTrade {
-        self.inner._trade()
+    pub fn _trade(&mut self) -> InitialTrade {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        self.inner._provide_bidding(state)
+    pub fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        self.inner._buy_or_sell(state)
+    pub fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _send_money_to_player(&mut self, player: PlayerId, amount: Value) -> SendMoney {
-        self.inner._send_money_to_player(&player.clone(), amount)
+    pub fn _send_money_to_player(&mut self, player: PlayerId, amount: Value) -> SendMoney {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        self.inner._respond_to_trade(offer)
+    pub fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        panic!("needs to be implemented by user in Python")
     }
 
-    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        self.inner._receive_game_update(update)
+    pub fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        panic!("needs to be implemented by user in Python")
     }
 }
 
 pub struct RustPlayer {
-    pub inner: PlayerActions,
+    pub inner: Py<PlayerActions>,
+}
+
+impl RustPlayer {
+    pub fn new(py_obj: Py<PlayerActions>) -> Self {
+        Self { inner: py_obj }
+    }
 }
 
 impl CorePlayerActions for RustPlayer {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        self.inner._draw_or_trade()
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method0(py, "_draw_or_trade")
+                .unwrap();
+            result.extract::<PlayerTurnDecision>(py).unwrap()
+        })
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        self.inner._trade()
+        Python::with_gil(|py| {
+            let result = self.inner.as_ref().call_method0(py, "_trade").unwrap();
+            result.extract::<InitialTrade>(py).unwrap()
+        })
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        self.inner._provide_bidding(state)
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method1(py, "_provide_bidding", (state,))
+                .unwrap();
+            result.extract::<Bidding>(py).unwrap()
+        })
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        self.inner._buy_or_sell(state)
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method1(py, "_buy_or_sell", (state,))
+                .unwrap();
+            result.extract::<AuctionDecision>(py).unwrap()
+        })
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
-        self.inner._send_money_to_player(player.clone(), amount)
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method1(py, "_send_money_to_player", (player, amount))
+                .unwrap();
+            result.extract::<SendMoney>(py).unwrap()
+        })
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        self.inner._respond_to_trade(offer)
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method1(py, "_respond_to_trade", (offer,))
+                .unwrap();
+            result.extract::<TradeOpponentDecision>(py).unwrap()
+        })
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        self.inner._receive_game_update(update)
+        Python::with_gil(|py| {
+            let result = self
+                .inner
+                .as_ref()
+                .call_method1(py, "_receive_game_update", (update,))
+                .unwrap();
+            result.extract::<NoAction>(py).unwrap()
+        })
     }
 }

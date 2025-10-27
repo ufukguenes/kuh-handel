@@ -6,6 +6,7 @@ use crate::messages::message_protocol::StateMessage;
 
 use crate::player::player_actions::PlayerActions;
 use crate::player::player_error::PlayerError;
+use crate::player::random_player::RandomPlayerActions;
 use crate::player::wallet::Wallet;
 use pyo3::prelude::*;
 use std::cell::RefCell;
@@ -39,10 +40,6 @@ impl Player {
             owned_animals: BTreeMap::new(),
             player_actions,
         }
-    }
-
-    pub fn id(&self) -> &PlayerId {
-        &self.id
     }
 
     pub fn calculate_points(&self) -> Points {
@@ -184,5 +181,20 @@ impl Player {
 impl Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.id)
+    }
+}
+
+#[pymethods]
+impl Player {
+    #[new]
+    pub fn new_py(id: String, wallet: Wallet, game_stack: Vec<AnimalSet>) -> Self {
+        let dummy_action = RandomPlayerActions::new(id.clone(), 0);
+        let game_stack = game_stack.iter().map(|set| Rc::new(set.clone())).collect();
+        Player::new(id, wallet, game_stack, Box::new(dummy_action))
+    }
+
+    #[getter]
+    pub fn id(&self) -> &String {
+        &self.id
     }
 }

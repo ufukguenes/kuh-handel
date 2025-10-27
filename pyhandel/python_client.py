@@ -2,6 +2,7 @@ import threading
 import asyncio
 import pyhandel.pyhandel as pyh
 import sys
+from abc import ABC, abstractmethod
 
 bot_name = sys.argv[1]
 if len(bot_name) < 2:
@@ -11,7 +12,37 @@ if len(bot_name) < 2:
 
 print(bot_name)
 
-bot = pyh.player.player_actions.PlayerActions(bot_name)
+
+
+class Bot(pyh.player.player_actions.PlayerActions):
+    inner = pyh.player.random_player.RandomPlayerActions(bot_name, 0)
+    
+    def _draw_or_trade(self): 
+        return self.inner._draw_or_trade()
+
+    def _trade(self): 
+        return self.inner._trade()
+    
+    def _provide_bidding(self, state): 
+        return self.inner._provide_bidding(state)
+    
+    def _buy_or_sell(self, state): 
+        return self.inner._buy_or_sell(state)
+
+    def _send_money_to_player(self, player, amount): 
+        return self.inner._send_money_to_player(player, amount)
+
+    def _respond_to_trade(self, offer): 
+        return self.inner._respond_to_trade(offer)
+    
+    def _receive_game_update(self, update): 
+        return self.inner._receive_game_update(update)
+        
+
+    
+bot = Bot()
+
+
 client = pyh.client.Client(bot_name, "abcd", bot, "://127.0.0.1:2000") # "://127.0.0.1:2000"
 
 

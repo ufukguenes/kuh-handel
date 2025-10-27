@@ -1,5 +1,4 @@
 use kuh_handel_lib::player::base_player::Player;
-
 use pyo3::prelude::*;
 
 #[pymodule]

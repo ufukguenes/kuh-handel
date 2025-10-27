@@ -1,8 +1,8 @@
-import threading
 import asyncio
 import pyhandel.pyhandel as pyh
 import sys
 from abc import ABC, abstractmethod
+from typing import override
 
 bot_name = sys.argv[1]
 if len(bot_name) < 2:
@@ -12,10 +12,12 @@ if len(bot_name) < 2:
 
 print(bot_name)
 
+help(pyh.player.player_actions.PlayerActions)
 
 
 class Bot(pyh.player.player_actions.PlayerActions):
     inner = pyh.player.random_player.RandomPlayerActions(bot_name, 0)
+    
     
     def _draw_or_trade(self): 
         return self.inner._draw_or_trade()

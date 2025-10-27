@@ -71,6 +71,18 @@ impl Wallet {
     }
 }
 
+impl Wallet {
+    pub fn convert_to_rs(self) -> CoreWallet {
+        self.inner
+    }
+
+    pub fn convert_to_py(wallet: &CoreWallet) -> Self {
+        Wallet {
+            inner: wallet.clone(),
+        }
+    }
+}
+
 #[pyclass]
 pub enum Affordability {
     Exact(),

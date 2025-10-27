@@ -1,6 +1,6 @@
 use crate::py_messages::py_actions::*;
 use crate::py_messages::py_game_updates::*;
-use crate::py_player::py_base_player::PlayerId;
+use crate::PlayerId;
 use crate::Value;
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub enum ActionMessage {
 }
 
 #[pyclass]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "payload")]
 pub enum StateMessage {
     DrawOrTrade(),

@@ -1,61 +1,50 @@
+use kuh_handel_lib::{client::Client, player::random_player::RandomPlayerActions};
 use std::sync::Arc;
-
-use kuh_handel_lib::client::Client;
-use kuh_handel_lib::player::random_player::RandomPlayerActions;
 use tokio::sync::Mutex;
+// ... other imports
 
-#[tokio::main]
-async fn main() {
+// Remove #[tokio::main] and manually set up the runtime
+fn main() {
     let base_url = "://127.0.0.1:2000".to_string();
 
-    let ufuk_string = "ufuk".to_string();
-    let ufuk_client = Arc::new(Mutex::new(Client {
-        name: ufuk_string.clone(),
+    // 1. Manually build a single-threaded runtime
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    // 2. Block on the LocalSet within the single-threaded runtime
+    rt.block_on(async move {
+        let local_set = tokio::task::LocalSet::new();
+
+        // 3. Run all your tasks inside the LocalSet.
+        local_set
+            .run_until(async move {
+                // Note: start is now a synchronous function that spawns the local task.
+                let ufuk_handle = spawn_player("ufuk".to_string(), base_url.clone());
+                let leon_handle = spawn_player("leon".to_string(), base_url.clone());
+                let johannes_handle = spawn_player("johannes".to_string(), base_url.clone());
+                let viola_handle = spawn_player("viola".to_string(), base_url.clone());
+
+                // 4. Await the JoinHandles for the local tasks
+                let _ = tokio::join!(ufuk_handle, leon_handle, johannes_handle, viola_handle);
+            })
+            .await;
+    });
+}
+
+// Rename and restructure to be a synchronous function that calls spawn_local
+pub fn spawn_player(id: String, base_url: String) -> tokio::task::JoinHandle<()> {
+    let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client {
+        name: id.clone(),
         token: "abcd".to_string(),
-        bot: RandomPlayerActions::new(ufuk_string, 3),
+        bot: Box::new(RandomPlayerActions::new(id, 3)),
         base_url: base_url.clone(),
     }));
 
-    let leon_string = "leon".to_string();
-    let leon_client = Arc::new(Mutex::new(Client {
-        name: leon_string.clone(),
-        token: "efgh".to_string(),
-        bot: RandomPlayerActions::new(leon_string, 42),
-        base_url: base_url.clone(),
-    }));
-
-    let johannes_string = "johannes".to_string();
-    let johannes_client = Arc::new(Mutex::new(Client {
-        name: johannes_string.clone(),
-        token: "ijkl".to_string(),
-        bot: RandomPlayerActions::new(johannes_string, 42),
-        base_url: base_url.clone(),
-    }));
-
-    let viola_string = "viola".to_string();
-    let viola_client = Arc::new(Mutex::new(Client {
-        name: viola_string.clone(),
-        token: "mnop".to_string(),
-        bot: RandomPlayerActions::new(viola_string, 42),
-        base_url: base_url.clone(),
-    }));
-
-    let _ = ufuk_client.clone().lock().await.register().await;
-    let _ = leon_client.clone().lock().await.register().await;
-    let _ = johannes_client.clone().lock().await.register().await;
-    let _ = viola_client.clone().lock().await.register().await;
-
-    let start_client = |client: Arc<Mutex<Client>>| async move {
-        client.clone().lock().await.play_one_round().await
-    };
-
-    let ufuk_handel = tokio::spawn(start_client(ufuk_client));
-    let leon_handel = tokio::spawn(start_client(leon_client));
-    let johannes_handel = tokio::spawn(start_client(johannes_client));
-    let viola_handel = tokio::spawn(start_client(viola_client));
-
-    let _ = ufuk_handel.await;
-    let _ = leon_handel.await;
-    let _ = johannes_handel.await;
-    let _ = viola_handel.await;
+    // Use spawn_local directly, which works because we are inside a LocalSet
+    tokio::task::spawn_local(async move {
+        let _ = client.clone().lock().await.register().await;
+        client.clone().lock().await.play_one_round().await;
+    })
 }

@@ -25,7 +25,7 @@ use crate::player::wallet::Wallet;
 // yes we should,this also duplicates code form supervised player
 
 // todo check if this bot maybe changes its state somewhere where the supervisor does not, this will go away when i just remove the code duplication
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RandomPlayerActions {
     opponents: Vec<PlayerId>,
     owned_animals: BTreeMap<Animal, usize>,
@@ -80,7 +80,7 @@ impl RandomPlayerActions {
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
         match bids.iter().max_by_key(|(_, bid)| bid) {
             Some((player_id, Bidding::Bid(value))) => Some((player_id, value)),
-            Some(&(_, Bidding::Pass)) => None,
+            Some(&(_, Bidding::Pass())) => None,
             None => None,
         }
     }
@@ -121,14 +121,14 @@ impl PlayerActions for RandomPlayerActions {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         if let Some(random_trade) = self.get_random_trade() {
             return vec![
-                PlayerTurnDecision::Draw,
+                PlayerTurnDecision::Draw(),
                 PlayerTurnDecision::Trade(random_trade),
             ]
             .choose(&mut self.rng)
             .unwrap()
             .clone();
         }
-        PlayerTurnDecision::Draw
+        PlayerTurnDecision::Draw()
     }
 
     fn _trade(&mut self) -> InitialTrade {
@@ -143,19 +143,19 @@ impl PlayerActions for RandomPlayerActions {
         }
         let random_bid = Bidding::Bid(new_val);
 
-        let decision = vec![Bidding::Pass, random_bid]
+        let decision = vec![Bidding::Pass(), random_bid]
             .choose(&mut self.rng)
             .unwrap()
             .clone();
 
         match decision {
-            Bidding::Pass => {
+            Bidding::Pass() => {
                 self.has_passed_this_auction_round = true;
                 decision
             }
             Bidding::Bid(_) => {
                 if self.has_passed_this_auction_round {
-                    return Bidding::Pass;
+                    return Bidding::Pass();
                 }
                 decision
             }
@@ -179,7 +179,7 @@ impl PlayerActions for RandomPlayerActions {
         if let Some(combination) = self.wallet.propose_bill_combinations(amount, false).get(0) {
             return SendMoney::Amount(combination.1.clone());
         }
-        SendMoney::WasBluff
+        SendMoney::WasBluff()
     }
 
     fn _respond_to_trade(&mut self, _offer: TradeOffer) -> TradeOpponentDecision {
@@ -188,12 +188,12 @@ impl PlayerActions for RandomPlayerActions {
         match combination.get(0) {
             Some((_, combination)) => {
                 let counter_offer = TradeOpponentDecision::CounterOffer(combination.clone());
-                return vec![TradeOpponentDecision::Accept, counter_offer]
+                return vec![TradeOpponentDecision::Accept(), counter_offer]
                     .choose(&mut self.rng)
                     .unwrap()
                     .clone();
             }
-            None => TradeOpponentDecision::Accept,
+            None => TradeOpponentDecision::Accept(),
         }
     }
 

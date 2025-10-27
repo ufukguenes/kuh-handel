@@ -126,7 +126,7 @@ impl PlayerActions for WebsocketActions {
     }
 
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        let msg: StateMessage = StateMessage::DrawOrTrade;
+        let msg: StateMessage = StateMessage::DrawOrTrade();
         let decision: Option<PlayerTurnDecision> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,
@@ -202,7 +202,7 @@ impl PlayerActions for WebsocketActions {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        let msg: StateMessage = StateMessage::Trade;
+        let msg: StateMessage = StateMessage::Trade();
         let decision: Option<InitialTrade> = self.send_and_recv(msg);
         match decision {
             Some(decision) => decision,

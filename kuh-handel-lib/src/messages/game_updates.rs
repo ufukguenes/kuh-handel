@@ -10,9 +10,11 @@ use crate::{
         player::base_player::PlayerId,
     },
 };
+use pyo3::prelude::*;
 
 pub type Points = usize;
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
     pub host: PlayerId,
@@ -21,6 +23,7 @@ pub struct AuctionRound {
 }
 
 /// After each game event, all players are informed about what happened.
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GameUpdate {
     /// The action update is sent after an auction has finished.
@@ -48,6 +51,7 @@ pub enum GameUpdate {
     Inflation(Money),
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionKind {
     NoBiddings {
@@ -62,6 +66,7 @@ pub enum AuctionKind {
     },
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTransfer {
     Public {
@@ -73,6 +78,7 @@ pub enum MoneyTransfer {
     },
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTrade {
     Public {

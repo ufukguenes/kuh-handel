@@ -7,8 +7,10 @@ use crate::messages::actions::{
 };
 use crate::messages::game_updates::{AuctionRound, GameUpdate};
 use crate::player::base_player::PlayerId;
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum ActionMessage {
@@ -21,11 +23,12 @@ pub enum ActionMessage {
     NoAction { decision: NoAction },
 }
 
-#[derive(Serialize, Deserialize)]
+#[pyclass(unsendable)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "payload")]
 pub enum StateMessage {
-    DrawOrTrade,
-    Trade,
+    DrawOrTrade(),
+    Trade(),
     ProvideBidding { state: AuctionRound },
     BuyOrSell { state: AuctionRound },
     SendMoney { player_id: PlayerId, amount: Value },
@@ -36,8 +39,8 @@ pub enum StateMessage {
 impl Display for StateMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StateMessage::DrawOrTrade => write!(f, "DrawOrTrade"),
-            StateMessage::Trade => write!(f, "Trade"),
+            StateMessage::DrawOrTrade() => write!(f, "DrawOrTrade"),
+            StateMessage::Trade() => write!(f, "Trade"),
             StateMessage::ProvideBidding { .. } => write!(f, "ProvideBidding"),
             StateMessage::BuyOrSell { .. } => write!(f, "BuyOrSell"),
             StateMessage::SendMoney { .. } => write!(f, "SendMoney"),

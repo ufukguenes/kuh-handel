@@ -1,9 +1,8 @@
-use crate::py_messages::py_actions::*;
-use crate::py_messages::py_game_updates::*;
-use crate::py_messages::py_message_protocol::*;
 use crate::PlayerId;
 use crate::Value;
+use kuh_handel_lib::messages::{actions::*, game_updates::*, message_protocol::*};
 use kuh_handel_lib::player::player_actions::PlayerActions as CorePlayerActions;
+use kuh_handel_lib::player::random_player::RandomPlayerActions as CoreRandomPlayerActions;
 use pyo3::prelude::*;
 
 #[pymodule]
@@ -15,10 +14,19 @@ pub fn player_actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 #[pyclass(unsendable)]
 #[derive(Clone)]
-pub struct PlayerActions {}
+pub struct PlayerActions {
+    inner: CoreRandomPlayerActions,
+}
 
 #[pymethods]
 impl PlayerActions {
+    #[new]
+    pub fn new(id: String) -> Self {
+        PlayerActions {
+            inner: CoreRandomPlayerActions::new(id, 0),
+        }
+    }
+
     fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
         match state_msg {
             StateMessage::DrawOrTrade() => ActionMessage::PlayerTurnDecision {
@@ -45,81 +53,66 @@ impl PlayerActions {
         }
     }
 
+    //todo remove randomplayer, the clone from randomplayer
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        todo!()
-    }
-
-    fn _trade(&mut self) -> InitialTrade {
-        todo!()
-    }
-
-    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        todo!()
-    }
-
-    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        todo!()
-    }
-
-    fn _send_money_to_player(&mut self, player: PlayerId, amount: Value) -> SendMoney {
-        todo!()
-    }
-
-    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
-        todo!()
-    }
-
-    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
-        todo!()
-    }
-}
-
-struct CorePlayer {
-    inner: PlayerActions,
-}
-
-impl CorePlayerActions for CorePlayer {
-    fn _draw_or_trade(&mut self) -> kuh_handel_lib::messages::actions::PlayerTurnDecision {
         self.inner._draw_or_trade()
     }
 
-    fn _trade(&mut self) -> kuh_handel_lib::messages::actions::InitialTrade {
+    fn _trade(&mut self) -> InitialTrade {
         self.inner._trade()
     }
 
-    fn _provide_bidding(
-        &mut self,
-        state: kuh_handel_lib::messages::game_updates::AuctionRound,
-    ) -> kuh_handel_lib::messages::actions::Bidding {
-        self.inner._provide_bidding()
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        self.inner._provide_bidding(state)
     }
 
-    fn _buy_or_sell(
-        &mut self,
-        state: kuh_handel_lib::messages::game_updates::AuctionRound,
-    ) -> kuh_handel_lib::messages::actions::AuctionDecision {
-        self.inner._buy_or_sell()
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        self.inner._buy_or_sell(state)
     }
 
-    fn _send_money_to_player(
-        &mut self,
-        player: &kuh_handel_lib::player::base_player::PlayerId,
-        amount: kuh_handel_lib::Value,
-    ) -> kuh_handel_lib::messages::actions::SendMoney {
-        self.inner._send_money_to_player()
+    fn _send_money_to_player(&mut self, player: PlayerId, amount: Value) -> SendMoney {
+        self.inner._send_money_to_player(&player.clone(), amount)
     }
 
-    fn _respond_to_trade(
-        &mut self,
-        offer: kuh_handel_lib::messages::actions::TradeOffer,
-    ) -> kuh_handel_lib::messages::actions::TradeOpponentDecision {
-        self.inner._respond_to_trade()
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        self.inner._respond_to_trade(offer)
     }
 
-    fn _receive_game_update(
-        &mut self,
-        update: kuh_handel_lib::messages::game_updates::GameUpdate,
-    ) -> kuh_handel_lib::messages::actions::NoAction {
-        self.inner._receive_game_update()
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        self.inner._receive_game_update(update)
+    }
+}
+
+pub struct CorePlayer {
+    pub inner: PlayerActions,
+}
+
+impl CorePlayerActions for CorePlayer {
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
+        self.inner._draw_or_trade()
+    }
+
+    fn _trade(&mut self) -> InitialTrade {
+        self.inner._trade()
+    }
+
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        self.inner._provide_bidding(state)
+    }
+
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        self.inner._buy_or_sell(state)
+    }
+
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
+        self.inner._send_money_to_player(player.clone(), amount)
+    }
+
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        self.inner._respond_to_trade(offer)
+    }
+
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        self.inner._receive_game_update(update)
     }
 }

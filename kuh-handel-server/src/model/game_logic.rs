@@ -339,7 +339,7 @@ impl Game {
                 //    animal
                 // );
 
-                if let Bidding::Pass = player_decision {
+                if let Bidding::Pass() = player_decision {
                     pass_count += 1;
                 }
             }
@@ -368,7 +368,7 @@ impl Game {
                 let auction_winner = auction_winner;
 
                 let max_bid = match max_bid {
-                    Bidding::Pass => 0,
+                    Bidding::Pass() => 0,
                     Bidding::Bid(value) => *value,
                 };
 
@@ -417,7 +417,7 @@ impl Game {
         };
         let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
         match player_decision {
-            SendMoney::WasBluff => {
+            SendMoney::WasBluff() => {
                 let update = GameUpdate::ExposePlayer {
                     player: sender.borrow().id(),
                     wallet: sender.borrow().clone_wallet(),
@@ -531,7 +531,7 @@ impl Game {
 
         let (opponent_total_value, opponent_card_count, opponent_offer_vec) = match player_decision
         {
-            TradeOpponentDecision::Accept => {
+            TradeOpponentDecision::Accept() => {
                 // println!("gl | \t Trade accepted by {}", opponent.borrow().id());
                 (0, None, None)
             }
@@ -586,7 +586,7 @@ impl Game {
     fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
         // println!("gl | {} must trade", player.borrow().id());
 
-        let state_msg = StateMessage::Trade;
+        let state_msg = StateMessage::Trade();
         let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
 
         let opponent = self.get_by_id(&player_decision.opponent);
@@ -651,12 +651,12 @@ impl Game {
             let player: Rc<RefCell<SupervisedPlayer>> =
                 Rc::clone(self.players.get(current_player_idx).unwrap());
 
-            let state_msg = StateMessage::DrawOrTrade;
+            let state_msg = StateMessage::DrawOrTrade();
             let player_decision: PlayerTurnDecision =
                 player.borrow_mut().map_to_action_inner(state_msg);
 
             match player_decision {
-                PlayerTurnDecision::Draw => {
+                PlayerTurnDecision::Draw() => {
                     let card = self.game_stack.pop().unwrap();
 
                     self.process_card_inflation(&card);

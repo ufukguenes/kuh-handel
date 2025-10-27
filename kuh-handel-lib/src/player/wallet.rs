@@ -2,8 +2,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use crate::{Money, Value, player::player_error::PlayerError};
+use pyo3::prelude::*;
 use std::collections::BTreeMap;
 
+#[pyclass(unsendable)]
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Wallet {

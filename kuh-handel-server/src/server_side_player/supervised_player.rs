@@ -125,7 +125,7 @@ impl SupervisedPlayer {
 
     fn rectify_payment(&self, send_money: &SendMoney) -> SendMoney {
         match send_money {
-            SendMoney::WasBluff => return send_money.clone(),
+            SendMoney::WasBluff() => return send_money.clone(),
             SendMoney::Amount(amount) => {
                 let has_enough_money = self.player.borrow().wallet().can_afford(amount);
                 match has_enough_money {
@@ -134,7 +134,7 @@ impl SupervisedPlayer {
                         return SendMoney::Amount(alternative_payment);
                     }
 
-                    CannotAfford => return SendMoney::WasBluff,
+                    CannotAfford => return SendMoney::WasBluff(),
                 }
             }
         }
@@ -151,12 +151,12 @@ impl PlayerActions for SupervisedPlayer {
         let decision: PlayerTurnDecision =
             self.player.borrow_mut().player_actions()._draw_or_trade();
         match decision {
-            PlayerTurnDecision::Draw => return decision,
+            PlayerTurnDecision::Draw() => return decision,
             PlayerTurnDecision::Trade(initial_trade) => {
                 if self.can_trade().is_some() {
                     return PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade));
                 }
-                return PlayerTurnDecision::Draw;
+                return PlayerTurnDecision::Draw();
             }
         }
     }
@@ -176,7 +176,7 @@ impl PlayerActions for SupervisedPlayer {
         if self.limit_bidding_until_next_auction {
             let limit = self.player.borrow().wallet().total_money();
             match decision {
-                Bidding::Pass => {
+                Bidding::Pass() => {
                     return decision;
                 }
                 Bidding::Bid(value) => {
@@ -220,7 +220,7 @@ impl PlayerActions for SupervisedPlayer {
             .player_actions()
             ._respond_to_trade(offer);
         match decision {
-            TradeOpponentDecision::Accept => decision,
+            TradeOpponentDecision::Accept() => decision,
             TradeOpponentDecision::CounterOffer(amount) => {
                 TradeOpponentDecision::CounterOffer(self.rectify_money_combination(&amount))
             }

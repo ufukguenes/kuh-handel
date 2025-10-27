@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::py_player::{py_player_actions::PlayerActions, py_random_player::RandomPlayerActions};
+use crate::py_player::{
+    py_player_actions::{CorePlayer, PlayerActions},
+    py_random_player::RandomPlayerActions,
+};
 use kuh_handel_lib::client::Client as CoreClient;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -22,12 +25,13 @@ pub struct Client {
 #[pymethods]
 impl Client {
     #[new]
-    pub fn new(name: String, token: String, bot: &mut PlayerActions, base_url: String) -> Self {
+    pub fn new(name: String, token: String, bot: PlayerActions, base_url: String) -> Self {
+        let bot = CorePlayer { inner: bot };
         Client {
             inner: Arc::new(Mutex::new(CoreClient {
                 name: name,
                 token: token,
-                bot: bot.inner.take().unwrap(),
+                bot: Box::new(bot),
                 base_url: base_url,
             })),
         }

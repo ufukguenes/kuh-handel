@@ -5,13 +5,11 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
-use crate::player::random_player::RandomPlayerActions;
 
-#[derive(Debug)]
 pub struct Client {
     pub name: String,
     pub token: String,
-    pub bot: RandomPlayerActions,
+    pub bot: Box<dyn PlayerActions + Send + Sync>,
     pub base_url: String,
 }
 
@@ -128,14 +126,5 @@ impl Client {
 
         let res = send.close().await;
         println!("res: {}, {:?}", self.name, res);
-
-        println!(
-            "ranking: {:?}",
-            self.bot
-                .final_ranking()
-                .iter()
-                .map(|ranking| (ranking.0.clone(), ranking.1))
-                .collect::<Vec<_>>(),
-        );
     }
 }

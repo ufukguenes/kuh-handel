@@ -11,10 +11,10 @@ use crate::player::base_player::PlayerId;
 pub trait PlayerActions {
     fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
         match state_msg {
-            StateMessage::DrawOrTrade => ActionMessage::PlayerTurnDecision {
+            StateMessage::DrawOrTrade() => ActionMessage::PlayerTurnDecision {
                 decision: self._draw_or_trade(),
             },
-            StateMessage::Trade => ActionMessage::InitialTrade {
+            StateMessage::Trade() => ActionMessage::InitialTrade {
                 decision: self._trade(),
             },
             StateMessage::ProvideBidding { state } => ActionMessage::Bidding {

@@ -1,9 +1,5 @@
-use crate::py_messages::py_actions::*;
-use crate::py_messages::py_game_updates::*;
-use crate::PlayerId;
-use crate::Value;
+use kuh_handel_lib::messages::message_protocol::*;
 use pyo3::prelude::*;
-use serde::{Deserialize, Serialize};
 
 #[pymodule]
 pub fn message_protocol_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -12,30 +8,4 @@ pub fn message_protocol_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<StateMessage>();
 
     Ok(())
-}
-
-#[pyclass]
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type", content = "payload")]
-pub enum ActionMessage {
-    PlayerTurnDecision { decision: PlayerTurnDecision },
-    InitialTrade { decision: InitialTrade },
-    Bidding { decision: Bidding },
-    AuctionDecision { decision: AuctionDecision },
-    SendMoney { decision: SendMoney },
-    TradeOpponentDecision { decision: TradeOpponentDecision },
-    NoAction { decision: NoAction },
-}
-
-#[pyclass]
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(tag = "type", content = "payload")]
-pub enum StateMessage {
-    DrawOrTrade(),
-    Trade(),
-    ProvideBidding { state: AuctionRound },
-    BuyOrSell { state: AuctionRound },
-    SendMoney { player_id: PlayerId, amount: Value },
-    RespondToTrade { offer: TradeOffer },
-    GameUpdate { update: GameUpdate },
 }

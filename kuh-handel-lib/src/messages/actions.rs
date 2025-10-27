@@ -1,13 +1,15 @@
 use crate::messages::message_protocol::ActionMessage;
 use crate::{Money, Value};
 use crate::{animals::Animal, player::base_player::PlayerId};
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::error;
-
 pub trait FromActionMessage: Sized {
     fn extract(action: ActionMessage) -> Option<Self>;
 }
 // todo switch these panics to results, so that when client sends wrong response game doesnt crash
+
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NoAction {
     Ok,
@@ -24,9 +26,10 @@ impl FromActionMessage for NoAction {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerTurnDecision {
-    Draw,
+    Draw(),
     Trade(InitialTrade),
 }
 
@@ -42,6 +45,7 @@ impl FromActionMessage for PlayerTurnDecision {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitialTrade {
     pub opponent: PlayerId,
@@ -62,6 +66,7 @@ impl FromActionMessage for InitialTrade {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradeOffer {
     pub challenger: PlayerId,
@@ -70,6 +75,7 @@ pub struct TradeOffer {
     pub challenger_card_offer: usize,
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionDecision {
     Buy,
@@ -87,9 +93,10 @@ impl FromActionMessage for AuctionDecision {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TradeOpponentDecision {
-    Accept,
+    Accept(),
     CounterOffer(Vec<Money>),
 }
 
@@ -105,9 +112,10 @@ impl FromActionMessage for TradeOpponentDecision {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SendMoney {
-    WasBluff,
+    WasBluff(),
     Amount(Vec<Money>),
 }
 
@@ -123,18 +131,19 @@ impl FromActionMessage for SendMoney {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub enum Bidding {
-    Pass,
+    Pass(),
     Bid(Value),
 }
 
 impl PartialEq for Bidding {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Bidding::Pass, Bidding::Pass) => true,
-            (Bidding::Pass, _) => false,
-            (_, Bidding::Pass) => false,
+            (Bidding::Pass(), Bidding::Pass()) => true,
+            (Bidding::Pass(), _) => false,
+            (_, Bidding::Pass()) => false,
             (Bidding::Bid(a), Bidding::Bid(b)) => a == b,
         }
     }
@@ -143,9 +152,9 @@ impl PartialEq for Bidding {
 impl Ord for Bidding {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
-            (Bidding::Pass, Bidding::Pass) => std::cmp::Ordering::Equal,
-            (Bidding::Pass, _) => std::cmp::Ordering::Less,
-            (_, Bidding::Pass) => std::cmp::Ordering::Greater,
+            (Bidding::Pass(), Bidding::Pass()) => std::cmp::Ordering::Equal,
+            (Bidding::Pass(), _) => std::cmp::Ordering::Less,
+            (_, Bidding::Pass()) => std::cmp::Ordering::Greater,
             (Bidding::Bid(a), Bidding::Bid(b)) => a.cmp(b),
         }
     }

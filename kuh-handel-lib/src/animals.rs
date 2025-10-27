@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::Value;
+use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
@@ -13,6 +14,7 @@ pub enum AnimalError {
     InvalidDraw,
 }
 
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
     animal: Animal,
@@ -65,6 +67,7 @@ impl AnimalSet {
     }
 }
 
+#[pyclass(unsendable)]
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct Animal {
     value: Value,

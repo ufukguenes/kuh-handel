@@ -33,6 +33,7 @@ impl Client {
                 token: token,
                 bot: Box::new(bot),
                 base_url: base_url,
+                last_ranking: Vec::new(),
             })),
         }
     }

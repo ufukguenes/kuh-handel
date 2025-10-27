@@ -11,6 +11,7 @@ pub struct Client {
     pub token: String,
     pub bot: Box<dyn PlayerActions + Send + Sync>,
     pub base_url: String,
+    pub last_ranking: Vec<(String, usize)>,
 }
 
 impl Client {
@@ -51,7 +52,7 @@ impl Client {
 
         // Spawn a task to listen for incoming messages
         loop {
-            println!("waiting for next action request");
+            // println!("waiting for next action request");
             let msg = tokio::select! {
                 msg = recv.next() => {
                     match msg {
@@ -92,26 +93,27 @@ impl Client {
             let action_msg: ActionMessage;
             {
                 let state_message: StateMessage = serde_json::from_str(&text).unwrap();
-                println!("bot {} received message: {}", self.name, state_message);
+                // println!("bot {} received message: {}", self.name, state_message);
                 action_msg = self.bot.map_to_action(state_message);
 
                 let state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 if let StateMessage::GameUpdate {
-                    update: crate::messages::game_updates::GameUpdate::End { ranking: _ },
+                    update: crate::messages::game_updates::GameUpdate::End { ranking },
                 } = &state_message
                 {
+                    self.last_ranking = ranking.clone();
                     break;
                 };
             }
 
             let action_str = serde_json::to_string(&action_msg).unwrap();
-            println!("bot {} picked action: {}", self.name, action_str);
+            // println!("bot {} picked action: {}", self.name, action_str);
             let message: Message = Message::Text(action_str);
 
             let send_status = send.send(message).await;
 
             match send_status {
-                Ok(_) => println!("action of bot {} has been send to game", self.name,),
+                Ok(_) => (), //println!("action of bot {} has been send to game", self.name,),
                 Err(_) => {
                     println!(
                         "failure sending action of bot {} to game, closing connection",
@@ -121,10 +123,10 @@ impl Client {
                 }
             }
 
-            println!("bot {}, finished sending action", self.name);
+            // println!("bot {}, finished sending action", self.name);
         }
 
         let res = send.close().await;
-        println!("res: {}, {:?}", self.name, res);
+        println!("res: {}, {:?}", self.name, self.last_ranking);
     }
 }

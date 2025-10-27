@@ -40,6 +40,7 @@ pub fn spawn_player(id: String, base_url: String) -> tokio::task::JoinHandle<()>
         token: "abcd".to_string(),
         bot: Box::new(RandomPlayerActions::new(id, 3)),
         base_url: base_url.clone(),
+        last_ranking: Vec::new(),
     }));
 
     // Use spawn_local directly, which works because we are inside a LocalSet

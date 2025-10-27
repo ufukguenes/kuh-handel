@@ -58,9 +58,9 @@ impl SupervisedPlayer {
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
         match self.player.borrow().wallet().can_afford(combination) {
-            Exact => combination.clone(),
+            Exact() => combination.clone(),
             Alternative(alternative) => alternative,
-            CannotAfford => self.player.borrow().wallet().to_vec(),
+            CannotAfford() => self.player.borrow().wallet().to_vec(),
         }
     }
 
@@ -129,12 +129,12 @@ impl SupervisedPlayer {
             SendMoney::Amount(amount) => {
                 let has_enough_money = self.player.borrow().wallet().can_afford(amount);
                 match has_enough_money {
-                    Exact => return send_money.clone(),
+                    Exact() => return send_money.clone(),
                     Alternative(alternative_payment) => {
                         return SendMoney::Amount(alternative_payment);
                     }
 
-                    CannotAfford => return SendMoney::WasBluff(),
+                    CannotAfford() => return SendMoney::WasBluff(),
                 }
             }
         }

@@ -7,6 +7,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
 
+#[pyclass(unsendable)]
 #[derive(Debug)]
 pub enum AnimalError {
     InvalidArgument,

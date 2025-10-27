@@ -7,6 +7,7 @@ use crate::messages::message_protocol::StateMessage;
 use crate::player::player_actions::PlayerActions;
 use crate::player::player_error::PlayerError;
 use crate::player::wallet::Wallet;
+use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -15,6 +16,7 @@ use std::rc::Rc;
 
 pub type PlayerId = String;
 
+#[pyclass(unsendable)]
 pub struct Player {
     id: PlayerId,
     wallet: Wallet,

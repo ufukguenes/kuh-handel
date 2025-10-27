@@ -83,11 +83,11 @@ impl PlayerActions {
     }
 }
 
-pub struct CorePlayer {
+pub struct RustPlayer {
     pub inner: PlayerActions,
 }
 
-impl CorePlayerActions for CorePlayer {
+impl CorePlayerActions for RustPlayer {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         self.inner._draw_or_trade()
     }

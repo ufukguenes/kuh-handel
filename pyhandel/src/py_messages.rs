@@ -10,6 +10,8 @@ pub fn messages_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let message_protocol = PyModule::new(m.py(), "message_protocol")?;
 
     py_actions::actions_module_entry(&actions)?;
+    py_actions::actions_module_entry(&game_updates)?;
+    py_actions::actions_module_entry(&message_protocol)?;
 
     m.add_submodule(&actions);
     Ok(())

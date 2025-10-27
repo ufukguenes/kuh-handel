@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::py_player::{
-    py_player_actions::{CorePlayer, PlayerActions},
+    py_player_actions::{PlayerActions, RustPlayer},
     py_random_player::RandomPlayerActions,
 };
 use kuh_handel_lib::client::Client as CoreClient;
@@ -26,7 +26,7 @@ pub struct Client {
 impl Client {
     #[new]
     pub fn new(name: String, token: String, bot: PlayerActions, base_url: String) -> Self {
-        let bot = CorePlayer { inner: bot };
+        let bot = RustPlayer { inner: bot };
         Client {
             inner: Arc::new(Mutex::new(CoreClient {
                 name: name,

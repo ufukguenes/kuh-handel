@@ -170,7 +170,7 @@ pub async fn create_lobby_log_handle_pair(
 ) {
     let mut log = JsonLog::<Vec<usize>>::new(
         format!("./results/{}.json", lobby_name),
-        format!("new {}:", lobby_name.clone()),
+        format!("new {}", lobby_name.clone()),
     );
     log.add_to_multi_progress(&multi_progress).await;
 

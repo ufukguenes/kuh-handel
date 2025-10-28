@@ -25,17 +25,8 @@ use tracing::{Level, error, info};
 pub struct WebsocketLobby {
     pub lobby_name: String,
     pub channels_for_ws_actions: Arc<
-        Mutex<
-            BTreeMap<
-                PlayerId,
-                (
-                    Sender<serde_json::Value>,
-                    Option<Receiver<serde_json::Value>>,
-                ),
-            >,
-        >,
+        Mutex<BTreeMap<PlayerId, Option<(Sender<serde_json::Value>, Receiver<serde_json::Value>)>>>,
     >,
-    pub players_in_game: Arc<Mutex<BTreeSet<PlayerId>>>,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
     pub player_time_out: tokio::time::Duration,
@@ -50,7 +41,6 @@ impl WebsocketLobby {
         WebsocketLobby {
             lobby_name,
             channels_for_ws_actions: Arc::default(),
-            players_in_game: Arc::default(),
             time_last_n_games: Arc::default(),
             average_time_over_n_games: average_time_over_n_games,
             player_time_out,
@@ -80,20 +70,19 @@ pub async fn organize_new_game(
     loop {
         info!("og | creating new round of games {}", ws_lobby.lobby_name);
 
-        let mut all_player_ids: Vec<String> = ws_lobby
-            .channels_for_ws_actions
-            .lock()
-            .await
-            .keys()
-            .cloned()
-            .collect();
-
+        let mut available_players_ids = Vec::new();
         {
-            let players_in_game = ws_lobby.players_in_game.lock().await;
-            all_player_ids.retain(|id| !players_in_game.contains(id));
+            let channels_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
+            for (id, channels) in channels_for_ws_actions.iter() {
+                if channels.is_some() {
+                    available_players_ids.push(id.clone());
+                }
+            }
         }
 
-        if min_ws_player_amount > all_player_ids.len() {
+        let num_players = available_players_ids.len();
+
+        if min_ws_player_amount > num_players {
             info!(
                 "og | not enough players have joined, waiting {}",
                 ws_lobby.lobby_name
@@ -102,9 +91,7 @@ pub async fn organize_new_game(
             continue;
         }
 
-        all_player_ids.shuffle(&mut rng);
-
-        let num_players = all_player_ids.len();
+        available_players_ids.shuffle(&mut rng);
 
         let players_per_game;
 
@@ -132,15 +119,10 @@ pub async fn organize_new_game(
         }
 
         for _ in (0..num_players).step_by(players_per_game) {
-            let last_value = min(players_per_game, all_player_ids.len());
-            let current_players: Vec<String> = all_player_ids.drain(0..last_value).collect();
+            let last_value = min(players_per_game, available_players_ids.len());
+            let current_players: Vec<String> = available_players_ids.drain(0..last_value).collect();
 
             let new_ws_lobby = ws_lobby.clone();
-            let current_players_in_game = ws_lobby.players_in_game.clone();
-            current_players_in_game
-                .lock()
-                .await
-                .extend(current_players.iter().cloned());
 
             let num_current_players = current_players.len();
 
@@ -152,7 +134,7 @@ pub async fn organize_new_game(
             let random_players: Vec<String> = (0..num_random_player)
                 .map(|i| String::from(format!("random_player_{}", i)))
                 .collect();
-            info!(
+            error!(
                 "og| {} create game with {:?}",
                 ws_lobby.lobby_name, current_players
             );
@@ -163,11 +145,6 @@ pub async fn organize_new_game(
             tokio::spawn(async move {
                 let ranking = game_handle.await;
                 update_results(cloned_game_results, &ranking).await;
-                if ranking.is_ok() {
-                    for (player, _) in ranking.unwrap().iter() {
-                        let _ = current_players_in_game.lock().await.remove(player);
-                    }
-                }
             });
         }
 
@@ -213,10 +190,11 @@ pub fn spawn_game(
             let mut channel_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
 
             for id in &ws_players {
-                let (sender, receiver) = channel_for_ws_actions.get_mut(id).unwrap();
-                let channels = (sender.clone(), receiver.take().unwrap());
-
-                ws_actions.push(WebsocketActions::new(id.clone(), channels));
+                let player_channels = channel_for_ws_actions.get_mut(id).unwrap();
+                ws_actions.push(WebsocketActions::new(
+                    id.clone(),
+                    player_channels.take().unwrap(),
+                ));
             }
         }
 

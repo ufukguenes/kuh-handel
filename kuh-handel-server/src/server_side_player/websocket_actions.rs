@@ -60,6 +60,10 @@ impl WebsocketActions {
             Err(_) => return None,
         };
 
+        if self.state_sender.is_closed() {
+            self.action_receiver.close();
+            return None;
+        }
         let try_send_to_backend = self.state_sender.blocking_send(serialized_obj);
 
         if let Err(e) = try_send_to_backend {

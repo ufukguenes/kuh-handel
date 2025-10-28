@@ -175,7 +175,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         mpsc::channel(1);
 
     let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
-    let channels_for_this_bot = (state_sender, Option::Some(action_receiver));
+    let channels_for_this_bot = Some((state_sender, action_receiver));
 
     arc_channels_for_ws_actions
         .lock()
@@ -300,14 +300,11 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         .send(serde_json::to_value(NoAction::Ok).unwrap())
         .await;
 
-    let _ = socket.close().await;
     state_receiver.close();
-    action_sender.closed().await;
+    let _ = socket.close().await;
 
     arc_channels_for_ws_actions
         .lock()
         .await
         .remove(&player_id.clone());
-
-    info!("bck | Bot ID {} disconnected.", player_id);
 }

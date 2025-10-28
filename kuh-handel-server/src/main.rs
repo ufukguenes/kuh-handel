@@ -46,10 +46,8 @@ async fn main() {
 
     let multi_progress = MultiProgress::new();
 
-    let mut authentication = JsonLog::<String>::new(
-        "authentication.json".to_string(),
-        "registerd users".to_string(),
-    );
+    let mut authentication =
+        JsonLog::<String>::new("authentication.json".to_string(), "new users".to_string());
 
     authentication.add_to_multi_progress(&multi_progress).await;
 
@@ -61,9 +59,9 @@ async fn main() {
     let bot_time_out = tokio::time::Duration::from_millis(500);
     let interactive_player_time_out_min = tokio::time::Duration::from_secs(5 * 60);
 
-    let (pvp_ws_lobby, mut game_results, _) = create_lobby_log_handle_pair(
+    let (pvp_ws_lobby, game_results, _) = create_lobby_log_handle_pair(
         10,
-        "game_results".into(),
+        "pvp_games".into(),
         0,
         (3, 6),
         3,
@@ -73,9 +71,9 @@ async fn main() {
     )
     .await;
 
-    let (random_ws_lobby, mut random_results, _) = create_lobby_log_handle_pair(
+    let (random_ws_lobby, random_results, _) = create_lobby_log_handle_pair(
         10,
-        "random_results".into(),
+        "random_games".into(),
         0,
         (3, 6),
         1,
@@ -85,9 +83,9 @@ async fn main() {
     )
     .await;
 
-    let (interactive_ws_lobby, mut interactive_results, _) = create_lobby_log_handle_pair(
+    let (interactive_ws_lobby, interactive_results, _) = create_lobby_log_handle_pair(
         10,
-        "interactive_results".into(),
+        "interactive_games".into(),
         0,
         (3, 6),
         2,
@@ -170,7 +168,10 @@ pub async fn create_lobby_log_handle_pair(
     JsonLog<Vec<usize>>,
     tokio::task::JoinHandle<()>,
 ) {
-    let mut log = JsonLog::<Vec<usize>>::new(format!("{}.json", lobby_name), lobby_name.clone());
+    let mut log = JsonLog::<Vec<usize>>::new(
+        format!("./results/{}.json", lobby_name),
+        format!("new {}:", lobby_name.clone()),
+    );
     log.add_to_multi_progress(&multi_progress).await;
 
     match log.init_from_file().await {

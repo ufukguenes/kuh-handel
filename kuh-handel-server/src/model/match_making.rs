@@ -134,7 +134,7 @@ pub async fn organize_new_game(
             let random_players: Vec<String> = (0..num_random_player)
                 .map(|i| String::from(format!("random_player_{}", i)))
                 .collect();
-            error!(
+            info!(
                 "og| {} create game with {:?}",
                 ws_lobby.lobby_name, current_players
             );

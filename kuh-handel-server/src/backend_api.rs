@@ -307,4 +307,5 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
         .lock()
         .await
         .remove(&player_id.clone());
+    info!("bck | Bot ID {} disconnected.", player_id);
 }

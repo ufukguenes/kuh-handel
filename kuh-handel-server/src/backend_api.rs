@@ -19,6 +19,7 @@ use tokio::sync::{Mutex, mpsc};
 
 use tracing::{error, info};
 
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -31,34 +32,38 @@ pub struct AuthParams {
 pub struct JsonLog<T> {
     pub data: Arc<Mutex<BTreeMap<String, T>>>,
     path: String,
+    name: String,
+    new_entry_count: Arc<Mutex<usize>>,
+    pub status_line: ProgressBar,
 }
 
 impl<T> JsonLog<T>
 where
     T: Serialize + for<'a> Deserialize<'a> + Send + Sync + 'static,
 {
-    pub async fn new(path: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let new_auth = JsonLog {
+    pub fn new(path: String, name: String) -> Self {
+        let status_line = ProgressBar::new_spinner();
+        status_line.set_style(ProgressStyle::with_template("{spinner} {msg}").unwrap());
+
+        JsonLog {
             data: Arc::new(Mutex::new(BTreeMap::new())),
             path: path,
-        };
-
-        let _ = new_auth.to_file().await?;
-
-        Ok(new_auth)
+            name: name,
+            new_entry_count: Arc::new(Mutex::new(0)),
+            status_line: status_line,
+        }
     }
 
-    pub async fn from_file(path: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut file = File::open(&path).await?;
+    pub async fn init_from_file(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::open(&self.path).await?;
 
         let mut contents = String::new();
         file.read_to_string(&mut contents).await?;
 
         let data: BTreeMap<String, T> = serde_json::from_str(&contents)?;
-        Ok(JsonLog {
-            data: Arc::new(Mutex::new(data)),
-            path: path,
-        })
+        let mut current_data = self.data.lock().await;
+        *current_data = data;
+        Ok(())
     }
 
     pub async fn to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -82,6 +87,26 @@ where
 
         let json = serde_json::to_string(&*data)?;
         Ok(json)
+    }
+
+    pub async fn increase_count(&self) {
+        {
+            let mut current_count = self.new_entry_count.lock().await;
+            *current_count += 1;
+        }
+        self.update_terminal_view().await;
+    }
+
+    pub async fn update_terminal_view(&self) {
+        let count = self.new_entry_count.lock().await;
+        let output = format!("{}: {}", self.name, count);
+        self.status_line.set_message(output);
+        self.status_line.tick();
+    }
+
+    pub async fn add_to_multi_progress(&mut self, mp: &MultiProgress) {
+        let managed_status_line = mp.add(self.status_line.clone());
+        self.status_line = managed_status_line;
     }
 }
 
@@ -117,6 +142,7 @@ pub async fn register_handler(
         "bck | Successfully registered new player: {}",
         params.player_id.clone()
     );
+    authentication.increase_count().await;
     Ok(StatusCode::CREATED)
 }
 

@@ -164,6 +164,7 @@ async fn update_results(
                     .entry(player.clone())
                     .or_insert(Vec::new())
                     .push(rank);
+                game_results.increase_count().await;
             }
         }
         Err(_) => error!("og | game not properly finished"),

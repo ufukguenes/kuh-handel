@@ -2,6 +2,7 @@ use crate::backend_api::JsonLog;
 use crate::model::game_logic::Game;
 use crate::server_side_player::websocket_actions::WebsocketActions;
 
+use axum::extract::ws;
 use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
@@ -138,7 +139,12 @@ pub async fn organize_new_game(
                 "og| {} create game with {:?}",
                 ws_lobby.lobby_name, current_players
             );
-            let game_handle = spawn_game(new_ws_lobby.clone(), current_players, random_players);
+            let game_handle = spawn_game(
+                new_ws_lobby.clone(),
+                current_players,
+                random_players,
+                &mut rng,
+            );
 
             let cloned_game_results = game_results.clone();
 
@@ -177,7 +183,10 @@ pub fn spawn_game(
     ws_lobby: WebsocketLobby,
     ws_players: Vec<String>,
     random_players: Vec<String>,
+    rng: &mut ChaCha8Rng,
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
+    let amount_seeds = ws_players.len() + random_players.len() + 1;
+    let seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
 
@@ -195,16 +204,19 @@ pub fn spawn_game(
                 ws_actions.push(WebsocketActions::new(
                     id.clone(),
                     player_channels.take().unwrap(),
+                    *seeds.first().unwrap(),
                 ));
             }
         }
 
         let mut random_actions: Vec<RandomPlayerActions> = Vec::new();
         for id in random_players {
-            random_actions.push(RandomPlayerActions::new(id.clone(), 25)); //todo change seed
+            random_actions.push(RandomPlayerActions::new(
+                id.clone(),
+                *seeds.first().unwrap(),
+            ));
         }
 
-        let seed: u64 = 0; //todo change seed
         let game_handle = tokio::task::spawn_blocking(move || {
             let mut all_actions: Vec<Box<dyn PlayerActions>> = Vec::new();
             all_actions.extend(
@@ -218,7 +230,7 @@ pub fn spawn_game(
                     .map(|action: RandomPlayerActions| Box::new(action) as Box<dyn PlayerActions>),
             );
 
-            let mut game = Game::new_default_game(all_ids, all_actions, seed);
+            let mut game = Game::new_default_game(all_ids, all_actions, *seeds.first().unwrap());
 
             let ranking = game.play();
 

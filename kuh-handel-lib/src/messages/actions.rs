@@ -7,7 +7,6 @@ use tracing::error;
 pub trait FromActionMessage: Sized {
     fn extract(action: ActionMessage) -> Option<Self>;
 }
-// todo switch these panics to results, so that when client sends wrong response game doesnt crash
 
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -11,6 +11,8 @@ mod server_side_player;
 use axum::{Router, routing};
 
 use indicatif::MultiProgress;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use tracing::Level;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -56,13 +58,15 @@ async fn main() {
         Err(_) => authentication.to_file().await.unwrap(),
     };
 
+    let seed: u64 = 0;
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let bot_time_out = tokio::time::Duration::from_millis(500);
     let interactive_player_time_out_min = tokio::time::Duration::from_secs(5 * 60);
 
     let (pvp_ws_lobby, game_results, _) = create_lobby_log_handle_pair(
         10,
         "pvp_games".into(),
-        0,
+        rng.random(),
         (3, 6),
         3,
         false,
@@ -74,7 +78,7 @@ async fn main() {
     let (random_ws_lobby, random_results, _) = create_lobby_log_handle_pair(
         10,
         "random_games".into(),
-        0,
+        rng.random(),
         (3, 6),
         1,
         true,
@@ -86,7 +90,7 @@ async fn main() {
     let (interactive_ws_lobby, interactive_results, _) = create_lobby_log_handle_pair(
         10,
         "interactive_games".into(),
-        0,
+        rng.random(),
         (3, 6),
         2,
         false,

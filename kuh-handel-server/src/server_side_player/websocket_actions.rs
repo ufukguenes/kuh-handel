@@ -31,12 +31,13 @@ impl WebsocketActions {
     pub fn new(
         id: String,
         (state_sender, action_receiver): (Sender<serde_json::Value>, Receiver<serde_json::Value>),
+        seed: u64,
     ) -> WebsocketActions {
         WebsocketActions {
             state_sender: state_sender,
             action_receiver: action_receiver,
             id: id.clone(),
-            backup_actions: RandomPlayerActions::new(id, 42), // todo change seed
+            backup_actions: RandomPlayerActions::new(id, seed),
         }
     }
 

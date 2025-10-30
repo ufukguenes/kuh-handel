@@ -18,7 +18,7 @@ use kuh_handel_lib::{
     player::{base_player::PlayerId, player_actions::PlayerActions, wallet::Wallet},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ValueOwned {
     pub max: Value,
     pub min: Value,
@@ -54,7 +54,7 @@ pub struct SimplePlayer {
     opponents: BTreeMap<PlayerId, (BTreeMap<Animal, usize>, ValueOwned)>,
     wallet: Wallet,
     owned_animals: BTreeMap<Animal, usize>,
-    all_animals: Vec<AnimalSet>,
+    all_animals: Vec<(Animal, usize)>,
     mean_points: usize,
     aggressiveness: f32,
     previous_subjective_values: Vec<f32>,
@@ -197,7 +197,7 @@ impl PlayerActions for SimplePlayer {
 // handle updates
 impl SimplePlayer {
     pub fn handle_update_auction(&mut self, auction_kind: AuctionKind) {
-        let mut traded_animal;
+        let traded_animal;
 
         match auction_kind {
             AuctionKind::NoBiddings { host_id, animal } => {
@@ -316,7 +316,12 @@ impl SimplePlayer {
             .collect();
         self.wallet = wallet;
         self.owned_animals = BTreeMap::default();
-        self.all_animals = animals;
+
+        let mut all_animals = Vec::default();
+        for set in animals {
+            all_animals.push((set.animal().clone(), set.occurrences()));
+        }
+        self.all_animals = all_animals;
         self.mean_points = self.estimate_average_points_per_player();
     }
 
@@ -381,9 +386,11 @@ impl SimplePlayer {
         self.opponents
             .entry(selling_player)
             .and_modify(|(animals, value_owned)| {
-                let current_count = animals.get(animal).unwrap();
-                let new_count = cmp::min(current_count - animal_count, 0);
-                animals.insert(*animal, new_count);
+                if animal_count > 0 {
+                    let current_count = animals.get(animal).unwrap();
+                    let new_count = cmp::min(current_count - animal_count, 0);
+                    animals.insert(*animal, new_count);
+                }
 
                 value_owned.add(min_value_payed)
             });
@@ -391,8 +398,8 @@ impl SimplePlayer {
 
     pub fn estimate_average_points_per_player(&mut self) -> usize {
         let mut total_points: usize = 0;
-        for set in self.all_animals.iter() {
-            total_points += set.animal().value()
+        for (animal, occurrences) in self.all_animals.iter() {
+            total_points += animal.value()
         }
         total_points *= self.all_animals.len();
 
@@ -400,16 +407,16 @@ impl SimplePlayer {
     }
 
     pub fn sqrt_points_for_player(
-        all_animals: &Vec<AnimalSet>,
+        all_animals: &Vec<(Animal, usize)>,
         animals: &BTreeMap<Animal, usize>,
     ) -> f32 {
         let mut sqrt_points: f32 = 0.0;
-        for set in all_animals.iter() {
-            let my_animal_count = animals.get(set.animal());
+        for (animal, occurrences) in all_animals.iter() {
+            let my_animal_count = animals.get(animal);
             if my_animal_count.is_some() {
                 let percentage_of_deck_owned =
-                    *my_animal_count.unwrap() as f32 / set.occurrences() as f32;
-                sqrt_points += percentage_of_deck_owned.sqrt() * set.animal().value() as f32;
+                    *my_animal_count.unwrap() as f32 / *occurrences as f32;
+                sqrt_points += percentage_of_deck_owned.sqrt() * animal.value() as f32;
             }
         }
 
@@ -417,7 +424,7 @@ impl SimplePlayer {
     }
 
     pub fn subjective_animal_value_for_player(
-        all_animals: &Vec<AnimalSet>,
+        all_animals: &Vec<(Animal, usize)>,
         animals: &BTreeMap<Animal, usize>,
         animal: &Animal,
         animal_count: usize,
@@ -476,7 +483,10 @@ impl SimplePlayer {
 
     pub fn get_bill_combination(&self, amount: Value) -> Vec<Money> {
         let possible_combinations = self.wallet.propose_bill_combinations(amount, false);
-        possible_combinations.first().unwrap().1.clone()
+        match possible_combinations.first() {
+            Some((_, bill_combination)) => bill_combination.clone(),
+            None => Vec::new(),
+        }
     }
 
     pub fn get_highest_bid(bids: &Vec<(PlayerId, Bidding)>) -> Option<(&PlayerId, &Value)> {
@@ -548,7 +558,7 @@ impl SimplePlayer {
 
     pub fn average_subj_value_over_last(&self, count: usize) -> f32 {
         let mut averaged_subj_values = 0.0;
-        if self.previous_subjective_values.len() < count {
+        if self.previous_subjective_values.len() > count {
             let average_from_index = self.previous_subjective_values.len() - count;
             averaged_subj_values = self.previous_subjective_values[average_from_index..]
                 .iter()

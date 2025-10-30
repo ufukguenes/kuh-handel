@@ -35,10 +35,10 @@ impl Client {
         Ok(())
     }
 
-    pub async fn play_one_round(&mut self) {
+    pub async fn play_one_round(&mut self, game_type_url: String) {
         let (ws_stream, _) = connect_async(format!(
-            "ws{}/kuh-handel/game?player_id={}&token={}",
-            self.base_url, self.name, self.token
+            "ws{}/kuh-handel/{}?player_id={}&token={}",
+            self.base_url, game_type_url, self.name, self.token
         ))
         .await
         .expect("Failed to connect");

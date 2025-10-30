@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 kuh-handel-lib = {path = "../kuh-handel-lib"}
 tokio = {workspace = true}
-
+float-ord = "0.2"

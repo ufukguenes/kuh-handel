@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 #[pyclass(unsendable)]
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Wallet {
     #[serde_as(as = "Vec<(_, _)>")]
     bank_notes: BTreeMap<Money, usize>,

@@ -53,11 +53,14 @@ pub fn spawn_player(
     // Use spawn_local directly, which works because we are inside a LocalSet
     tokio::task::spawn_local(async move {
         let _ = client.clone().lock().await.register().await;
-        client
-            .clone()
-            .lock()
-            .await
-            .play_one_round("game".to_string())
-            .await;
+
+        for _ in 0..10 {
+            client
+                .clone()
+                .lock()
+                .await
+                .play_one_round("game".to_string())
+                .await;
+        }
     })
 }

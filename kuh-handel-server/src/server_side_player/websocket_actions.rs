@@ -12,7 +12,7 @@ use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
 
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::info;
+use tracing::{error, info};
 
 pub struct WebsocketActions {
     // for each bot, create two channels
@@ -121,7 +121,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!(
+                error!(
                     "wsp | {} provide_bidding switched to backup action",
                     self.id
                 );
@@ -136,7 +136,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!("wsp | {} draw_or_trade switched to backup action", self.id);
+                error!("wsp | {} draw_or_trade switched to backup action", self.id);
                 self.backup_actions._draw_or_trade()
             }
         }
@@ -150,7 +150,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!("wsp | {} buy_or_sell switched to backup action", self.id);
+                error!("wsp | {} buy_or_sell switched to backup action", self.id);
                 self.backup_actions._buy_or_sell(state)
             }
         }
@@ -168,7 +168,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!("wsp | {} game_update switched to backup action", self.id);
+                error!("wsp | {} game_update switched to backup action", self.id);
                 backup_decision
             }
         }
@@ -183,7 +183,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!("wsp | {} send_money switched to backup action", self.id);
+                error!("wsp | {} send_money switched to backup action", self.id);
                 self.backup_actions._send_money_to_player(player, amount)
             }
         }
@@ -197,7 +197,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!(
+                error!(
                     "wsp | {} respond_to_trade switched to backup action",
                     self.id
                 );
@@ -212,7 +212,7 @@ impl PlayerActions for WebsocketActions {
         match decision {
             Some(decision) => decision,
             None => {
-                info!("wsp | {} trade switched to backup action", self.id);
+                error!("wsp | {} trade switched to backup action", self.id);
                 self.backup_actions._trade()
             }
         }

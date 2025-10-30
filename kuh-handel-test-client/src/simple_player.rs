@@ -203,7 +203,10 @@ impl SimplePlayer {
             AuctionKind::NoBiddings { host_id, animal } => {
                 traded_animal = animal.clone();
                 if self.id == host_id {
-                    self.handle_exchange_payer(host_id, &animal, 1, 0);
+                    self.owned_animals
+                        .entry(animal)
+                        .and_modify(|count: &mut usize| *count += 1)
+                        .or_insert(1);
                 }
             }
 
@@ -230,6 +233,10 @@ impl SimplePlayer {
                                 self.wallet = Wallet::default();
                                 println!("miscalculated my own wallet")
                             }
+                            self.owned_animals
+                                .entry(*rounds.animal)
+                                .and_modify(|count: &mut usize| *count += 1)
+                                .or_insert(1);
 
                             self.handle_exchange_seller(to, &rounds.animal, 0, total_value);
                         } else {
@@ -286,8 +293,23 @@ impl SimplePlayer {
                     .abs() as usize;
 
                 if self.id == receiver {
+                    self.owned_animals
+                        .entry(animal)
+                        .and_modify(|count| *count += animal_count)
+                        .or_insert(1);
                     self.handle_exchange_seller(looser, &animal, animal_count, total_difference);
                 } else {
+                    if animal_count > 0 {
+                        let current_count = self.owned_animals.get(&animal).unwrap();
+                        let new_count = cmp::min(
+                            current_count
+                                .checked_sub(animal_count)
+                                .get_or_insert(0)
+                                .clone(),
+                            0,
+                        );
+                        self.owned_animals.insert(animal, new_count);
+                    }
                     self.handle_exchange_payer(receiver, &animal, animal_count, total_difference);
                 }
 
@@ -388,7 +410,13 @@ impl SimplePlayer {
             .and_modify(|(animals, value_owned)| {
                 if animal_count > 0 {
                     let current_count = animals.get(animal).unwrap();
-                    let new_count = cmp::min(current_count - animal_count, 0);
+                    let new_count = cmp::min(
+                        current_count
+                            .checked_sub(animal_count)
+                            .get_or_insert(0)
+                            .clone(),
+                        0,
+                    );
                     animals.insert(*animal, new_count);
                 }
 

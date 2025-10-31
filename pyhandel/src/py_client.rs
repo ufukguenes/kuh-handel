@@ -55,7 +55,7 @@ impl Client {
     pub fn play_one_round<'p>(&mut self, py: Python<'p>) -> PyResult<Bound<'p, PyAny>> {
         let inner = self.inner.clone();
         future_into_py(py, async move {
-            inner.lock().await.play_one_round().await;
+            inner.lock().await.play_one_round("game".to_string()).await;
             Ok(())
         })
     }

@@ -6,15 +6,41 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
 
+/// This Client is used to connect a Bot too the kuh-handel server
 pub struct Client {
+    /// name of the client. Should be identical to the name the bot uses
     pub name: String,
+
+    /// user defined token for authentication
     pub token: String,
+
+    /// the actual bot that provides the actions for the game. When providing actions with its name, that name should be the same as the clients name
     pub bot: Box<dyn PlayerActions + Send + Sync>,
+
+    /// the url to connect to where the game is hosted, e.g. s://ufuk-guenes.com or ://127.0.0.1:2000 if you want to connect to a locally hosted server
+    /// the url requires "s://" for a secure connection
     pub base_url: String,
-    pub last_ranking: Vec<(String, usize)>,
+    last_ranking: Vec<(String, usize)>,
 }
 
 impl Client {
+    /// Creates a new Client
+    pub fn new(
+        name: String,
+        token: String,
+        bot: Box<dyn PlayerActions + Send + Sync>,
+        base_url: String,
+    ) -> Self {
+        Client {
+            name,
+            token,
+            bot,
+            base_url,
+            last_ranking: Vec::new(),
+        }
+    }
+
+    /// Registers a new player with the provided name and token. This only needs to be called once
     pub async fn register(&self) -> Result<(), Box<dyn std::error::Error>> {
         let http = HttpClient::new();
         println!("Registering bot {} ...", self.name);
@@ -35,6 +61,10 @@ impl Client {
         Ok(())
     }
 
+    /// Connects to the server and tries to play one round.
+    /// `game_type_url` - the type of game to connect to. Possible choices:
+    ///                   game: waits for other players to join and then plays against those. These games are counted in the results
+    ///                   random_game: only play against random bots provided by the server. Use this for testing if your bot can play valid games. NOT counted in the results
     pub async fn play_one_round(&mut self, game_type_url: String) {
         let (ws_stream, _) = connect_async(format!(
             "ws{}/kuh-handel/{}?player_id={}&token={}",

@@ -35,13 +35,12 @@ pub fn spawn_player(
     aggressiveness: f32,
 ) -> tokio::task::JoinHandle<()> {
     let simple_bot = SimplePlayer::new(id.clone(), aggressiveness);
-    let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client {
-        name: id.clone(),
-        token: "abcd".to_string(),
-        bot: Box::new(simple_bot),
-        base_url: base_url.clone(),
-        last_ranking: Vec::new(),
-    }));
+    let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::new(
+        id.clone(),
+        "abcd".to_string(),
+        Box::new(simple_bot),
+        base_url.clone(),
+    )));
 
     tokio::task::spawn_local(async move {
         let _ = client.clone().lock().await.register().await;

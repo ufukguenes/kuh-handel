@@ -28,13 +28,12 @@ impl Client {
     pub fn new(name: String, token: String, bot: Py<PlayerActions>, base_url: String) -> Self {
         let bot = RustPlayer { inner: bot };
         Client {
-            inner: Arc::new(Mutex::new(CoreClient {
-                name: name,
-                token: token,
-                bot: Box::new(bot),
-                base_url: base_url,
-                last_ranking: Vec::new(),
-            })),
+            inner: Arc::new(Mutex::new(CoreClient::new(
+                name,
+                token,
+                Box::new(bot),
+                base_url,
+            ))),
         }
     }
 

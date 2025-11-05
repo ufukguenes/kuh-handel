@@ -6,11 +6,11 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney,
     TradeOpponentDecision,
 };
 use crate::messages::game_updates::{
-    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points,
+    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points, TradeOffer,
 };
 use crate::player::player_error::PlayerError;
 

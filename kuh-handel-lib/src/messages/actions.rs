@@ -8,6 +8,7 @@ pub trait FromActionMessage: Sized {
     fn extract(action: ActionMessage) -> Option<Self>;
 }
 
+/// Action of the bot that is used for conformation if the server sends a game update that does not require the bot to do anything
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NoAction {
@@ -25,6 +26,7 @@ impl FromActionMessage for NoAction {
     }
 }
 
+/// Action to decide if a bot, whose turn it currently is, wants to draw a new card or trade a card it already owns
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerTurnDecision {
@@ -44,12 +46,20 @@ impl FromActionMessage for PlayerTurnDecision {
     }
 }
 
+/// Action to specify the a trade offer
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitialTrade {
+    /// The player id of the opponent with which to trade
     pub opponent: PlayerId,
+
+    /// The animal that is offered for the trade
     pub animal: Animal,
+
+    /// The number of animals to trade. The opponent also needs to own this number of the specified animal.
     pub animal_count: usize,
+
+    /// Action to describe a trade that is initialized by the called bot
     pub amount: Vec<Money>,
 }
 
@@ -65,19 +75,14 @@ impl FromActionMessage for InitialTrade {
     }
 }
 
-#[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TradeOffer {
-    pub challenger: PlayerId,
-    pub animal: Animal,
-    pub animal_count: usize,
-    pub challenger_card_offer: usize,
-}
-
+/// Action for the bot which hosted a auction after drawing a card.
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionDecision {
+    /// The host wants to buy the animal itself, by paying out the highest bidder
     Buy,
+
+    /// The host wants to sell the animal to the highest bidder
     Sell,
 }
 impl FromActionMessage for AuctionDecision {
@@ -92,6 +97,7 @@ impl FromActionMessage for AuctionDecision {
     }
 }
 
+/// Action to decide to either accept a trade offer from another player or make a counter offer, with a combination of cards/ bills
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TradeOpponentDecision {
@@ -111,6 +117,7 @@ impl FromActionMessage for TradeOpponentDecision {
     }
 }
 
+/// Action to specify what combination of cards/ bills is send to another player to fulfill a requested minimum amount, or to acknowledge that it was a bluff  
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SendMoney {
@@ -130,10 +137,14 @@ impl FromActionMessage for SendMoney {
     }
 }
 
+/// Action to specify a single bid for the current animal that is auctioned
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub enum Bidding {
+    /// Do not place a bid, if every other player also bids the auction is over, if not a player is allowed to join in the next bidding round again
     Pass(),
+
+    /// Places a bid with the specified value
     Bid(Value),
 }
 

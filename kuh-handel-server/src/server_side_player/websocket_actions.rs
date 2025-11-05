@@ -1,8 +1,8 @@
 use kuh_handel_lib::messages::actions::{
     AuctionDecision, Bidding, FromActionMessage, InitialTrade, NoAction, PlayerTurnDecision,
-    SendMoney, TradeOffer, TradeOpponentDecision,
+    SendMoney, TradeOpponentDecision,
 };
-use kuh_handel_lib::messages::game_updates::{AuctionRound, GameUpdate};
+use kuh_handel_lib::messages::game_updates::{AuctionRound, GameUpdate, TradeOffer};
 use kuh_handel_lib::messages::message_protocol::{ActionMessage, StateMessage};
 
 use kuh_handel_lib::Value;

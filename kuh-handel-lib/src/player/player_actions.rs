@@ -1,10 +1,10 @@
 use crate::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney,
     TradeOpponentDecision,
 };
 
 use crate::Value;
-use crate::messages::game_updates::{AuctionRound, GameUpdate};
+use crate::messages::game_updates::{AuctionRound, GameUpdate, TradeOffer};
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::base_player::PlayerId;
 

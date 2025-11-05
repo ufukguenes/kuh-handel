@@ -125,7 +125,7 @@ impl SupervisedPlayer {
 
     fn rectify_payment(&self, send_money: &SendMoney) -> SendMoney {
         match send_money {
-            SendMoney::WasBluff() => return send_money.clone(),
+            SendMoney::WasBluff() => return send_money.clone(), // todo if a player bluffs but has enough money, should the player still be allowed to bluff?
             SendMoney::Amount(amount) => {
                 let has_enough_money = self.player.borrow().wallet().can_afford(amount);
                 match has_enough_money {

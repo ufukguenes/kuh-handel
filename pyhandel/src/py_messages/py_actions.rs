@@ -7,7 +7,6 @@ pub fn actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<NoAction>();
     m.add_class::<PlayerTurnDecision>();
     m.add_class::<InitialTrade>();
-    m.add_class::<TradeOffer>();
     m.add_class::<TradeOpponentDecision>();
     m.add_class::<SendMoney>();
     m.add_class::<Bidding>();

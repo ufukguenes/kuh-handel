@@ -11,9 +11,11 @@ use kuh_handel_lib::{
     messages::{
         actions::{
             AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney,
-            TradeOffer, TradeOpponentDecision,
+            TradeOpponentDecision,
         },
-        game_updates::{AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer},
+        game_updates::{
+            AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, TradeOffer,
+        },
     },
     player::{base_player::PlayerId, player_actions::PlayerActions, wallet::Wallet},
 };

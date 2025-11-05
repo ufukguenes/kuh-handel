@@ -1,9 +1,9 @@
 use kuh_handel_lib::messages::actions::{
-    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney, TradeOffer,
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney,
     TradeOpponentDecision,
 };
 use kuh_handel_lib::messages::game_updates::{
-    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points,
+    AuctionKind, AuctionRound, GameUpdate, MoneyTrade, MoneyTransfer, Points, TradeOffer,
 };
 
 use kuh_handel_lib::animals::{Animal, AnimalSet};

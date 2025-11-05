@@ -9,6 +9,7 @@ pub fn game_updates_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<AuctionKind>();
     m.add_class::<MoneyTransfer>();
     m.add_class::<MoneyTrade>();
+    m.add_class::<TradeOffer>();
 
     Ok(())
 }

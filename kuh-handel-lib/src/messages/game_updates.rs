@@ -104,13 +104,14 @@ pub enum GameUpdate {
     Inflation(Money),
 }
 
+/// After an auction has finished it is described by a kind
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionKind {
-    NoBiddings {
-        host_id: PlayerId,
-        animal: Animal,
-    },
+    /// No one has placed a bid. The host will receive the animal
+    NoBiddings { host_id: PlayerId, animal: Animal },
+
+    /// Information about the bids that have been placed
     NormalAuction {
         rounds: AuctionRound,
         from: PlayerId,
@@ -119,25 +120,31 @@ pub enum AuctionKind {
     },
 }
 
+/// Information about what money has been transferred after an auction
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTransfer {
+    /// only the number of cards/ bills that have been exchanged and the minimum value to be payed are exposed to players not participating in the current money transfer
     Public {
         card_amount: usize,
         min_value: Value,
     },
-    Private {
-        amount: Vec<Money>,
-    },
+
+    /// players participating in the money transfer will receive full information about what cards/ bills has been exchanged
+    Private { amount: Vec<Money> },
 }
 
+/// Information about what money has been transferred after a trade
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTrade {
+    /// only the number of cards/ bills that have been exchanged are exposed to players not participating in the current money trade
     Public {
         challenger_card_offer: usize,
         opponent_card_offer: Option<usize>,
     },
+
+    /// players participating in the money trade will receive full information about what cards/ bills has been exchanged
     Private {
         challenger_card_offer: Vec<Money>,
         opponent_card_offer: Option<Vec<Money>>,

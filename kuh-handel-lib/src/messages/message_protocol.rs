@@ -10,6 +10,7 @@ use crate::player::base_player::PlayerId;
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
+/// Actions a player can make after receiving a state message
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
@@ -23,6 +24,7 @@ pub enum ActionMessage {
     NoAction { decision: NoAction },
 }
 
+/// State Messages are sent to a player describing a state of the current game which leads to an action
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "payload")]

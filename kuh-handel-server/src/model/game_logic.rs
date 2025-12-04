@@ -368,7 +368,15 @@ impl Game {
                 let auction_winner = auction_winner;
 
                 let max_bid = match max_bid {
-                    Bidding::Pass() => 0,
+                    Bidding::Pass() => {
+                        let update: GameUpdate = GameUpdate::Auction(AuctionKind::NoBiddings {
+                            host_id: host_id,
+                            animal: **animal,
+                        });
+
+                        Self::update_multiple_players(&self.players, update);
+                        return;
+                    }
                     Bidding::Bid(value) => *value,
                 };
 

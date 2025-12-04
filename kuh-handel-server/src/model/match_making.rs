@@ -55,8 +55,6 @@ impl WebsocketLobby {
     }
 }
 
-// todo: this now allows for bots to join all the time and not only when a round of games is done, but this can be a problem
-// it can happen that players might never be paired against if their games finish offset.
 pub async fn organize_new_game(
     ws_lobby: WebsocketLobby,
     game_results: JsonLog<Vec<usize>>,

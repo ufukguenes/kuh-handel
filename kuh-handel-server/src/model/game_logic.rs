@@ -349,16 +349,6 @@ impl Game {
             }
         }
 
-        let final_auction_round = AuctionRound {
-            host: host_id.clone(),
-            animal: animal.clone(),
-            bids: bids.clone(),
-        };
-        let state_msg = StateMessage::BuyOrSell {
-            state: final_auction_round.clone(),
-        };
-        let player_decision: AuctionDecision = player.borrow_mut().map_to_action_inner(state_msg);
-
         match bids.iter().max_by_key(|(_, bid)| bid) {
             Some((max_bidder_id, max_bid)) => {
                 let auction_winner = auction_players
@@ -379,6 +369,18 @@ impl Game {
                     }
                     Bidding::Bid(value) => *value,
                 };
+
+                let final_auction_round = AuctionRound {
+                    host: host_id.clone(),
+                    animal: animal.clone(),
+                    bids: bids.clone(),
+                };
+
+                let state_msg = StateMessage::BuyOrSell {
+                    state: final_auction_round.clone(),
+                };
+                let player_decision: AuctionDecision =
+                    player.borrow_mut().map_to_action_inner(state_msg);
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy => {

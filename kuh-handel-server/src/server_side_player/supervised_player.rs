@@ -76,10 +76,8 @@ impl SupervisedPlayer {
 
         let animal_trade_count = match self.player.borrow().owned_animals().get(&trade_animal) {
             Some(&count) => {
-                if count >= animal_count {
+                if count > 0 {
                     count
-                } else if count > 0 {
-                    1
                 } else {
                     panic!(
                         "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"
@@ -101,10 +99,8 @@ impl SupervisedPlayer {
 
         let opponent_animal_count = match opponent.borrow().owned_animals().get(&trade_animal) {
             Some(&count) => {
-                if count >= animal_count {
+                if count > 0 {
                     count
-                } else if count > 0 {
-                    1
                 } else {
                     panic!(
                         "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"

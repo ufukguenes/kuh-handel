@@ -54,7 +54,6 @@ impl RandomPlayerActions {
 
         let (&random_animal, &animal_count) = self.owned_animals.iter().choose(&mut self.rng)?;
 
-        let random_animal_count = self.rng.random_range(1..=animal_count) as usize;
         let value = self.wallet.total_money();
         let random_amount = self
             .wallet
@@ -66,7 +65,7 @@ impl RandomPlayerActions {
         let trade_choice = InitialTrade {
             opponent: random_opponent.clone(),
             animal: random_animal,
-            animal_count: random_animal_count,
+            animal_count: animal_count,
             amount: random_amount,
         };
 

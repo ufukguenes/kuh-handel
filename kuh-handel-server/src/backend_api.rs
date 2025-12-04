@@ -111,6 +111,10 @@ where
 }
 
 async fn authenticate(authentication: JsonLog<String>, auth_params: &AuthParams) -> bool {
+    if let Err(e) = authentication.init_from_file().await {
+        error!("bck | failed to init from authentication file: {}", e)
+    }
+
     let credentials = authentication.data.lock().await;
 
     match credentials.get(&auth_params.player_id) {

@@ -64,12 +64,15 @@ pub async fn organize_new_game(
     (min_game_size, max_game_size): (usize, usize),
     min_ws_player_amount: usize,
     play_only_against_random_bots: bool,
+    sync_game_starts: bool,
 ) {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let valid_game_sizes: Vec<usize> = (min_game_size..=max_game_size).collect();
 
     loop {
         info!("og | creating new round of games {}", ws_lobby.lobby_name);
+
+        let mut current_game_handles = Vec::new();
 
         let mut available_players_ids = Vec::new();
         {
@@ -148,14 +151,22 @@ pub async fn organize_new_game(
 
             let cloned_game_results = game_results.clone();
 
-            tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 let ranking = game_handle.await;
                 update_results(cloned_game_results.clone(), &ranking).await;
                 cloned_game_results.increase_count().await;
             });
+
+            current_game_handles.push(handle);
         }
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await; // todo should we still wait when we allow games to start async?
+        if sync_game_starts {
+            for handle in current_game_handles {
+                let _ = handle.await;
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 

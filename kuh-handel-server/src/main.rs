@@ -70,6 +70,7 @@ async fn main() {
         (3, 6),
         3,
         false,
+        true,
         bot_time_out,
         &multi_progress,
     )
@@ -82,6 +83,7 @@ async fn main() {
         (3, 6),
         1,
         true,
+        true,
         bot_time_out,
         &multi_progress,
     )
@@ -92,8 +94,9 @@ async fn main() {
         "interactive_games".into(),
         rng.random(),
         (3, 6),
-        1,
-        true,
+        2,
+        false,
+        false,
         interactive_player_time_out_min,
         &multi_progress,
     )
@@ -165,6 +168,7 @@ pub async fn create_lobby_log_handle_pair(
     (min_game_size, max_game_size): (usize, usize),
     min_ws_player_amount: usize,
     play_only_against_random_bots: bool,
+    sync_game_starts: bool,
     time_out: tokio::time::Duration,
     multi_progress: &MultiProgress,
 ) -> (
@@ -193,6 +197,7 @@ pub async fn create_lobby_log_handle_pair(
         (min_game_size, max_game_size),
         min_ws_player_amount,
         play_only_against_random_bots,
+        sync_game_starts,
     ));
 
     return (lobby, log, handle);

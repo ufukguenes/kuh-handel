@@ -58,7 +58,7 @@ impl SupervisedPlayer {
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
         match self.player.borrow().wallet().can_afford(combination) {
-            Exact() => combination.clone(),
+            Exact(exact_amount) => exact_amount,
             Alternative(alternative) => alternative,
             CannotAfford() => self.player.borrow().wallet().to_vec(),
         }
@@ -123,20 +123,33 @@ impl SupervisedPlayer {
         new_trade
     }
 
-    fn rectify_payment(&self, send_money: &SendMoney) -> SendMoney {
-        match send_money {
-            SendMoney::WasBluff() => return send_money.clone(), // todo if a player bluffs but has enough money, should the player still be allowed to bluff?
-            SendMoney::Amount(amount) => {
-                let has_enough_money = self.player.borrow().wallet().can_afford(amount);
-                match has_enough_money {
-                    Exact() => return send_money.clone(),
-                    Alternative(alternative_payment) => {
-                        return SendMoney::Amount(alternative_payment);
-                    }
+    fn rectify_payment(&self, send_money: &SendMoney, value_amount: Value) -> SendMoney {
+        let has_enough_money: kuh_handel_lib::player::wallet::Affordability;
 
-                    CannotAfford() => return SendMoney::WasBluff(),
-                }
+        match send_money {
+            SendMoney::WasBluff() => {
+                has_enough_money = self
+                    .player
+                    .borrow()
+                    .wallet()
+                    .can_afford(&vec![value_amount]);
             }
+            SendMoney::Amount(bill_combination_amount) => {
+                has_enough_money = self
+                    .player
+                    .borrow()
+                    .wallet()
+                    .can_afford(bill_combination_amount);
+            }
+        }
+
+        match has_enough_money {
+            Exact(exact_payment) => return SendMoney::Amount(exact_payment),
+            Alternative(alternative_payment) => {
+                return SendMoney::Amount(alternative_payment);
+            }
+
+            CannotAfford() => return SendMoney::WasBluff(),
         }
     }
 
@@ -210,7 +223,7 @@ impl PlayerActions for SupervisedPlayer {
             .borrow_mut()
             .player_actions()
             ._send_money_to_player(player, amount);
-        self.rectify_payment(&decision)
+        self.rectify_payment(&decision, amount)
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {

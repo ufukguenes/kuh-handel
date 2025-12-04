@@ -146,7 +146,7 @@ impl Wallet {
         let fits_exact = self.check_if_exact(&payment_amount);
 
         if fits_exact {
-            return Affordability::Exact();
+            return Affordability::Exact(payment_amount.clone());
         }
 
         // just pick the bill combination with the smallest overhead
@@ -166,7 +166,7 @@ impl Wallet {
 
 #[pyclass(unsendable)]
 pub enum Affordability {
-    Exact(),
+    Exact(Vec<Money>),
     Alternative(Vec<Money>),
     CannotAfford(),
 }

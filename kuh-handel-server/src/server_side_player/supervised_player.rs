@@ -124,23 +124,25 @@ impl SupervisedPlayer {
     }
 
     fn rectify_payment(&self, send_money: &SendMoney, value_amount: Value) -> SendMoney {
-        let has_enough_money: kuh_handel_lib::player::wallet::Affordability;
+        let mut has_enough_money = self
+            .player
+            .borrow()
+            .wallet()
+            .can_afford(&vec![value_amount]);
 
         match send_money {
-            SendMoney::WasBluff() => {
-                has_enough_money = self
-                    .player
-                    .borrow()
-                    .wallet()
-                    .can_afford(&vec![value_amount]);
-            }
             SendMoney::Amount(bill_combination_amount) => {
-                has_enough_money = self
-                    .player
-                    .borrow()
-                    .wallet()
-                    .can_afford(bill_combination_amount);
+                let total_payed: Value = bill_combination_amount.iter().map(|money| money).sum();
+
+                if total_payed >= value_amount {
+                    has_enough_money = self
+                        .player
+                        .borrow()
+                        .wallet()
+                        .can_afford(bill_combination_amount);
+                }
             }
+            SendMoney::WasBluff() => (),
         }
 
         match has_enough_money {

@@ -1,3 +1,4 @@
+use core::num;
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet},
@@ -462,12 +463,16 @@ impl SimplePlayer {
 
     pub fn estimate_average_points_per_player(&mut self) -> usize {
         let mut total_points: usize = 0;
-        for (animal, occurrences) in self.all_animals.iter() {
+        let num_players = self.opponents.len() + 1;
+        for (animal, _) in self.all_animals.iter() {
             total_points += animal.value()
         }
-        total_points *= self.all_animals.len();
+        let summed_card_points_per_player = total_points.div_ceil(num_players);
+        let final_points_per_player = summed_card_points_per_player as f32
+            * self.all_animals.len() as f32
+            / num_players as f32;
 
-        total_points.div_ceil(self.opponents.len() + 1)
+        final_points_per_player as usize
     }
 
     pub fn sqrt_points_for_player(

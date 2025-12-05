@@ -96,7 +96,7 @@ impl PlayerActions for SimplePlayer {
             "{}: bidder_id {} highest bid {}",
             self.id, highest_bidder_id, highest_bid
         );
-        if highest_bidder_id == &self.id {
+        if highest_bidder_id == &self.id || highest_bid > value_allowed_to_spend {
             return Bidding::Pass();
         }
 

@@ -94,7 +94,7 @@ async fn main() {
         "interactive_games".into(),
         rng.random(),
         (3, 3),
-        1,
+        3,
         false,
         false,
         interactive_player_time_out_min,

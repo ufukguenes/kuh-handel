@@ -122,7 +122,7 @@ impl PlayerActions for SimplePlayer {
             <= self.mean_points as f32
             || (highest_bid <= value_allowed_to_spend && averaged_subj_values < current_subj_value)
         {
-            let bidding_rounded_to_next_ten = highest_bid / 10;
+            let bidding_rounded_to_next_ten = highest_bid / 10 * 10; // rounds down to next ten because integer division
             let my_bid = bidding_rounded_to_next_ten + 10;
             println!("{}: bid {}", self.id, my_bid);
             return Bidding::Bid(my_bid);

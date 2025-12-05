@@ -84,19 +84,10 @@ impl PlayerActions for SimplePlayer {
         let value_allowed_to_spend =
             (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
 
-        println!(
-            "{}: value allowed to spend {}",
-            self.id, value_allowed_to_spend
-        );
-
         let empty_id = "".to_string();
         let (highest_bidder_id, &highest_bid) =
             Self::get_highest_bid(&state.bids).unwrap_or((&empty_id, &0));
 
-        println!(
-            "{}: bidder_id {} highest bid {}",
-            self.id, highest_bidder_id, highest_bid
-        );
         if highest_bidder_id == &self.id || highest_bid > value_allowed_to_spend {
             return Bidding::Pass();
         }
@@ -107,17 +98,8 @@ impl PlayerActions for SimplePlayer {
             &state.animal,
             1,
         );
-        println!("{}: subj_value {}", self.id, current_subj_value);
 
         let averaged_subj_values = self.average_subj_value_over_last(5);
-        println!("{}: averaged_subj_values {}", self.id, averaged_subj_values);
-
-        println!(
-            "{}: sqrt_points {} mean_points {}",
-            self.id,
-            Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals),
-            self.mean_points
-        );
 
         if Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals)
             <= self.mean_points as f32
@@ -125,10 +107,9 @@ impl PlayerActions for SimplePlayer {
         {
             let bidding_rounded_to_next_ten = highest_bid / 10 * 10; // rounds down to next ten because integer division
             let my_bid = bidding_rounded_to_next_ten + 10;
-            println!("{}: bid {}", self.id, my_bid);
             return Bidding::Bid(my_bid);
         }
-        println!("{}: pass", self.id);
+
         Bidding::Pass()
     }
 

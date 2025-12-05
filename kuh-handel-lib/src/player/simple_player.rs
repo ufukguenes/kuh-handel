@@ -505,7 +505,7 @@ impl SimplePlayer {
             .and_modify(|current_count| *current_count += animal_count)
             .or_insert(animal_count);
 
-        let points_with = Self::sqrt_points_for_player(all_animals, temp_animals);
+        let points_with = Self::sqrt_points_for_player(all_animals, &temp_animals);
 
         points_with - points_without
     }

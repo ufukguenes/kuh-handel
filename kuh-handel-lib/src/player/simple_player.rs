@@ -83,7 +83,13 @@ impl PlayerActions for SimplePlayer {
         let value_allowed_to_spend =
             (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
 
+        println!(
+            "{}: value allowed to spend {}",
+            self.id, value_allowed_to_spend
+        );
+
         let (_, &highest_bid) = Self::get_highest_bid(&state.bids).unwrap_or((&"".to_string(), &0));
+        println!("{}: highest bid {}", self.id, highest_bid);
 
         let current_subj_value = Self::subjective_animal_value_for_player(
             &self.all_animals,
@@ -91,17 +97,27 @@ impl PlayerActions for SimplePlayer {
             &state.animal,
             1,
         );
+        println!("{}: subj_value {}", self.id, current_subj_value);
 
         let averaged_subj_values = self.average_subj_value_over_last(5);
+        println!("{}: averaged_subj_values {}", self.id, averaged_subj_values);
+
+        println!(
+            "{}: sqrt_points {} mean_points {}",
+            self.id,
+            Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals),
+            self.mean_points
+        );
 
         if Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals)
             <= self.mean_points as f32
             || (highest_bid <= value_allowed_to_spend && averaged_subj_values < current_subj_value)
         {
             let my_bid = (highest_bid as f32 * 1.1).ceil() as usize;
+            println!("{}: bid {}", self.id, my_bid);
             return Bidding::Bid(my_bid);
         }
-
+        println!("{}: pass", self.id);
         Bidding::Pass()
     }
 

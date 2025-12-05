@@ -76,9 +76,9 @@ async fn main() {
     )
     .await;
 
-    let (random_ws_lobby, random_results, _) = create_lobby_log_handle_pair(
+    let (server_bot_ws_lobby, server_bot_results, _) = create_lobby_log_handle_pair(
         10,
-        "random_games".into(),
+        "server_bot_games".into(),
         rng.random(),
         (3, 6),
         1,
@@ -104,7 +104,7 @@ async fn main() {
 
     let usize_logs = Arc::new(vec![
         game_results.clone(),
-        random_results.clone(),
+        server_bot_results.clone(),
         interactive_results.clone(),
     ]);
     let auth_log = authentication.clone();
@@ -142,9 +142,9 @@ async fn main() {
                 .with_state((pvp_ws_lobby.clone(), authentication.clone())),
         )
         .route(
-            "/kuh-handel/random_game",
+            "/kuh-handel/server_bot_game",
             routing::get(websocket_handler)
-                .with_state((random_ws_lobby.clone(), authentication.clone())),
+                .with_state((server_bot_ws_lobby.clone(), authentication.clone())),
         )
         .route(
             "/kuh-handel/interactive_game",
@@ -167,7 +167,7 @@ pub async fn create_lobby_log_handle_pair(
     seed: u64,
     (min_game_size, max_game_size): (usize, usize),
     min_ws_player_amount: usize,
-    play_only_against_random_bots: bool,
+    play_only_against_server_bot: bool,
     sync_game_starts: bool,
     time_out: tokio::time::Duration,
     multi_progress: &MultiProgress,
@@ -196,7 +196,7 @@ pub async fn create_lobby_log_handle_pair(
         seed,
         (min_game_size, max_game_size),
         min_ws_player_amount,
-        play_only_against_random_bots,
+        play_only_against_server_bot,
         sync_game_starts,
     ));
 

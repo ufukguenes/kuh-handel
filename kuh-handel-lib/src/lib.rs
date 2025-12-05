@@ -17,6 +17,7 @@ pub mod player {
     pub mod player_actions;
     pub mod player_error;
     pub mod random_player;
+    pub mod simple_player;
     pub mod wallet;
 }
 

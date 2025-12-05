@@ -9,7 +9,7 @@ use kuh_handel_lib::Value;
 use kuh_handel_lib::player::base_player::PlayerId;
 
 use kuh_handel_lib::player::player_actions::PlayerActions;
-use kuh_handel_lib::player::random_player::RandomPlayerActions;
+use kuh_handel_lib::player::simple_player::SimplePlayer;
 
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info};
@@ -24,7 +24,7 @@ pub struct WebsocketActions {
     state_sender: Sender<serde_json::Value>,
     action_receiver: Receiver<serde_json::Value>,
     id: String,
-    backup_actions: RandomPlayerActions,
+    backup_actions: SimplePlayer,
 }
 
 impl WebsocketActions {
@@ -37,7 +37,7 @@ impl WebsocketActions {
             state_sender: state_sender,
             action_receiver: action_receiver,
             id: id.clone(),
-            backup_actions: RandomPlayerActions::new(id, seed),
+            backup_actions: SimplePlayer::new_from_seed(id, seed),
         }
     }
 

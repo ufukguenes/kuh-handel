@@ -16,3 +16,4 @@ pyo3 = {version = "0.25.0", features = ["extension-module", "experimental-async"
 reqwest = { version = "0.12"}
 
 tracing = "0.1"
+float-ord = "0.2"

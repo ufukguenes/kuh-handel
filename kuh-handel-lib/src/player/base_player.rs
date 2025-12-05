@@ -7,6 +7,7 @@ use crate::messages::message_protocol::StateMessage;
 use crate::player::player_actions::PlayerActions;
 use crate::player::player_error::PlayerError;
 use crate::player::random_player::RandomPlayerActions;
+use crate::player::simple_player::SimplePlayer;
 use crate::player::wallet::Wallet;
 use pyo3::prelude::*;
 use std::cell::RefCell;
@@ -188,7 +189,7 @@ impl Display for Player {
 impl Player {
     #[new]
     pub fn new_py(id: String, wallet: Wallet, game_stack: Vec<AnimalSet>) -> Self {
-        let dummy_action = RandomPlayerActions::new(id.clone(), 0);
+        let dummy_action = SimplePlayer::new_from_seed(id.clone(), 0);
         let game_stack = game_stack.iter().map(|set| Rc::new(set.clone())).collect();
         Player::new(id, wallet, game_stack, Box::new(dummy_action))
     }

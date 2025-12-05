@@ -1,9 +1,6 @@
-use kuh_handel_lib::{client::Client, player::random_player::RandomPlayerActions};
+use kuh_handel_lib::{client::Client, player::simple_player::SimplePlayer};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
-use crate::simple_player::SimplePlayer;
-pub mod simple_player;
 
 fn main() {
     let base_url = "://127.0.0.1:2000".to_string();

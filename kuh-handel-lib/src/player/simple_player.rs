@@ -4,8 +4,7 @@ use std::{
     usize,
 };
 
-use float_ord::FloatOrd;
-use kuh_handel_lib::{
+use crate::{
     Money, Value,
     animals::{Animal, AnimalSet},
     messages::{
@@ -19,6 +18,9 @@ use kuh_handel_lib::{
     },
     player::{base_player::PlayerId, player_actions::PlayerActions, wallet::Wallet},
 };
+use float_ord::FloatOrd;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 #[derive(Default, Debug)]
 pub struct ValueOwned {
@@ -129,8 +131,8 @@ impl PlayerActions for SimplePlayer {
 
     fn _send_money_to_player(
         &mut self,
-        player: &kuh_handel_lib::player::base_player::PlayerId,
-        amount: kuh_handel_lib::Value,
+        player: &crate::player::base_player::PlayerId,
+        amount: crate::Value,
     ) -> SendMoney {
         let bill_combination = self.get_bill_combination(amount);
         SendMoney::Amount(bill_combination)
@@ -379,6 +381,12 @@ impl SimplePlayer {
             aggressiveness: aggressiveness,
             previous_subjective_values: Vec::default(),
         }
+    }
+
+    pub fn new_from_seed(id: String, seed: u64) -> Self {
+        let mut rng = ChaCha8Rng::seed_from_u64(seed);
+        let aggressiveness: f32 = rng.random_range(0.0..=1.0);
+        SimplePlayer::new(id, aggressiveness)
     }
 
     pub fn handle_exchange_payer(

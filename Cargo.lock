@@ -935,6 +935,7 @@ dependencies = [
 name = "kuh-handel-lib"
 version = "0.1.0"
 dependencies = [
+ "float-ord",
  "futures-util",
  "pyo3",
  "rand 0.9.2",
@@ -975,7 +976,6 @@ dependencies = [
 name = "kuh-handel-test-client"
 version = "0.1.0"
 dependencies = [
- "float-ord",
  "kuh-handel-lib",
  "tokio",
 ]

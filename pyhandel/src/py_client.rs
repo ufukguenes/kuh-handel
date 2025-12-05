@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::py_player::{
-    py_player_actions::{PlayerActions, RustPlayer},
-    py_random_player::RandomPlayerActions,
-};
+use crate::py_player::py_player_actions::{PlayerActions, RustPlayer};
 use kuh_handel_lib::client::Client as CoreClient;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use pyo3_async_runtimes::tokio::future_into_py;

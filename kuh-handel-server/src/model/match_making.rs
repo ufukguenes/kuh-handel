@@ -6,6 +6,7 @@ use axum::extract::ws;
 use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
 use kuh_handel_lib::player::random_player::RandomPlayerActions;
+use kuh_handel_lib::player::simple_player::SimplePlayer;
 
 use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
@@ -61,7 +62,7 @@ pub async fn organize_new_game(
     seed: u64,
     (min_game_size, max_game_size): (usize, usize),
     min_ws_player_amount: usize,
-    play_only_against_random_bots: bool,
+    play_only_against_server_bot: bool,
     sync_game_starts: bool,
 ) {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
@@ -97,7 +98,7 @@ pub async fn organize_new_game(
 
         let players_per_game;
 
-        if play_only_against_random_bots {
+        if play_only_against_server_bot {
             players_per_game = 1;
         } else {
             let remainders: Vec<usize> = valid_game_sizes.iter().map(|i| num_players % i).collect();
@@ -128,24 +129,20 @@ pub async fn organize_new_game(
 
             let num_current_players = current_players.len();
 
-            let min_random_players = min_game_size.checked_sub(num_current_players).unwrap_or(0);
-            let max_random_players = max_game_size.checked_sub(num_current_players).unwrap_or(0);
+            let min_server_bots = min_game_size.checked_sub(num_current_players).unwrap_or(0);
+            let max_server_bots = max_game_size.checked_sub(num_current_players).unwrap_or(0);
 
-            let num_random_player = rng.random_range(min_random_players..=max_random_players);
+            let num_server_bots = rng.random_range(min_server_bots..=max_server_bots);
 
-            let random_players: Vec<String> = (0..num_random_player)
-                .map(|i| String::from(format!("random_player_{}", i)))
+            let server_bots: Vec<String> = (0..num_server_bots)
+                .map(|i| String::from(format!("server_bot_{}", i)))
                 .collect();
             info!(
                 "og| {} create game with {:?}",
                 ws_lobby.lobby_name, current_players
             );
-            let game_handle = spawn_game(
-                new_ws_lobby.clone(),
-                current_players,
-                random_players,
-                &mut rng,
-            );
+            let game_handle =
+                spawn_game(new_ws_lobby.clone(), current_players, server_bots, &mut rng);
 
             let cloned_game_results = game_results.clone();
 
@@ -191,17 +188,17 @@ async fn update_results(
 pub fn spawn_game(
     ws_lobby: WebsocketLobby,
     ws_players: Vec<String>,
-    random_players: Vec<String>,
+    server_bots: Vec<String>,
     rng: &mut ChaCha8Rng,
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
-    let amount_seeds = ws_players.len() + random_players.len() + 1;
+    let amount_seeds = ws_players.len() + server_bots.len() + 1;
     let seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
 
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
-        all_ids.extend(random_players.clone());
+        all_ids.extend(server_bots.clone());
 
         let mut ws_actions: Vec<WebsocketActions> = Vec::new();
 
@@ -218,9 +215,9 @@ pub fn spawn_game(
             }
         }
 
-        let mut random_actions: Vec<RandomPlayerActions> = Vec::new();
-        for id in random_players {
-            random_actions.push(RandomPlayerActions::new(
+        let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
+        for id in server_bots {
+            server_bot_actions.push(SimplePlayer::new_from_seed(
                 id.clone(),
                 *seeds.first().unwrap(),
             ));
@@ -234,9 +231,9 @@ pub fn spawn_game(
                     .map(|action: WebsocketActions| Box::new(action) as Box<dyn PlayerActions>),
             );
             all_actions.extend(
-                random_actions
+                server_bot_actions
                     .into_iter()
-                    .map(|action: RandomPlayerActions| Box::new(action) as Box<dyn PlayerActions>),
+                    .map(|action: SimplePlayer| Box::new(action) as Box<dyn PlayerActions>),
             );
 
             let mut game = Game::new_default_game(all_ids, all_actions, *seeds.first().unwrap());

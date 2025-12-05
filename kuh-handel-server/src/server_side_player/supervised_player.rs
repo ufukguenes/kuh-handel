@@ -13,6 +13,8 @@ use kuh_handel_lib::player::{
     wallet::{Affordability::*, Wallet},
 };
 use kuh_handel_lib::{Money, Value};
+use serde::de;
+use serde::de::value;
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:
@@ -182,24 +184,42 @@ impl PlayerActions for SupervisedPlayer {
             .player
             .borrow_mut()
             .player_actions()
-            ._provide_bidding(state);
+            ._provide_bidding(state.clone());
 
-        if self.limit_bidding_until_next_auction {
+        let current_max_bid_value: usize;
+        match state.bids.iter().max_by_key(|(_, bid)| bid) {
+            Some((_, max_bid)) => match max_bid {
+                Bidding::Pass() => current_max_bid_value = 0,
+                Bidding::Bid(max_bid_value) => current_max_bid_value = *max_bid_value,
+            },
+            None => current_max_bid_value = 0,
+        }
+
+        let rectified_bidding = if self.limit_bidding_until_next_auction {
             let limit = self.player.borrow().wallet().total_money();
             match decision {
-                Bidding::Pass() => {
-                    return decision;
-                }
+                Bidding::Pass() => decision,
                 Bidding::Bid(value) => {
                     if value > limit {
-                        return Bidding::Bid(limit);
+                        Bidding::Bid(limit)
                     } else {
-                        return decision;
-                    };
+                        decision
+                    }
                 }
             }
         } else {
-            return decision;
+            decision
+        };
+
+        match rectified_bidding {
+            Bidding::Pass() => Bidding::Pass(),
+            Bidding::Bid(value) => {
+                if value <= current_max_bid_value {
+                    Bidding::Pass()
+                } else {
+                    Bidding::Bid(value)
+                }
+            }
         }
     }
 

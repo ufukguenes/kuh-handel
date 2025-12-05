@@ -88,8 +88,17 @@ impl PlayerActions for SimplePlayer {
             self.id, value_allowed_to_spend
         );
 
-        let (_, &highest_bid) = Self::get_highest_bid(&state.bids).unwrap_or((&"".to_string(), &0));
-        println!("{}: highest bid {}", self.id, highest_bid);
+        let empty_id = "".to_string();
+        let (highest_bidder_id, &highest_bid) =
+            Self::get_highest_bid(&state.bids).unwrap_or((&empty_id, &0));
+
+        println!(
+            "{}: bidder_id {} highest bid {}",
+            self.id, highest_bidder_id, highest_bid
+        );
+        if highest_bidder_id == &self.id {
+            return Bidding::Pass();
+        }
 
         let current_subj_value = Self::subjective_animal_value_for_player(
             &self.all_animals,
@@ -113,7 +122,7 @@ impl PlayerActions for SimplePlayer {
             <= self.mean_points as f32
             || (highest_bid <= value_allowed_to_spend && averaged_subj_values < current_subj_value)
         {
-            let my_bid = (highest_bid as f32 * 1.1).ceil() as usize;
+            let my_bid = highest_bid + 10;
             println!("{}: bid {}", self.id, my_bid);
             return Bidding::Bid(my_bid);
         }
@@ -618,6 +627,9 @@ impl SimplePlayer {
                 .iter()
                 .sum::<f32>()
                 / count as f32;
+        } else {
+            averaged_subj_values = self.previous_subjective_values.iter().sum::<f32>()
+                / self.previous_subjective_values.len() as f32;
         }
 
         averaged_subj_values

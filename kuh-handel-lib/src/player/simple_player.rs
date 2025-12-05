@@ -627,7 +627,7 @@ impl SimplePlayer {
                 .iter()
                 .sum::<f32>()
                 / count as f32;
-        } else {
+        } else if self.previous_subjective_values.len() > 0 {
             averaged_subj_values = self.previous_subjective_values.iter().sum::<f32>()
                 / self.previous_subjective_values.len() as f32;
         }

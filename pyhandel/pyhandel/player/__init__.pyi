@@ -1,5 +1,12 @@
-from . import base_player as base_player
-from . import random_player as random_player
-from . import simple_player as simple_player
-from . import wallet as wallet
-from . import player_actions as player_actions
+from .base_player import *
+from .random_player import RandomPlayerActions as RandomPlayerActions
+from .simple_player import SimplePlayer as SimplePlayer
+from .wallet import Wallet as Wallet
+from .player_actions import PlayerActions as PlayerActions
+
+__all__ = [
+    "RandomPlayerActions",
+    "SimplePlayer",
+    "Wallet",
+    "PlayerActions",
+]

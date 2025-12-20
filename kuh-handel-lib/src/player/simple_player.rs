@@ -195,7 +195,7 @@ impl PlayerActions for SimplePlayer {
                 players_in_turn_order,
                 animals,
             } => self.handle_update_start(wallet, players_in_turn_order, animals),
-            GameUpdate::End { ranking } => println!("ranking: {:?}", ranking),
+            GameUpdate::End { ranking } => (),
             GameUpdate::ExposePlayer { player, wallet } => {
                 self.handle_update_expose(player, wallet)
             }
@@ -243,7 +243,7 @@ impl SimplePlayer {
                             let could_pay = self.wallet.withdraw(&amount);
                             if could_pay.is_err() {
                                 self.wallet = Wallet::default();
-                                println!("miscalculated my own wallet")
+                                panic!("miscalculated my own wallet")
                             }
                             self.owned_animals
                                 .entry(*rounds.animal)

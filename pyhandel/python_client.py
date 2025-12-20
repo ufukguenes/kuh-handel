@@ -1,22 +1,17 @@
 import asyncio
-import pyhandel.pyhandel as pyh
+import pyhandel as pyh
 import sys
 from abc import ABC, abstractmethod
 from typing import override
 
-bot_name = sys.argv[1]
-if len(bot_name) < 2:
-    print("provide bot name")
-    quit()
-
-
-print(bot_name)
-
-help(pyh.player.player_actions.PlayerActions)
+bot_name = "ufuk"
+bot_token = "ufuk"
 
 
 class Bot(pyh.player.player_actions.PlayerActions):
     inner = pyh.player.simple_player.SimplePlayer(bot_name, 0.3)
+    action = pyh.messages.actions.PlayerTurnDecision.draw
+    pyh.player.random_player.RandomPlayerActions
 
     def _draw_or_trade(self):
         return self.inner._draw_or_trade()
@@ -44,12 +39,11 @@ bot = Bot()
 
 
 client = pyh.client.Client(
-    bot_name, "abcd", bot, "://127.0.0.1:2000"
+    bot_name, bot_token, bot, "s://ufuk-guenes.com"
 )  # "://127.0.0.1:2000"
 
 
 async def run(client, num_rounds):
-    res = await client.register()
     for _ in range(num_rounds):
         await client.play_one_round()
 

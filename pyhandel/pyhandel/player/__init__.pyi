@@ -1,12 +1,11 @@
-from .base_player import *
-from .random_player import RandomPlayerActions as RandomPlayerActions
-from .simple_player import SimplePlayer as SimplePlayer
-from .wallet import Wallet as Wallet
-from .player_actions import PlayerActions as PlayerActions
+from . import player_actions as player_actions
+from . import simple_player as simple_player
+from . import random_player as random_player
+from . import wallet as wallet
 
 __all__ = [
-    "RandomPlayerActions",
-    "SimplePlayer",
-    "Wallet",
-    "PlayerActions",
+    "player_actions",
+    "simple_player",
+    "random_player",
+    "wallet",
 ]

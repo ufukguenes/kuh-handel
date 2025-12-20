@@ -1,5 +1,5 @@
-from .pyplayer import player_actions as player_actions
-from .pyplayer import simple_player as simple_player
+from . import player as player
+from .player import simple_player as simple_player
 
 from . import messages as messages
 from . import animals as animals
@@ -11,7 +11,7 @@ Money: TypeAlias = int
 Value: TypeAlias = int
 
 __all__ = [
-    "pyplayer",
+    "player",
     "messages",
     "animals",
     "client",

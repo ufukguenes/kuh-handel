@@ -1,5 +1,4 @@
-from . import player as player
-from .player import simple_player as simple_player
+from pyhandel import player as player
 
 from . import messages as messages
 from . import animals as animals

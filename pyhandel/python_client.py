@@ -8,8 +8,8 @@ bot_name = "ufuk"
 bot_token = "ufuk"
 
 
-class Bot(pyh.player.player_actions.PlayerActions):
-    inner = pyh.player.simple_player.SimplePlayer(bot_name, 0.3)
+class Bot(pyh.pyplayer.player_actions.PlayerActions):
+    inner = pyh.pyplayer.simple_player.SimplePlayer(bot_name, 0.3)
 
     def _draw_or_trade(self):
         return self.inner._draw_or_trade()

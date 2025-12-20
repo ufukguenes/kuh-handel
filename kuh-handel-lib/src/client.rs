@@ -64,7 +64,7 @@ impl Client {
     /// Connects to the server and tries to play one round.
     /// `game_type_url` - the type of game to connect to. Possible choices:
     ///                   game: waits for other players to join and then plays against those. These games are counted in the results
-    ///                   random_game: only play against random bots provided by the server. Use this for testing if your bot can play valid games. NOT counted in the results
+    ///                   server_bot_game: only play against random bots provided by the server. Use this for testing if your bot can play valid games. NOT counted in the results
     pub async fn play_one_round(&mut self, game_type_url: String) {
         let (ws_stream, _) = connect_async(format!(
             "ws{}/kuh-handel/{}?player_id={}&token={}",

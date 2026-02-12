@@ -6,7 +6,6 @@ use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use pyo3_async_runtimes::tokio::future_into_py;
 use tokio::sync::Mutex;
 
-#[pymodule]
 pub fn client_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Client>();
 

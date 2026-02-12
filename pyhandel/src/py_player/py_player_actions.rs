@@ -4,7 +4,6 @@ use kuh_handel_lib::messages::{actions::*, game_updates::*, message_protocol::*}
 use kuh_handel_lib::player::player_actions::PlayerActions as CorePlayerActions;
 use pyo3::prelude::*;
 
-#[pymodule]
 pub fn player_actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use super::*;
     m.add_class::<PlayerActions>();

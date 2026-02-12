@@ -5,7 +5,6 @@ use kuh_handel_lib::player::simple_player::SimplePlayer as CorePlayer;
 use kuh_handel_lib::Value;
 use pyo3::prelude::*;
 
-#[pymodule]
 pub fn simple_player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use super::*;
     m.add_class::<SimplePlayer>();

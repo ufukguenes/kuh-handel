@@ -5,7 +5,6 @@ pub mod py_random_player;
 pub mod py_simple_player;
 pub mod py_wallet;
 
-#[pymodule]
 pub fn player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let base_player = PyModule::new(m.py(), "base_player")?;
     let wallet = PyModule::new(m.py(), "wallet")?;

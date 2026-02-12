@@ -3,7 +3,6 @@ pub mod py_actions;
 pub mod py_game_updates;
 pub mod py_message_protocol;
 
-#[pymodule]
 pub fn messages_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let actions = PyModule::new(m.py(), "actions")?;
     let game_updates = PyModule::new(m.py(), "game_updates")?;

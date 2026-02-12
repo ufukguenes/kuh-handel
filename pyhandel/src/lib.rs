@@ -10,25 +10,23 @@ pub type Points = usize;
 pub type PlayerId = String;
 
 #[pymodule]
-fn animals(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    py_animals::animal_module_entry(m)?;
-    Ok(())
-}
+fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let messages = PyModule::new(m.py(), "messages")?;
+    py_messages::messages_module_entry(&messages)?;
 
-#[pymodule]
-fn messages(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    py_messages::messages_module_entry(m)?;
-    Ok(())
-}
+    let player = PyModule::new(m.py(), "player")?;
+    py_player::player_module_entry(&player)?;
 
-#[pymodule]
-fn player(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    py_player::player_module_entry(m)?;
-    Ok(())
-}
+    let animal = PyModule::new(m.py(), "animal")?;
+    py_animals::animal_module_entry(&animal)?;
 
-#[pymodule]
-fn client(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    py_client::client_module_entry(m)?;
+    let client = PyModule::new(m.py(), "client")?;
+    py_client::client_module_entry(&client)?;
+
+    m.add_submodule(&messages)?;
+    m.add_submodule(&player)?;
+    m.add_submodule(&animal)?;
+    m.add_submodule(&client)?;
+
     Ok(())
 }

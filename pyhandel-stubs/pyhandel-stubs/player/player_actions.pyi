@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from ..messages import actions, game_updates, message_protocol
+from . import PlayerId
+from .. import Value
 
 class PlayerActions(ABC): 
     @abstractmethod
@@ -15,7 +17,7 @@ class PlayerActions(ABC):
     def _buy_or_sell(self, state: game_updates.AuctionRound) -> actions.AuctionDecision: ...
 
     @abstractmethod
-    def _send_money_to_player(self, player, amount) -> actions.SendMoney: ...
+    def _send_money_to_player(self, player: PlayerId, amount: Value) -> actions.SendMoney: ...
     
     @abstractmethod
     def _respond_to_trade(self, offer: game_updates.TradeOffer) -> actions.TradeOpponentDecision: ...

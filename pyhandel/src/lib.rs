@@ -7,7 +7,6 @@ pub mod py_player;
 pub type Money = usize;
 pub type Value = usize;
 pub type Points = usize;
-pub type PlayerId = String;
 
 #[pymodule]
 fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {

@@ -13,4 +13,4 @@ classifiers = [
 dynamic = ["version"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
-include = ["./pyhandel/*.pyi", "pyhandel/py.typed"]
+include = ["pyhandel/py.typed"]

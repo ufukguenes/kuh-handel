@@ -10,11 +10,25 @@ pub type Points = usize;
 pub type PlayerId = String;
 
 #[pymodule]
-fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    py_messages::messages_module_entry(m)?;
-    py_player::player_module_entry(m)?;
+fn animals(m: &Bound<'_, PyModule>) -> PyResult<()> {
     py_animals::animal_module_entry(m)?;
-    py_client::client_module_entry(m)?;
+    Ok(())
+}
 
+#[pymodule]
+fn messages(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    py_messages::messages_module_entry(m)?;
+    Ok(())
+}
+
+#[pymodule]
+fn player(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    py_player::player_module_entry(m)?;
+    Ok(())
+}
+
+#[pymodule]
+fn client(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    py_client::client_module_entry(m)?;
     Ok(())
 }

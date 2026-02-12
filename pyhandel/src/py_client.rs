@@ -8,7 +8,6 @@ use tokio::sync::Mutex;
 
 #[pymodule]
 pub fn client_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use super::*;
     m.add_class::<Client>();
 
     Ok(())

@@ -1254,7 +1254,7 @@ dependencies = [
 
 [[package]]
 name = "pyhandel"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "kuh-handel-lib",
  "pyo3",

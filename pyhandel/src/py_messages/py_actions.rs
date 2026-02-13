@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 pub fn actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use super::*;
     m.add_class::<NoAction>();
+    m.add_class::<AuctionDecision>();
     m.add_class::<PlayerTurnDecision>();
     m.add_class::<InitialTrade>();
     m.add_class::<TradeOpponentDecision>();

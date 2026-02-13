@@ -36,18 +36,18 @@ class TradeOpponentDecision:
         __match_args__ = ("money_list",)
 
 class SendMoney:
-    class WasBluff:
+    class WasBluff(SendMoney):
         def __init__(self) -> None: ...
 
-    class Amount:
+    class Amount(SendMoney):
         money_list: list[Money]
         def __init__(self, money_list: list[Money]) -> None: ...
         __match_args__ = ("money_list",)
 
 class Bidding:
-    class Pass:
+    class Pass(Bidding):
         def __init__(self) -> None: ...
 
-    class Bid:
+    class Bid(Bidding):
         value: Value
         def __init__(self, value: Value) -> None: ...

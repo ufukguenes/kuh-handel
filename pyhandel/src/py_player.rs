@@ -1,4 +1,4 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyString};
 pub mod py_base_player;
 pub mod py_player_actions;
 pub mod py_random_player;
@@ -8,6 +8,9 @@ pub mod py_wallet;
 use crate::add_submodule;
 
 pub fn player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py_int = m.py().get_type::<PyString>();
+    m.add("PlayerId", &py_int)?;
+
     let base_player = PyModule::new(m.py(), "base_player")?;
     let wallet = PyModule::new(m.py(), "wallet")?;
 

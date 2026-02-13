@@ -1,12 +1,11 @@
-use pyo3::{prelude::*, types::PyList};
+use pyo3::{
+    prelude::*,
+    types::{PyInt, PyList},
+};
 pub mod py_animals;
 pub mod py_client;
 pub mod py_messages;
 pub mod py_player;
-
-pub type Money = usize;
-pub type Value = usize;
-pub type Points = usize;
 
 #[pymodule]
 fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -27,6 +26,10 @@ fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     add_submodule(m, "pyhandel".to_string(), &animals, "animals".to_string())?;
     add_submodule(m, "pyhandel".to_string(), &client, "client".to_string())?;
 
+    let py_int = m.py().get_type::<PyInt>();
+    m.add("Money", &py_int)?;
+    m.add("Value", &py_int)?;
+    m.add("Points", &py_int)?;
     Ok(())
 }
 

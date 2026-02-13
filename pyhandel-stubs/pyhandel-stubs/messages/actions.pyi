@@ -2,14 +2,9 @@ from enum import Enum
 from ..player import PlayerId
 from ..animals import Animal
 from .. import Money, Value
-from dataclasses import dataclass
-from typing import Union
-
-
 
 class NoAction:
     class Ok(NoAction): ...
-
 
 class InitialTrade:
     opponent: PlayerId
@@ -17,50 +12,43 @@ class InitialTrade:
     animal_count: int
     amount: list[Money]
 
+    def __init__(
+        self, opponent: PlayerId, animal: Animal, animal_count: int, amount: list[Money]
+    ) -> None: ...
+
 class PlayerTurnDecision:
-    
-    @staticmethod
-    def Draw() -> PlayerTurnDecision: ...
+    class Draw(PlayerTurnDecision): ...
 
-    @staticmethod
-    def Trade(initial_trade: InitialTrade) -> PlayerTurnDecision: ... 
-
-
-class Buy:
-    def __init__(self) -> None: ...
-
-class Sell:
-    def __init__(self) -> None: ...
+    class Trade(PlayerTurnDecision):
+        initial_trade: InitialTrade
+        def __init__(self, initial_trade: InitialTrade) -> None: ...
+        __match_args__ = ("initial_trade",)
 
 class AuctionDecision:
     class Buy(AuctionDecision): ...
     class Sell(AuctionDecision): ...
 
-
-
 class TradeOpponentDecision:
     class Accept(TradeOpponentDecision): ...
+
     class CounterOffer(TradeOpponentDecision):
-        data: list[Money]
-        def __init__(self, data: list[Money]) -> None: ...
-        __match_args__ = ("data")
+        money_list: list[Money]
+        def __init__(self, money_list: list[Money]) -> None: ...
+        __match_args__ = ("money_list",)
 
+class SendMoney:
+    class WasBluff:
+        def __init__(self) -> None: ...
 
-class WasBluff:
-    def __init__(self) -> None: ...
+    class Amount:
+        money_list: list[Money]
+        def __init__(self, money_list: list[Money]) -> None: ...
+        __match_args__ = ("money_list",)
 
-class Amount:
-    data: list[Money]
-    def __init__(self, data: list[Money]) -> None: ...
+class Bidding:
+    class Pass:
+        def __init__(self) -> None: ...
 
-SendMoney = Union[WasBluff, Amount]
-
-
-class Pass:
-    def __init__(self) -> None: ...
-
-class Bid:
-    data: Value
-    def __init__(self, data: Value) -> None: ...
-
-Bidding = Union[Pass, Bid]
+    class Bid:
+        value: Value
+        def __init__(self, value: Value) -> None: ...

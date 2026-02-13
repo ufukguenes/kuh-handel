@@ -7,6 +7,7 @@ from typing import TypeAlias
 
 Money: TypeAlias = int
 Value: TypeAlias = int
+Points: TypeAlias = int
 
 __all__ = [
     "player",

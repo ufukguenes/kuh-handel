@@ -16,8 +16,8 @@ fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let player = PyModule::new(m.py(), "player")?;
     py_player::player_module_entry(&player)?;
 
-    let animal = PyModule::new(m.py(), "animal")?;
-    py_animals::animal_module_entry(&animal)?;
+    let animals = PyModule::new(m.py(), "animals")?;
+    py_animals::animal_module_entry(&animals)?;
 
     let client = PyModule::new(m.py(), "client")?;
     py_client::client_module_entry(&client)?;

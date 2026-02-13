@@ -1,3 +1,19 @@
+from . import Value
+
 class Animal:
-    def __init__(self, value) -> None: ...
-    def value(self): ...
+    value: Value
+    def __init__(self, value: Value) -> None: ...
+
+class AnimalSet:
+    animal: Animal
+    inflation: list[Value]
+    draw_count: int
+    animals: list[Animal]
+
+    def __init__(
+        self,
+        animal: Animal,
+        inflation: list[Value],
+        draw_count: int,
+        animals: list[Animal],
+    ) -> None: ...

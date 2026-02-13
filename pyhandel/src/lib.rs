@@ -32,11 +32,11 @@ fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 fn add_submodule(
     parent_module: &Bound<'_, PyModule>,
-    parent_name: String,
+    parent_path: String,
     child_module: &Bound<'_, PyModule>,
     child_name: String,
 ) -> PyResult<()> {
-    let name = format!("{parent_name}.{child_name}");
+    let name = format!("{parent_path}.{child_name}");
     parent_module.add_submodule(&child_module)?;
     parent_module
         .py()

@@ -13,16 +13,21 @@ pub fn messages_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     py_game_updates::game_updates_module_entry(&game_updates)?;
     py_message_protocol::message_protocol_module_entry(&message_protocol)?;
 
-    add_submodule(m, "messages".to_string(), &actions, "actions".to_string())?;
     add_submodule(
         m,
-        "messages".to_string(),
+        "pyhandel.messages".to_string(),
+        &actions,
+        "actions".to_string(),
+    )?;
+    add_submodule(
+        m,
+        "pyhandel.messages".to_string(),
         &game_updates,
         "game_updates".to_string(),
     )?;
     add_submodule(
         m,
-        "messages".to_string(),
+        "pyhandel.messages".to_string(),
         &message_protocol,
         "message_protocol".to_string(),
     )?;

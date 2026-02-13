@@ -23,26 +23,31 @@ pub fn player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     add_submodule(
         m,
-        "player".to_string(),
+        "pyhandel.player".to_string(),
         &base_player,
         "base_player".to_string(),
     )?;
-    add_submodule(m, "player".to_string(), &wallet, "wallet".to_string())?;
     add_submodule(
         m,
-        "player".to_string(),
+        "pyhandel.player".to_string(),
+        &wallet,
+        "wallet".to_string(),
+    )?;
+    add_submodule(
+        m,
+        "pyhandel.player".to_string(),
         &random_player,
         "random_player".to_string(),
     )?;
     add_submodule(
         m,
-        "player".to_string(),
+        "pyhandel.player".to_string(),
         &player_actions,
         "player_actions".to_string(),
     )?;
     add_submodule(
         m,
-        "player".to_string(),
+        "pyhandel.player".to_string(),
         &simple_player,
         "simple_player".to_string(),
     )?;

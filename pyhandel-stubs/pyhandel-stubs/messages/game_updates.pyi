@@ -1,9 +1,8 @@
-from enum import Enum
-from ..player import PlayerId
-from ..player.wallet import Wallet
-from ..animals import Animal, AnimalSet
-from .. import Money, Value, Points
-from .actions import Bidding
+from ..player import PlayerId  # type: ignore
+from ..player.wallet import Wallet  # type: ignore
+from ..animals import Animal, AnimalSet  # type: ignore
+from .. import Money, Value, Points  # type: ignore
+from .actions import Bidding  # type: ignore
 
 class AuctionRound:
     host: PlayerId

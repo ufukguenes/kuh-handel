@@ -1,4 +1,4 @@
-from . import Value
+from . import Value  # type: ignore
 
 class Animal:
     value: Value

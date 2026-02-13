@@ -1,4 +1,3 @@
-from typing import Union
 from .actions import (
     AuctionDecision,
     Bidding,

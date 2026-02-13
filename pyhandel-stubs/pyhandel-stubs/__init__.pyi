@@ -1,7 +1,7 @@
-from . import messages as messages
-from . import animals as animals
-from . import client as client
-from . import player as player
+from . import messages as messages  # type: ignore
+from . import animals as animals  # type: ignore
+from . import client as client  # type: ignore
+from . import player as player  # type: ignore
 
 from typing import TypeAlias
 

@@ -1,7 +1,6 @@
-from enum import Enum
-from ..player import PlayerId
-from ..animals import Animal
-from .. import Money, Value
+from ..player import PlayerId  # type: ignore
+from ..animals import Animal  # type: ignore
+from .. import Money, Value  # type: ignore
 
 class NoAction:
     class Ok(NoAction): ...

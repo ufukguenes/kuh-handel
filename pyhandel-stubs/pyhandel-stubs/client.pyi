@@ -1,4 +1,5 @@
-from .player.player_actions import PlayerActions
+from .player.player_actions import PlayerActions  # type: ignore
+
 class Client:
     def __init__(self, name: str, token: str, bot: PlayerActions, base_url: str): ...
     async def register(self): ...

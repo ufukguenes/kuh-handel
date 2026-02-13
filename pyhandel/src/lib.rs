@@ -22,10 +22,26 @@ fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let client = PyModule::new(m.py(), "client")?;
     py_client::client_module_entry(&client)?;
 
-    m.add_submodule(&messages)?;
-    m.add_submodule(&player)?;
-    m.add_submodule(&animals)?;
-    m.add_submodule(&client)?;
+    add_submodule(m, "pyhandel".to_string(), &messages, "messages".to_string())?;
+    add_submodule(m, "pyhandel".to_string(), &player, "player".to_string())?;
+    add_submodule(m, "pyhandel".to_string(), &animals, "animals".to_string())?;
+    add_submodule(m, "pyhandel".to_string(), &client, "client".to_string())?;
+
+    Ok(())
+}
+
+fn add_submodule(
+    parent_module: &Bound<'_, PyModule>,
+    parent_name: String,
+    child_module: &Bound<'_, PyModule>,
+    child_name: String,
+) -> PyResult<()> {
+    parent_module.add_submodule(&child_module)?;
+    parent_module
+        .py()
+        .import("sys")?
+        .getattr("modules")?
+        .set_item(format!("{parent_name}.{child_name}"), child_module)?;
 
     Ok(())
 }

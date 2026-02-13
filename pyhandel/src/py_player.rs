@@ -5,6 +5,8 @@ pub mod py_random_player;
 pub mod py_simple_player;
 pub mod py_wallet;
 
+use crate::add_submodule;
+
 pub fn player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let base_player = PyModule::new(m.py(), "base_player")?;
     let wallet = PyModule::new(m.py(), "wallet")?;
@@ -19,10 +21,30 @@ pub fn player_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     py_simple_player::simple_player_module_entry(&simple_player)?;
     py_player_actions::player_actions_module_entry(&player_actions)?;
 
-    m.add_submodule(&base_player);
-    m.add_submodule(&wallet);
-    m.add_submodule(&random_player);
-    m.add_submodule(&simple_player);
-    m.add_submodule(&player_actions);
+    add_submodule(
+        m,
+        "player".to_string(),
+        &base_player,
+        "base_player".to_string(),
+    )?;
+    add_submodule(m, "player".to_string(), &wallet, "wallet".to_string())?;
+    add_submodule(
+        m,
+        "player".to_string(),
+        &random_player,
+        "random_player".to_string(),
+    )?;
+    add_submodule(
+        m,
+        "player".to_string(),
+        &player_actions,
+        "player_actions".to_string(),
+    )?;
+    add_submodule(
+        m,
+        "player".to_string(),
+        &simple_player,
+        "simple_player".to_string(),
+    )?;
     Ok(())
 }

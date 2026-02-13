@@ -3,7 +3,7 @@ use serde_with::serde_as;
 
 use crate::{Money, Value, player::player_error::PlayerError};
 use pyo3::{exceptions::PyValueError, prelude::*};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[pyclass(unsendable)]
 #[serde_as]
@@ -168,7 +168,7 @@ impl Wallet {
 #[pymethods]
 impl Wallet {
     #[new]
-    pub fn new_from_list(bank_notes: Vec<(Money, usize)>) -> Self {
+    pub fn new_py(bank_notes: BTreeMap<Money, usize>) -> Self {
         let mut btree_bank_notes = BTreeMap::default();
         for (money, amount) in bank_notes {
             btree_bank_notes.insert(money, amount);

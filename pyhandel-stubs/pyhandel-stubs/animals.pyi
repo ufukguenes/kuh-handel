@@ -7,8 +7,6 @@ class Animal:
 class AnimalSet:
     animal: Animal
     inflation: list[Value]
-    draw_count: int
-    animals: list[Animal]
 
     def __init__(
         self,

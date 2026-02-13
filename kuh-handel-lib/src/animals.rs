@@ -18,7 +18,9 @@ pub enum AnimalError {
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
+    #[pyo3(get, set)]
     animal: Animal,
+    #[pyo3(get, set)]
     inflation: Vec<Value>,
     draw_count: RefCell<usize>,
     animals: Vec<Rc<Animal>>,

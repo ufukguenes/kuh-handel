@@ -1,4 +1,4 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyList};
 pub mod py_animals;
 pub mod py_client;
 pub mod py_messages;
@@ -36,12 +36,16 @@ fn add_submodule(
     child_module: &Bound<'_, PyModule>,
     child_name: String,
 ) -> PyResult<()> {
+    let name = format!("{parent_name}.{child_name}");
     parent_module.add_submodule(&child_module)?;
     parent_module
         .py()
         .import("sys")?
         .getattr("modules")?
-        .set_item(format!("{parent_name}.{child_name}"), child_module)?;
+        .set_item(name.clone(), child_module)?;
+
+    child_module.setattr("__name__", name)?;
+    child_module.setattr("__path__", PyList::empty(parent_module.py()))?;
 
     Ok(())
 }

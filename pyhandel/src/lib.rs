@@ -24,7 +24,7 @@ fn pyhandel(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_submodule(&messages)?;
     m.add_submodule(&player)?;
-    m.add_submodule(&animal)?;
+    m.add_submodule(&animals)?;
     m.add_submodule(&client)?;
 
     Ok(())

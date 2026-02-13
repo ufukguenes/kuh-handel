@@ -12,8 +12,6 @@ class AnimalSet:
 
     def __init__(
         self,
-        animal: Animal,
+        value: Value,
         inflation: list[Value],
-        draw_count: int,
-        animals: list[Animal],
     ) -> None: ...

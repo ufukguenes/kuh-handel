@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyhandel-stubs"
-version = "0.1.4"
+version = "0.1.8"
 description = "Type stubs for pyhandel library"
 readme = "README.md"
 requires-python = ">=3.8"

@@ -117,6 +117,17 @@ impl FromActionMessage for TradeOpponentDecision {
     }
 }
 
+#[pymethods]
+impl TradeOpponentDecision {
+    #[getter]
+    fn data(&self) -> PyResult<Option<Vec<Money>>> {
+        match self {
+            TradeOpponentDecision::CounterOffer(m) => Ok(Some(m.clone())),
+            _ => Ok(None),
+        }
+    }
+}
+
 /// Action to specify what combination of cards/ bills is send to another player to fulfill a requested minimum amount, or to acknowledge that it was a bluff  
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]

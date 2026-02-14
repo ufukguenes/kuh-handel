@@ -6,7 +6,7 @@ use kuh_handel_lib::{
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use std::{collections::BTreeMap, rc::Rc, vec};
+use std::{collections::BTreeMap, rc::Arc, sync::Arc, vec};
 
 impl Game {
     pub fn new_default_game(
@@ -30,17 +30,17 @@ impl Game {
         let cow = AnimalSet::new(800, vec![0; 4]);
         let horse = AnimalSet::new(1000, vec![0; 4]);
 
-        let game_stack: Vec<Rc<AnimalSet>> = vec![
-            Rc::new(chicken),
-            Rc::new(goose),
-            Rc::new(cat),
-            Rc::new(dog),
-            Rc::new(sheep),
-            Rc::new(goat),
-            Rc::new(donkey),
-            Rc::new(pig),
-            Rc::new(cow),
-            Rc::new(horse),
+        let game_stack: Vec<Arc<AnimalSet>> = vec![
+            Arc::new(chicken),
+            Arc::new(goose),
+            Arc::new(cat),
+            Arc::new(dog),
+            Arc::new(sheep),
+            Arc::new(goat),
+            Arc::new(donkey),
+            Arc::new(pig),
+            Arc::new(cow),
+            Arc::new(horse),
         ];
 
         let wallet: Wallet = Wallet::new(bank_notes);
@@ -49,12 +49,7 @@ impl Game {
             .iter()
             .zip(player_actions)
             .map(|(id, player_action)| {
-                Player::new(
-                    id.clone(),
-                    wallet.clone(),
-                    game_stack.clone(),
-                    player_action,
-                )
+                Player::new(id.clone(), wallet.clone(), game_stack, player_action)
             })
             .collect();
 
@@ -85,7 +80,7 @@ impl Game {
         bank_notes.insert(ten, 4 * ratio_player_money);
         bank_notes.insert(fifty, ratio_player_money);
 
-        let mut game_stack: Vec<Rc<AnimalSet>> = Vec::new();
+        let mut game_stack: Vec<Arc<AnimalSet>> = Vec::new();
 
         let min_animal_value: usize = 10;
         let max_animal_value: usize = 500;
@@ -110,7 +105,7 @@ impl Game {
                 }
 
                 let animal_set = AnimalSet::new(random_value, inflation);
-                game_stack.push(Rc::new(animal_set));
+                game_stack.push(Arc::new(animal_set));
             }
         }
 

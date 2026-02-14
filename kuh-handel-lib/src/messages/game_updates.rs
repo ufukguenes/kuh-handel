@@ -53,9 +53,13 @@ impl AuctionRound {
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradeOffer {
+    #[pyo3(get)]
     pub challenger: PlayerId,
+    #[pyo3(get)]
     pub animal: Animal,
+    #[pyo3(get)]
     pub animal_count: usize,
+    #[pyo3(get)]
     pub challenger_card_offer: usize,
 }
 

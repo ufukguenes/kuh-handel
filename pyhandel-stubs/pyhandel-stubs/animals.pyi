@@ -1,3 +1,15 @@
+from . import Value  # type: ignore
+
 class Animal:
-    def __init__(self, value) -> None: ...
-    def value(self): ...
+    value: Value
+    def __init__(self, value: Value) -> None: ...
+
+class AnimalSet:
+    animal: Animal
+    inflation: list[Value]
+
+    def __init__(
+        self,
+        value: Value,
+        inflation: list[Value],
+    ) -> None: ...

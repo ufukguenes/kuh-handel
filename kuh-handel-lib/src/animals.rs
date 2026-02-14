@@ -18,7 +18,9 @@ pub enum AnimalError {
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
+    #[pyo3(get, set)]
     animal: Animal,
+    #[pyo3(get, set)]
     inflation: Vec<Value>,
     draw_count: RefCell<usize>,
     animals: Vec<Rc<Animal>>,
@@ -30,7 +32,9 @@ impl Display for AnimalSet {
     }
 }
 
+#[pymethods]
 impl AnimalSet {
+    #[new]
     pub fn new(value: usize, inflation_numbers: Vec<usize>) -> AnimalSet {
         let animal = Animal::new(value);
         let animals = inflation_numbers
@@ -46,7 +50,9 @@ impl AnimalSet {
             animals: animals,
         }
     }
+}
 
+impl AnimalSet {
     pub fn get_next_inflation(&self) -> Value {
         self.inflation[*self.draw_count.borrow()]
     }
@@ -71,6 +77,7 @@ impl AnimalSet {
 #[pyclass(unsendable)]
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct Animal {
+    #[pyo3(get, set)]
     value: Value,
 }
 
@@ -80,11 +87,15 @@ impl Display for Animal {
     }
 }
 
+#[pymethods]
 impl Animal {
+    #[new]
     pub fn new(value: Value) -> Self {
         Animal { value }
     }
+}
 
+impl Animal {
     pub fn value(&self) -> Value {
         self.value
     }

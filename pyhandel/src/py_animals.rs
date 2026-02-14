@@ -1,4 +1,3 @@
-use crate::Value;
 use kuh_handel_lib::animals::{Animal, AnimalError, AnimalSet};
 
 use pyo3::prelude::*;

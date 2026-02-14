@@ -1,7 +1,7 @@
-use crate::PlayerId;
-use crate::Value;
 use kuh_handel_lib::messages::{actions::*, game_updates::*, message_protocol::*};
+use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions as CorePlayerActions;
+use kuh_handel_lib::Value;
 use pyo3::prelude::*;
 
 pub fn player_actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {

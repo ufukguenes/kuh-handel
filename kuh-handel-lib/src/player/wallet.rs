@@ -2,14 +2,15 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use crate::{Money, Value, player::player_error::PlayerError};
-use pyo3::prelude::*;
-use std::collections::BTreeMap;
+use pyo3::{exceptions::PyValueError, prelude::*};
+use std::collections::{BTreeMap, HashMap};
 
 #[pyclass(unsendable)]
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Wallet {
     #[serde_as(as = "Vec<(_, _)>")]
+    #[pyo3(get, set)]
     bank_notes: BTreeMap<Money, usize>,
 }
 
@@ -161,6 +162,58 @@ impl Wallet {
 
     pub fn bank_notes(&self) -> &BTreeMap<Money, usize> {
         &self.bank_notes
+    }
+}
+
+#[pymethods]
+impl Wallet {
+    #[new]
+    pub fn new_py(bank_notes: BTreeMap<Money, usize>) -> Self {
+        let mut btree_bank_notes = BTreeMap::default();
+        for (money, amount) in bank_notes {
+            btree_bank_notes.insert(money, amount);
+        }
+        Wallet {
+            bank_notes: btree_bank_notes,
+        }
+    }
+
+    pub fn add_money_py(&mut self, money: Money) {
+        self.add_money(money);
+    }
+
+    pub fn withdraw_py(&mut self, amount: Vec<Money>) -> PyResult<()> {
+        let res = self.withdraw(&amount);
+        match res {
+            Ok(val) => Ok(val),
+            Err(e) => {
+                let error = match e {
+                    PlayerError::MoneyNotAvailable => "Money is not available",
+                    PlayerError::AnimalsNotAvailable => "unknown",
+                };
+                return PyResult::Err(PyErr::new::<PyValueError, &str>(error));
+            }
+        }
+    }
+
+    pub fn deposit_py(&mut self, amount: Vec<Money>) {
+        self.deposit(&amount);
+    }
+
+    pub fn total_money_py(&self) -> Value {
+        self.total_money()
+    }
+
+    pub fn propose_bill_combinations_py(
+        &self,
+        amount: Value,
+        also_suggest_smaller_values: bool,
+    ) -> Vec<(Value, Vec<Money>)> {
+        self.propose_bill_combinations(amount, also_suggest_smaller_values)
+    }
+
+    pub fn can_afford_py(&self, payment_amount: Vec<Money>) -> Affordability {
+        self.can_afford(&payment_amount)
     }
 }
 

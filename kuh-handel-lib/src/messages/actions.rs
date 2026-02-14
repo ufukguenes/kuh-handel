@@ -46,6 +46,17 @@ impl FromActionMessage for PlayerTurnDecision {
     }
 }
 
+#[pymethods]
+impl PlayerTurnDecision {
+    #[getter]
+    fn initial_trade(&self) -> PyResult<Option<InitialTrade>> {
+        match self {
+            PlayerTurnDecision::Trade(it) => Ok(Some(it.clone())),
+            _ => Ok(None),
+        }
+    }
+}
+
 /// Action to specify the a trade offer
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -117,12 +128,34 @@ impl FromActionMessage for TradeOpponentDecision {
     }
 }
 
+#[pymethods]
+impl TradeOpponentDecision {
+    #[getter]
+    fn money_list(&self) -> PyResult<Option<Vec<Money>>> {
+        match self {
+            TradeOpponentDecision::CounterOffer(m) => Ok(Some(m.clone())),
+            _ => Ok(None),
+        }
+    }
+}
+
 /// Action to specify what combination of cards/ bills is send to another player to fulfill a requested minimum amount, or to acknowledge that it was a bluff  
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SendMoney {
     WasBluff(),
     Amount(Vec<Money>),
+}
+
+#[pymethods]
+impl SendMoney {
+    #[getter]
+    fn money_list(&self) -> PyResult<Option<Vec<Money>>> {
+        match self {
+            SendMoney::Amount(money_list) => Ok(Some(money_list.clone())),
+            _ => Ok(None),
+        }
+    }
 }
 
 impl FromActionMessage for SendMoney {
@@ -146,6 +179,17 @@ pub enum Bidding {
 
     /// Places a bid with the specified value
     Bid(Value),
+}
+
+#[pymethods]
+impl Bidding {
+    #[getter]
+    fn money_list(&self) -> PyResult<Option<Value>> {
+        match self {
+            Bidding::Bid(val) => Ok(Some(val.clone())),
+            _ => Ok(None),
+        }
+    }
 }
 
 impl PartialEq for Bidding {

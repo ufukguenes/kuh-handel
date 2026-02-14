@@ -61,7 +61,7 @@ pub struct SimplePlayer {
     owned_animals: BTreeMap<Animal, usize>,
     all_animals: Vec<(Animal, usize)>,
     mean_points: usize,
-    aggressiveness: f32,
+    pub aggressiveness: f32,
     previous_subjective_values: Vec<f32>,
 }
 

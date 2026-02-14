@@ -2,10 +2,8 @@ use crate::backend_api::JsonLog;
 use crate::model::game_logic::Game;
 use crate::server_side_player::websocket_actions::WebsocketActions;
 
-use axum::extract::ws;
 use kuh_handel_lib::player::base_player::PlayerId;
 use kuh_handel_lib::player::player_actions::PlayerActions;
-use kuh_handel_lib::player::random_player::RandomPlayerActions;
 use kuh_handel_lib::player::simple_player::SimplePlayer;
 
 use rand::seq::SliceRandom;
@@ -188,17 +186,13 @@ async fn update_results(
 pub fn spawn_game(
     ws_lobby: WebsocketLobby,
     ws_players: Vec<String>,
-    server_bots: Vec<String>,
+    mut server_bots: Vec<String>,
     rng: &mut ChaCha8Rng,
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
     let amount_seeds = ws_players.len() + server_bots.len() + 1;
     let seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
-
-        let mut all_ids: Vec<String> = Vec::new();
-        all_ids.extend(ws_players.clone());
-        all_ids.extend(server_bots.clone());
 
         let mut ws_actions: Vec<WebsocketActions> = Vec::new();
 
@@ -216,12 +210,22 @@ pub fn spawn_game(
         }
 
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
-        for id in server_bots {
+        for id in &server_bots {
             server_bot_actions.push(SimplePlayer::new_from_seed(
                 id.clone(),
                 *seeds.first().unwrap(),
             ));
         }
+
+        for (idx, bot) in server_bot_actions.iter().enumerate() {
+            let aggressiveness = bot.aggressiveness;
+            let current_id = server_bots[idx].clone();
+            server_bots[idx] = format!("{current_id}_aggressiveness_{aggressiveness}")
+        }
+
+        let mut all_ids: Vec<String> = Vec::new();
+        all_ids.extend(ws_players.clone());
+        all_ids.extend(server_bots.clone());
 
         let game_handle = tokio::task::spawn_blocking(move || {
             let mut all_actions: Vec<Box<dyn PlayerActions>> = Vec::new();

@@ -5,7 +5,7 @@ use crate::{Money, Value, player::player_error::PlayerError};
 use pyo3::{exceptions::PyValueError, prelude::*};
 use std::collections::{BTreeMap, HashMap};
 
-#[pyclass]
+#[pyclass(unsendable)]
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Wallet {
@@ -217,7 +217,7 @@ impl Wallet {
     }
 }
 
-#[pyclass]
+#[pyclass(unsendable)]
 pub enum Affordability {
     Exact(Vec<Money>),
     Alternative(Vec<Money>),

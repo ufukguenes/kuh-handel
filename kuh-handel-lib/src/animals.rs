@@ -2,11 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::Value;
 use pyo3::prelude::*;
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::rc::Rc;
 
-#[pyclass]
+#[pyclass(unsendable)]
 #[derive(Debug)]
 pub enum AnimalError {
     InvalidArgument,
@@ -14,15 +15,15 @@ pub enum AnimalError {
     InvalidDraw,
 }
 
-#[pyclass]
+#[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
     #[pyo3(get, set)]
     animal: Animal,
     #[pyo3(get, set)]
     inflation: Vec<Value>,
-    draw_count: usize,
-    animals: Vec<Arc<Animal>>,
+    draw_count: RefCell<usize>,
+    animals: Vec<Rc<Animal>>,
 }
 
 impl Display for AnimalSet {
@@ -39,13 +40,13 @@ impl AnimalSet {
         let animals = inflation_numbers
             .clone()
             .iter()
-            .map(|_| Arc::new(animal.clone()))
+            .map(|_| Rc::new(animal.clone()))
             .collect();
 
         AnimalSet {
             animal: animal,
             inflation: inflation_numbers,
-            draw_count: 0,
+            draw_count: RefCell::new(0),
             animals: animals,
         }
     }
@@ -53,27 +54,27 @@ impl AnimalSet {
 
 impl AnimalSet {
     pub fn get_next_inflation(&self) -> Value {
-        self.inflation[self.draw_count]
+        self.inflation[*self.draw_count.borrow()]
     }
 
     pub fn occurrences(&self) -> usize {
         self.inflation.len()
     }
 
-    pub fn increase_draw_count(&mut self) {
-        self.draw_count += 1;
+    pub fn increase_draw_count(&self) {
+        *self.draw_count.borrow_mut() += 1;
     }
 
     pub fn animal(&self) -> &Animal {
         &self.animal
     }
 
-    pub fn animals(&self) -> &Vec<Arc<Animal>> {
+    pub fn animals(&self) -> &Vec<Rc<Animal>> {
         &self.animals
     }
 }
 
-#[pyclass]
+#[pyclass(unsendable)]
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct Animal {
     #[pyo3(get, set)]

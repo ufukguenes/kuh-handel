@@ -13,7 +13,6 @@ use kuh_handel_lib::player::{
     wallet::Wallet,
 };
 use kuh_handel_lib::{Money, Value};
-use tokio::sync::Mutex;
 
 use crate::game_error::GameError;
 
@@ -23,18 +22,19 @@ use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 use tracing::error;
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use std::fmt;
 use std::fmt::Display;
 use std::ops::Not;
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub struct Game {
-    players: Vec<Arc<Mutex<SupervisedPlayer>>>,
-    game_stack: Vec<Arc<Animal>>,
-    animal_usage: BTreeMap<Arc<Animal>, Arc<AnimalSet>>,
-    animal_sets: Vec<Arc<AnimalSet>>,
+    players: Vec<Rc<RefCell<SupervisedPlayer>>>,
+    game_stack: Vec<Rc<Animal>>,
+    animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>>,
+    animal_sets: Vec<Rc<AnimalSet>>,
     num_players: usize,
     num_bidding_rounds: usize,
     num_trading_rounds: usize,
@@ -66,38 +66,38 @@ impl Game {
     pub fn new(
         players: Vec<Player>,
         start_wallet: Wallet,
-        animal_sets: Vec<Arc<AnimalSet>>,
+        animal_sets: Vec<Rc<AnimalSet>>,
         seed: u64,
         num_bidding_rounds: usize,
         num_trading_rounds: usize,
     ) -> Self {
-        let mut animal_usage: BTreeMap<Arc<Animal>, Arc<AnimalSet>> = BTreeMap::new();
-        let mut game_stack: Vec<Arc<Animal>> = Vec::new();
+        let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
+        let mut game_stack: Vec<Rc<Animal>> = Vec::new();
         let num_players = players.len();
 
         for set in animal_sets.iter() {
             for animal in set.animals() {
-                animal_usage.insert(Arc::clone(animal), Arc::clone(set));
-                game_stack.push(Arc::clone(animal));
+                animal_usage.insert(Rc::clone(animal), Rc::clone(set));
+                game_stack.push(Rc::clone(animal));
             }
         }
 
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
-        let players: Vec<Arc<Mutex<Player>>> = players
+        let players: Vec<Rc<RefCell<Player>>> = players
             .into_iter()
-            .map(|p| Arc::new(Mutex::new(p)))
+            .map(|p| Rc::new(RefCell::new(p)))
             .collect();
 
         let mut supervised_players = Vec::new();
         for player in players.iter() {
-            let opponents: Vec<Arc<Mutex<Player>>> = players
+            let opponents: Vec<Rc<RefCell<Player>>> = players
                 .iter()
-                .filter(|p| p.blocking_lock().id() != player.blocking_lock().id())
+                .filter(|p| p.borrow().id() != player.borrow().id())
                 .cloned()
                 .collect();
             let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents);
-            supervised_players.push(Arc::new(Mutex::new(new_supervised_player)));
+            supervised_players.push(Rc::new(RefCell::new(new_supervised_player)));
         }
 
         let update = GameUpdate::Start {
@@ -305,7 +305,7 @@ impl Game {
         return all_ids;
     }
 
-    fn auction(&mut self, player: Arc<Mutex<SupervisedPlayer>>, animal: &Arc<Animal>) {
+    fn auction(&mut self, player: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
         let host_id = player.borrow().id().clone();
 
         let auction_players = self.get_players_excluding(vec![&host_id]);
@@ -321,7 +321,7 @@ impl Game {
             let mut pass_count = 0usize;
             for bidder in auction_players.iter() {
                 let auction_round = AuctionRound {
-                    animal: Arc::clone(animal),
+                    animal: Rc::clone(&animal),
                     host: host_id.clone(),
                     bids: bids.clone(),
                 };
@@ -391,7 +391,7 @@ impl Game {
                         //    host_id, animal, max_bidder_id, max_bid
                         //);
 
-                        (player, Arc::clone(auction_winner))
+                        (player, Rc::clone(auction_winner))
                     }
                     AuctionDecision::Sell => {
                         // println!(
@@ -399,7 +399,7 @@ impl Game {
                         //    host_id, animal, max_bidder_id, max_bid
                         //);
 
-                        (Arc::clone(auction_winner), player)
+                        (Rc::clone(auction_winner), player)
                     }
                 };
 
@@ -418,8 +418,8 @@ impl Game {
 
     fn process_auction(
         &mut self,
-        sender: Arc<Mutex<SupervisedPlayer>>,
-        receiver: Arc<Mutex<SupervisedPlayer>>,
+        sender: Rc<RefCell<SupervisedPlayer>>,
+        receiver: Rc<RefCell<SupervisedPlayer>>,
         max_bid: Value,
         final_auction_round: AuctionRound,
     ) {
@@ -444,7 +444,7 @@ impl Game {
                 //    sender.borrow().clone_wallet().total_money(),
                 // );
 
-                self.auction(host, final_auction_round.animal);
+                self.auction(host, &final_auction_round.animal);
             }
             SendMoney::Amount(amount) => {
                 let sender_id = sender.borrow().id().clone();
@@ -483,7 +483,7 @@ impl Game {
         }
     }
 
-    fn update_multiple_players(players: &Vec<Arc<Mutex<SupervisedPlayer>>>, update: GameUpdate) {
+    fn update_multiple_players(players: &Vec<Rc<RefCell<SupervisedPlayer>>>, update: GameUpdate) {
         for other_player in players {
             let _: NoAction =
                 other_player
@@ -496,8 +496,8 @@ impl Game {
 
     fn public_private_update(
         &self,
-        player_a: Arc<Mutex<SupervisedPlayer>>,
-        player_b: Arc<Mutex<SupervisedPlayer>>,
+        player_a: Rc<RefCell<SupervisedPlayer>>,
+        player_b: Rc<RefCell<SupervisedPlayer>>,
         public_update: GameUpdate,
         private_update: GameUpdate,
     ) {
@@ -521,8 +521,8 @@ impl Game {
 
     fn offer_trade_to_opponent(
         &self,
-        challenger: Arc<Mutex<SupervisedPlayer>>,
-        opponent: Arc<Mutex<SupervisedPlayer>>,
+        challenger: Rc<RefCell<SupervisedPlayer>>,
+        opponent: Rc<RefCell<SupervisedPlayer>>,
         amount: Vec<Money>,
         animal: Animal,
         animal_count: usize,
@@ -595,7 +595,7 @@ impl Game {
         );
     }
 
-    fn player_must_trade(&self, player: Arc<Mutex<SupervisedPlayer>>) {
+    fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
         // println!("gl | {} must trade", player.borrow().id());
 
         let state_msg = StateMessage::Trade();
@@ -660,8 +660,8 @@ impl Game {
         while !self.game_stack.is_empty() {
             // println!("gl | --- New turn ---");
 
-            let player: Arc<Mutex<SupervisedPlayer>> =
-                Arc::clone(self.players.get(current_player_idx).unwrap());
+            let player: Rc<RefCell<SupervisedPlayer>> =
+                Rc::clone(self.players.get(current_player_idx).unwrap());
 
             let state_msg = StateMessage::DrawOrTrade();
             let player_decision: PlayerTurnDecision =
@@ -735,7 +735,7 @@ impl Game {
 
                 if !skip_players.contains(&player.borrow().id()) {
                     if player.borrow().can_trade().is_some() {
-                        self.player_must_trade(Arc::clone(player));
+                        self.player_must_trade(Rc::clone(player));
                     } else {
                         // println!(
                         //    "gl | player will be {} skipped in trading",
@@ -751,7 +751,7 @@ impl Game {
     pub fn get_players_excluding(
         &self,
         excluding: Vec<&PlayerId>,
-    ) -> Vec<Arc<Mutex<SupervisedPlayer>>> {
+    ) -> Vec<Rc<RefCell<SupervisedPlayer>>> {
         self.players
             .iter()
             .filter(|p| excluding.contains(&&p.borrow().id()).not())
@@ -762,14 +762,14 @@ impl Game {
     pub fn get_by_id(
         &self,
         player_id: &PlayerId,
-    ) -> Result<Arc<Mutex<SupervisedPlayer>>, GameError> {
+    ) -> Result<Rc<RefCell<SupervisedPlayer>>, GameError> {
         let player = self
             .players
             .iter()
             .find(|player| player.borrow().id() == *player_id);
 
         match player {
-            Some(player) => Ok(Arc::clone(player)),
+            Some(player) => Ok(Rc::clone(player)),
             None => Err(GameError::PlayerNotFound),
         }
     }

@@ -8,7 +8,7 @@ use crate::messages::game_updates::{AuctionRound, GameUpdate, TradeOffer};
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::base_player::PlayerId;
 
-pub trait PlayerActions: Sync + Send {
+pub trait PlayerActions {
     fn map_to_action(&mut self, state_msg: StateMessage) -> ActionMessage {
         match state_msg {
             StateMessage::DrawOrTrade() => ActionMessage::PlayerTurnDecision {

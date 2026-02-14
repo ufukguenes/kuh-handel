@@ -190,7 +190,7 @@ pub fn spawn_game(
     rng: &mut ChaCha8Rng,
 ) -> JoinHandle<Vec<(PlayerId, usize)>> {
     let amount_seeds = ws_players.len() + server_bots.len() + 1;
-    let seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
+    let mut seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
     tokio::spawn(async move {
         let start_time = tokio::time::Instant::now();
 
@@ -204,14 +204,14 @@ pub fn spawn_game(
                 ws_actions.push(WebsocketActions::new(
                     id.clone(),
                     player_channels.take().unwrap(),
-                    *seeds.first().unwrap(),
+                    seeds.pop().unwrap(),
                 ));
             }
         }
 
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
         for idx in 0..server_bots.len() {
-            let mut risk = SimplePlayer::get_random_risk(*seeds.first().unwrap());
+            let mut risk = SimplePlayer::get_random_risk(seeds.pop().unwrap());
             risk = (risk * 100.0).round() / 100.0;
 
             let old_id = server_bots[idx].clone();
@@ -237,7 +237,7 @@ pub fn spawn_game(
                     .map(|action: SimplePlayer| Box::new(action) as Box<dyn PlayerActions>),
             );
 
-            let mut game = Game::new_default_game(all_ids, all_actions, *seeds.first().unwrap());
+            let mut game = Game::new_default_game(all_ids, all_actions, seeds.pop().unwrap());
 
             let ranking = game.play();
 

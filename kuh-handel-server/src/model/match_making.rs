@@ -210,17 +210,12 @@ pub fn spawn_game(
         }
 
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
-        for id in &server_bots {
-            server_bot_actions.push(SimplePlayer::new_from_seed(
-                id.clone(),
-                *seeds.first().unwrap(),
-            ));
-        }
-
-        for (idx, bot) in server_bot_actions.iter().enumerate() {
-            let aggressiveness = bot.aggressiveness;
-            let current_id = server_bots[idx].clone();
-            server_bots[idx] = format!("{current_id}_aggressiveness_{aggressiveness}")
+        for idx in 0..server_bots.len() {
+            let aggressiveness = SimplePlayer::get_random_aggressiveness(*seeds.first().unwrap());
+            let old_id = server_bots[idx].clone();
+            let new_id = format!("{old_id}_aggressiveness_{aggressiveness}");
+            server_bots[idx] = new_id.clone();
+            server_bot_actions.push(SimplePlayer::new(new_id.clone(), aggressiveness));
         }
 
         let mut all_ids: Vec<String> = Vec::new();

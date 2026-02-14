@@ -392,9 +392,14 @@ impl SimplePlayer {
     }
 
     pub fn new_from_seed(id: String, seed: u64) -> Self {
+        let aggressiveness = Self::get_random_aggressiveness(seed);
+        SimplePlayer::new(id, aggressiveness)
+    }
+
+    pub fn get_random_aggressiveness(seed: u64) -> f32 {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let aggressiveness: f32 = rng.random_range(0.0..=1.0);
-        SimplePlayer::new(id, aggressiveness)
+        aggressiveness
     }
 
     pub fn handle_exchange_payer(

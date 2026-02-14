@@ -14,6 +14,7 @@ pub mod client;
 /// modules used for implementing a bot
 pub mod player {
     pub mod base_player;
+    pub mod leon_bot;
     pub mod player_actions;
     pub mod player_error;
     pub mod random_player;

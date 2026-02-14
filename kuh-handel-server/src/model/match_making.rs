@@ -211,11 +211,13 @@ pub fn spawn_game(
 
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
         for idx in 0..server_bots.len() {
-            let aggressiveness = SimplePlayer::get_random_aggressiveness(*seeds.first().unwrap());
+            let mut risk = SimplePlayer::get_random_risk(*seeds.first().unwrap());
+            risk = (risk * 100.0).round() / 100.0;
+
             let old_id = server_bots[idx].clone();
-            let new_id = format!("{old_id}_aggressiveness_{aggressiveness}");
+            let new_id = format!("{old_id}_risk_{risk}");
             server_bots[idx] = new_id.clone();
-            server_bot_actions.push(SimplePlayer::new(new_id.clone(), aggressiveness));
+            server_bot_actions.push(SimplePlayer::new(new_id.clone(), risk));
         }
 
         let mut all_ids: Vec<String> = Vec::new();

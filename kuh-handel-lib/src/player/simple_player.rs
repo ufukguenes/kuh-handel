@@ -61,7 +61,7 @@ pub struct SimplePlayer {
     owned_animals: BTreeMap<Animal, usize>,
     all_animals: Vec<(Animal, usize)>,
     mean_points: usize,
-    pub aggressiveness: f32,
+    pub risk: f32,
     previous_subjective_values: Vec<f32>,
 }
 
@@ -81,8 +81,7 @@ impl PlayerActions for SimplePlayer {
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
-        let value_allowed_to_spend =
-            (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
+        let value_allowed_to_spend = (self.wallet.total_money() as f32 * self.risk) as usize;
 
         let empty_id = "".to_string();
         let (highest_bidder_id, &highest_bid) =
@@ -114,8 +113,7 @@ impl PlayerActions for SimplePlayer {
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
-        let value_allowed_to_spend =
-            (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
+        let value_allowed_to_spend = (self.wallet.total_money() as f32 * self.risk) as usize;
         let averaged_subj_values = self.average_subj_value_over_last(5);
 
         let (_, &highest_bid) = Self::get_highest_bid(&state.bids).unwrap_or((&"".to_string(), &0));
@@ -162,8 +160,7 @@ impl PlayerActions for SimplePlayer {
         );
 
         if my_subj_value >= opponent_subj_value {
-            let value_allowed_to_spend =
-                (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
+            let value_allowed_to_spend = (self.wallet.total_money() as f32 * self.risk) as usize;
 
             let bill_combination = self.get_bill_combination(value_allowed_to_spend);
             TradeOpponentDecision::CounterOffer(bill_combination);
@@ -372,12 +369,9 @@ impl SimplePlayer {
 
 // helper
 impl SimplePlayer {
-    pub fn new(id: String, aggressiveness: f32) -> Self {
-        if 0.0 > aggressiveness || 1.0 < aggressiveness {
-            panic!(
-                "pick aggressiveness between 0 and 1, currently {}",
-                aggressiveness
-            )
+    pub fn new(id: String, risk: f32) -> Self {
+        if 0.0 > risk || 1.0 < risk {
+            panic!("pick risk between 0 and 1, currently {}", risk)
         }
         SimplePlayer {
             id: id,
@@ -386,20 +380,20 @@ impl SimplePlayer {
             owned_animals: BTreeMap::default(),
             all_animals: Vec::default(),
             mean_points: 0,
-            aggressiveness: aggressiveness,
+            risk: risk,
             previous_subjective_values: Vec::default(),
         }
     }
 
     pub fn new_from_seed(id: String, seed: u64) -> Self {
-        let aggressiveness = Self::get_random_aggressiveness(seed);
-        SimplePlayer::new(id, aggressiveness)
+        let risk = Self::get_random_risk(seed);
+        SimplePlayer::new(id, risk)
     }
 
-    pub fn get_random_aggressiveness(seed: u64) -> f32 {
+    pub fn get_random_risk(seed: u64) -> f32 {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
-        let aggressiveness: f32 = rng.random_range(0.0..=1.0);
-        aggressiveness
+        let risk: f32 = rng.random_range(0.0..=1.0);
+        risk
     }
 
     pub fn handle_exchange_payer(
@@ -553,7 +547,7 @@ impl SimplePlayer {
     }
 
     pub fn trade_helper(&mut self) -> Option<(bool, InitialTrade)> {
-        let value_save_to_spend = (self.wallet.total_money() as f32 * self.aggressiveness) as usize;
+        let value_save_to_spend = (self.wallet.total_money() as f32 * self.risk) as usize;
 
         let mut sub_optimal_trade: Option<InitialTrade> = None;
 

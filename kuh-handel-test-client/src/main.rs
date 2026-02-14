@@ -26,12 +26,8 @@ fn main() {
     });
 }
 
-pub fn spawn_player(
-    id: String,
-    base_url: String,
-    aggressiveness: f32,
-) -> tokio::task::JoinHandle<()> {
-    let simple_bot = SimplePlayer::new(id.clone(), aggressiveness);
+pub fn spawn_player(id: String, base_url: String, risk: f32) -> tokio::task::JoinHandle<()> {
+    let simple_bot = SimplePlayer::new(id.clone(), risk);
     let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::new(
         id.clone(),
         "abcd".to_string(),

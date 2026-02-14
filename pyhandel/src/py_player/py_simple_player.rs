@@ -20,9 +20,9 @@ pub struct SimplePlayer {
 #[pymethods]
 impl SimplePlayer {
     #[new]
-    pub fn new(id: String, aggressiveness: f32) -> Self {
+    pub fn new(id: String, risk: f32) -> Self {
         SimplePlayer {
-            inner: CorePlayer::new(id, aggressiveness),
+            inner: CorePlayer::new(id, risk),
         }
     }
 

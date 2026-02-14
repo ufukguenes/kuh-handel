@@ -131,10 +131,10 @@ impl PlayerActions for SimplePlayer {
             <= self.mean_points as f32
             || (highest_bid <= value_allowed_to_spend && averaged_subj_values < current_subj_value)
         {
-            return AuctionDecision::Buy;
+            return AuctionDecision::Buy();
         }
 
-        AuctionDecision::Sell
+        AuctionDecision::Sell()
     }
 
     fn _send_money_to_player(
@@ -202,7 +202,7 @@ impl PlayerActions for SimplePlayer {
             GameUpdate::Inflation(money) => self.handle_update_inflation(money),
         }
 
-        NoAction::Ok
+        NoAction::Ok()
     }
 }
 

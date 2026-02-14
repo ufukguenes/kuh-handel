@@ -80,7 +80,7 @@ impl WebsocketActions {
         if close_channel {
             self.action_receiver.close();
             let act_msg = ActionMessage::NoAction {
-                decision: NoAction::Ok,
+                decision: NoAction::Ok(),
             };
             return T::extract(act_msg);
         }

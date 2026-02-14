@@ -165,13 +165,13 @@ impl PlayerActions for RandomPlayerActions {
         if let Some((_, bid_value)) = Self::get_highest_bid(&state.bids) {
             let my_value = self.wallet.total_money();
             if bid_value > &my_value {
-                return vec![AuctionDecision::Sell, AuctionDecision::Buy]
+                return vec![AuctionDecision::Sell(), AuctionDecision::Buy()]
                     .choose(&mut self.rng)
                     .unwrap()
                     .clone();
             }
         }
-        AuctionDecision::Sell
+        AuctionDecision::Sell()
     }
 
     fn _send_money_to_player(&mut self, _player: &PlayerId, amount: Value) -> SendMoney {
@@ -289,6 +289,6 @@ impl PlayerActions for RandomPlayerActions {
             } => {}
         }
 
-        NoAction::Ok
+        NoAction::Ok()
     }
 }

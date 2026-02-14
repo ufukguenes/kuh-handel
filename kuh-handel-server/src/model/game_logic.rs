@@ -385,7 +385,7 @@ impl Game {
                     player.borrow_mut().map_to_action_inner(state_msg);
 
                 let (sender, receiver) = match player_decision {
-                    AuctionDecision::Buy => {
+                    AuctionDecision::Buy() => {
                         // println!(
                         //    "gl | \t Host {} buys animal {} from {} with bid {}",
                         //    host_id, animal, max_bidder_id, max_bid
@@ -393,7 +393,7 @@ impl Game {
 
                         (player, Rc::clone(auction_winner))
                     }
-                    AuctionDecision::Sell => {
+                    AuctionDecision::Sell() => {
                         // println!(
                         //    "gl | \t Host {} sells animal {} to {} with bid {}",
                         //    host_id, animal, max_bidder_id, max_bid

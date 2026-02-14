@@ -12,7 +12,7 @@ pub trait FromActionMessage: Sized {
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NoAction {
-    Ok,
+    Ok(),
 }
 impl FromActionMessage for NoAction {
     fn extract(action: ActionMessage) -> Option<Self> {
@@ -91,10 +91,10 @@ impl FromActionMessage for InitialTrade {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionDecision {
     /// The host wants to buy the animal itself, by paying out the highest bidder
-    Buy,
+    Buy(),
 
     /// The host wants to sell the animal to the highest bidder
-    Sell,
+    Sell(),
 }
 impl FromActionMessage for AuctionDecision {
     fn extract(action: ActionMessage) -> Option<Self> {

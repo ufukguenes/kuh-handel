@@ -230,7 +230,7 @@ impl PlayerActions for SupervisedPlayer {
             .player_actions()
             ._buy_or_sell(state);
         if self.limit_bidding_until_next_auction {
-            return AuctionDecision::Sell;
+            return AuctionDecision::Sell();
         }
         decision
     }

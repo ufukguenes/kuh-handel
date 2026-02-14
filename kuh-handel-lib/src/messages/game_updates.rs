@@ -1,3 +1,4 @@
+use reqwest::header::SEC_WEBSOCKET_ACCEPT;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
@@ -24,9 +25,21 @@ pub type Points = usize;
 #[pyclass(unsendable)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
+    #[pyo3(get)]
     pub host: PlayerId,
+
     pub animal: Rc<Animal>,
+
+    #[pyo3(get)]
     pub bids: Vec<(PlayerId, Bidding)>,
+}
+
+#[pymethods]
+impl AuctionRound {
+    #[getter]
+    pub fn animal(&self) -> Animal {
+        *self.animal.clone()
+    }
 }
 
 /// Information about a trade offer from another player

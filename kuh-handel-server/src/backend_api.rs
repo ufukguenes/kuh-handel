@@ -326,7 +326,7 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
     }
 
     let _ = action_sender
-        .send(serde_json::to_value(NoAction::Ok).unwrap())
+        .send(serde_json::to_value(NoAction::Ok()).unwrap())
         .await;
 
     state_receiver.close();

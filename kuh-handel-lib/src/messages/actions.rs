@@ -1,5 +1,5 @@
 use crate::messages::message_protocol::ActionMessage;
-use crate::{Money, Value};
+use crate::{Money, Value, animals};
 use crate::{animals::Animal, player::base_player::PlayerId};
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -62,16 +62,33 @@ impl PlayerTurnDecision {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitialTrade {
     /// The player id of the opponent with which to trade
+    #[pyo3(get)]
     pub opponent: PlayerId,
 
     /// The animal that is offered for the trade
+    #[pyo3(get)]
     pub animal: Animal,
 
     /// The number of animals to trade. The opponent also needs to own this number of the specified animal.
+    #[pyo3(get)]
     pub animal_count: usize,
 
     /// Action to describe a trade that is initialized by the called bot
+    #[pyo3(get)]
     pub amount: Vec<Money>,
+}
+
+#[pymethods]
+impl InitialTrade {
+    #[new]
+    fn new(opponent: PlayerId, animal: Animal, animal_count: usize, amount: Vec<Money>) -> Self {
+        InitialTrade {
+            opponent,
+            animal,
+            animal_count,
+            amount,
+        }
+    }
 }
 
 impl FromActionMessage for InitialTrade {

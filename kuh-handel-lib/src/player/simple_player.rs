@@ -1,7 +1,7 @@
 use core::num;
 use std::{
     cmp,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, btree_map::Entry},
     usize,
 };
 
@@ -44,8 +44,8 @@ impl ValueOwned {
     }
 
     pub fn sub(&mut self, value: Value) {
-        self.max = self.max.checked_sub(value).get_or_insert(0).clone();
-        self.min = self.min.checked_sub(value).get_or_insert(0).clone();
+        self.max = self.max.saturating_sub(value);
+        self.min = self.min.saturating_sub(value);
     }
 
     pub fn value_at_step(&self, percentage: f32) -> Value {
@@ -216,6 +216,13 @@ impl SimplePlayer {
                         .entry(animal)
                         .and_modify(|count: &mut usize| *count += 1)
                         .or_insert(1);
+                } else {
+                    self.opponents.entry(host_id).and_modify(|(animals, _)| {
+                        animals
+                            .entry(animal)
+                            .and_modify(|count: &mut usize| *count += 1)
+                            .or_insert(1);
+                    });
                 }
             }
 
@@ -285,7 +292,7 @@ impl SimplePlayer {
                 challenger_card_offer,
                 opponent_card_offer,
             } => {
-                self.handle_exchange_payer(receiver.clone(), &animal, animal_count, 0);
+                self.handle_exchange_payer(receiver, &animal, animal_count, 0);
                 self.handle_exchange_seller(looser, &animal, animal_count, 0);
             }
             MoneyTrade::Private {
@@ -310,15 +317,15 @@ impl SimplePlayer {
                 } else {
                     if animal_count > 0 {
                         let current_count = self.owned_animals.get(&animal).unwrap();
-                        let new_count = cmp::min(
-                            current_count
-                                .checked_sub(animal_count)
-                                .get_or_insert(0)
-                                .clone(),
-                            0,
-                        );
-                        self.owned_animals.insert(animal, new_count);
+                        let new_count = current_count.saturating_sub(animal_count);
+                        if new_count > 0 {
+                            self.owned_animals.insert(animal, new_count);
+                        } else {
+                            self.owned_animals.remove(&animal);
+                        }
                     }
+                    // i think i need to call handle_exchange_seller here
+
                     self.handle_exchange_payer(receiver, &animal, animal_count, total_difference);
                 }
 
@@ -423,22 +430,26 @@ impl SimplePlayer {
         min_value_payed: Value,
     ) {
         self.opponents
-            .entry(selling_player)
+            .entry(selling_player.clone())
             .and_modify(|(animals, value_owned)| {
                 if animal_count > 0 {
                     let current_count = animals.get(animal).unwrap();
-                    let new_count = cmp::min(
-                        current_count
-                            .checked_sub(animal_count)
-                            .get_or_insert(0)
-                            .clone(),
-                        0,
-                    );
+                    let new_count = current_count.saturating_sub(animal_count);
                     animals.insert(*animal, new_count);
                 }
 
                 value_owned.add(min_value_payed)
             });
+
+        if let Entry::Occupied(mut player_entry) = self.opponents.entry(selling_player) {
+            let (animals, _) = player_entry.get_mut();
+            if let Entry::Occupied(animal_entry) = animals.entry(animal.clone()) {
+                let count = animal_entry.get();
+                if count == &0usize {
+                    animal_entry.remove();
+                }
+            }
+        }
     }
 
     pub fn estimate_average_points_per_player(&mut self) -> usize {

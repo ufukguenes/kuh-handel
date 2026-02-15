@@ -127,8 +127,8 @@ pub async fn organize_new_game(
 
             let num_current_players = current_players.len();
 
-            let min_server_bots = min_game_size.checked_sub(num_current_players).unwrap_or(0);
-            let max_server_bots = max_game_size.checked_sub(num_current_players).unwrap_or(0);
+            let min_server_bots = min_game_size.saturating_sub(num_current_players);
+            let max_server_bots = max_game_size.saturating_sub(num_current_players);
 
             let num_server_bots = rng.random_range(min_server_bots..=max_server_bots);
 

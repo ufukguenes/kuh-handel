@@ -38,6 +38,7 @@ pub struct Game {
     num_players: usize,
     num_bidding_rounds: usize,
     num_trading_rounds: usize,
+    num_drawing_rounds: usize,
     start_wallet: Wallet,
 }
 
@@ -70,6 +71,7 @@ impl Game {
         seed: u64,
         num_bidding_rounds: usize,
         num_trading_rounds: usize,
+        num_drawing_rounds: usize,
     ) -> Self {
         let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
         let mut game_stack: Vec<Rc<Animal>> = Vec::new();
@@ -130,6 +132,7 @@ impl Game {
             start_wallet: start_wallet,
             num_bidding_rounds: num_bidding_rounds,
             num_trading_rounds: num_trading_rounds,
+            num_drawing_rounds: num_drawing_rounds,
         }
     }
 
@@ -657,7 +660,11 @@ impl Game {
         // draw a card and trigger the auction
         //   in the auction ask each player to bid, and provide the current transaction state = tuple of player and his/her current/highest bid
         //
-        while !self.game_stack.is_empty() {
+
+        let mut current_draw_round_count = 0usize;
+        while !self.game_stack.is_empty() && current_draw_round_count < self.num_drawing_rounds {
+            current_draw_round_count += 1;
+
             // println!("gl | --- New turn ---");
 
             let player: Rc<RefCell<SupervisedPlayer>> =

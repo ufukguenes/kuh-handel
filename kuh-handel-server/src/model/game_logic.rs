@@ -25,10 +25,12 @@ use tracing::error;
 
 use std::collections::BTreeMap;
 
+use async_recursion::async_recursion;
 use std::fmt;
 use std::fmt::Display;
 use std::ops::Not;
 use std::sync::Arc;
+use tokio::task::JoinSet;
 
 pub struct Game {
     players: Vec<Arc<Mutex<SupervisedPlayer>>>,
@@ -141,9 +143,9 @@ impl Game {
         }
     }
 
-    pub fn play(&mut self) -> Result<Vec<(PlayerId, Points)>, GameError> {
-        self.draw_phase();
-        self.trading_phase();
+    pub async fn play(&mut self) -> Result<Vec<(PlayerId, Points)>, GameError> {
+        self.draw_phase().await;
+        self.trading_phase().await;
 
         if !self.validate_players_animals() {
             // print!("gl | game failed animal check at the end");
@@ -169,7 +171,7 @@ impl Game {
         let update = GameUpdate::End {
             ranking: ranking.clone(),
         };
-        Self::update_multiple_players(&self.players, update);
+        Self::update_multiple_players(&self.players, update).await;
         Ok(ranking)
     }
 
@@ -322,7 +324,7 @@ impl Game {
         return all_ids;
     }
 
-    fn auction(&mut self, player: Arc<Mutex<SupervisedPlayer>>, animal: &Arc<Animal>) {
+    async fn auction(&mut self, player: Arc<Mutex<SupervisedPlayer>>, animal: &Arc<Animal>) {
         let host_id = player.blocking_lock().id().clone();
 
         let auction_players = self.get_players_excluding(vec![host_id.clone()]);
@@ -386,7 +388,7 @@ impl Game {
                         animal: **animal,
                     });
 
-                    Self::update_multiple_players(&self.players, update);
+                    Self::update_multiple_players(&self.players, update).await;
                     return;
                 }
 
@@ -421,7 +423,8 @@ impl Game {
                     }
                 };
 
-                self.process_auction(sender, receiver, max_bid, final_auction_round);
+                self.process_auction(sender, receiver, max_bid, final_auction_round)
+                    .await;
             }
             None => {
                 let update = GameUpdate::Auction(AuctionKind::NoBiddings {
@@ -429,12 +432,12 @@ impl Game {
                     animal: **animal,
                 });
 
-                Self::update_multiple_players(&self.players, update);
+                Self::update_multiple_players(&self.players, update).await;
             }
         };
     }
 
-    fn process_auction(
+    async fn process_auction(
         &mut self,
         sender: Arc<Mutex<SupervisedPlayer>>,
         receiver: Arc<Mutex<SupervisedPlayer>>,
@@ -457,7 +460,7 @@ impl Game {
                 };
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
 
-                Self::update_multiple_players(&self.players, update);
+                Self::update_multiple_players(&self.players, update).await;
                 let host = self.get_by_id(final_auction_round.host).unwrap(); // player always exists
                 // println!(
                 //    "gl | \t player {} bluffed, exposed value {}",
@@ -465,7 +468,7 @@ impl Game {
                 //    sender.blocking_lock().clone_wallet().total_money(),
                 // );
 
-                self.auction(host, &final_auction_round.animal);
+                self.auction(host, &final_auction_round.animal).await;
             }
             SendMoney::Amount(amount) => {
                 let sender_id = sender.blocking_lock().id().clone();
@@ -502,21 +505,34 @@ impl Game {
                     receiver,
                     update(public_kind),
                     update(private_kind),
-                );
+                )
+                .await;
             }
         }
     }
 
-    fn update_multiple_players(players: &Vec<Arc<Mutex<SupervisedPlayer>>>, update: GameUpdate) {
-        for other_player in players {
-            let mut binding = other_player.blocking_lock();
-            let _: NoAction = binding.map_to_action_inner(StateMessage::GameUpdate {
-                update: update.clone(),
+    async fn update_multiple_players(
+        players: &Vec<Arc<Mutex<SupervisedPlayer>>>,
+        update: GameUpdate,
+    ) {
+        let mut set = JoinSet::new();
+
+        for player_arc in players {
+            let player_arc = player_arc.clone();
+            let update_clone = update.clone();
+
+            set.spawn(async move {
+                let mut binding = player_arc.lock().await;
+
+                let _: NoAction = binding.map_to_action_inner(StateMessage::GameUpdate {
+                    update: update_clone,
+                });
             });
         }
+        set.join_next().await;
     }
 
-    fn public_private_update(
+    async fn public_private_update(
         &self,
         player_a: Arc<Mutex<SupervisedPlayer>>,
         player_b: Arc<Mutex<SupervisedPlayer>>,
@@ -526,7 +542,7 @@ impl Game {
         let player_a_id = player_a.blocking_lock().id().clone();
         let player_b_id = player_b.blocking_lock().id().clone();
         let other_player = self.get_players_excluding(vec![player_a_id, player_b_id]);
-        Self::update_multiple_players(&other_player, public_update);
+        Self::update_multiple_players(&other_player, public_update).await;
 
         let _: NoAction = player_a
             .blocking_lock()
@@ -541,7 +557,7 @@ impl Game {
             });
     }
 
-    fn offer_trade_to_opponent(
+    async fn offer_trade_to_opponent(
         &self,
         challenger: Arc<Mutex<SupervisedPlayer>>,
         opponent: Arc<Mutex<SupervisedPlayer>>,
@@ -614,10 +630,11 @@ impl Game {
             opponent,
             update.clone()(public_kind),
             update(private_kind),
-        );
+        )
+        .await;
     }
 
-    fn player_must_trade(&self, player: Arc<Mutex<SupervisedPlayer>>) {
+    async fn player_must_trade(&self, player: Arc<Mutex<SupervisedPlayer>>) {
         // println!("gl | {} must trade", player.blocking_lock().id());
 
         let state_msg = StateMessage::Trade();
@@ -656,24 +673,25 @@ impl Game {
                     player_decision.animal,
                     player_decision.animal_count,
                 )
+                .await;
             }
             Err(e) => panic!("{:?}", e),
         }
     }
 
-    fn process_card_inflation(&mut self, card: &Animal) {
+    async fn process_card_inflation(&mut self, card: &Animal) {
         let mut animal_set = self.animal_usage.get(card).unwrap().blocking_lock(); // must not fail as all animals of the game are in the mapping
 
         let inflation = animal_set.get_next_inflation();
         if inflation > 0 {
             self.start_wallet.add_money(inflation);
             let update = GameUpdate::Inflation(inflation);
-            Self::update_multiple_players(&self.players, update);
+            Self::update_multiple_players(&self.players, update).await;
         }
         animal_set.increase_draw_count();
     }
 
-    fn draw_phase(&mut self) {
+    async fn draw_phase(&mut self) {
         let mut current_player_idx = 0usize;
         // get player order and iterate over them
         // draw a card and trigger the auction
@@ -697,14 +715,14 @@ impl Game {
                 PlayerTurnDecision::Draw() => {
                     let card = self.game_stack.pop().unwrap();
 
-                    self.process_card_inflation(&card);
+                    self.process_card_inflation(&card).await;
 
                     // println!(
                     //    "gl | \t Player {} drew card: {}",
                     //    player.blocking_lock().id(),
                     //    card
                     // );
-                    self.auction(player, &card)
+                    self.auction(player, &card).await
                 }
                 PlayerTurnDecision::Trade(InitialTrade {
                     opponent,
@@ -740,6 +758,7 @@ impl Game {
                                 animal,
                                 animal_count,
                             )
+                            .await;
                         }
                         Err(e) => panic!("{:?}", e),
                     }
@@ -749,7 +768,7 @@ impl Game {
         }
     }
 
-    fn trading_phase(&mut self) {
+    async fn trading_phase(&mut self) {
         let mut skip_players: Vec<PlayerId> = Vec::new();
 
         for idx in 0..self.num_trading_rounds {
@@ -763,7 +782,7 @@ impl Game {
                 if !skip_players.contains(&player_id) {
                     let can_trade = player.blocking_lock().can_trade().is_some();
                     if can_trade {
-                        self.player_must_trade(Arc::clone(player));
+                        self.player_must_trade(Arc::clone(player)).await;
                     } else {
                         // println!(
                         //    "gl | player will be {} skipped in trading",

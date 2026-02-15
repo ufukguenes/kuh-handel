@@ -16,7 +16,7 @@ use kuh_handel_lib::{Money, Value};
 
 use crate::game_error::GameError;
 
-use crate::server_side_player::supervised_player::SupervisedPlayer;
+use kuh_handel_lib::player::supervised_player::SupervisedPlayer;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
@@ -98,7 +98,7 @@ impl Game {
                 .filter(|p| p.borrow().id() != player.borrow().id())
                 .cloned()
                 .collect();
-            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents);
+            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents, false);
             supervised_players.push(Rc::new(RefCell::new(new_supervised_player)));
         }
 

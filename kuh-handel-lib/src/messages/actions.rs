@@ -10,7 +10,7 @@ pub trait FromActionMessage: Sized {
 
 /// Action of the bot that is used for conformation if the server sends a game update that does not require the bot to do anything
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum NoAction {
     Ok(),
 }
@@ -28,7 +28,7 @@ impl FromActionMessage for NoAction {
 
 /// Action to decide if a bot, whose turn it currently is, wants to draw a new card or trade a card it already owns
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum PlayerTurnDecision {
     Draw(),
     Trade(InitialTrade),
@@ -59,7 +59,7 @@ impl PlayerTurnDecision {
 
 /// Action to specify the a trade offer
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct InitialTrade {
     /// The player id of the opponent with which to trade
     #[pyo3(get)]
@@ -105,7 +105,7 @@ impl FromActionMessage for InitialTrade {
 
 /// Action for the bot which hosted a auction after drawing a card.
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum AuctionDecision {
     /// The host wants to buy the animal itself, by paying out the highest bidder
     Buy(),
@@ -127,7 +127,7 @@ impl FromActionMessage for AuctionDecision {
 
 /// Action to decide to either accept a trade offer from another player or make a counter offer, with a combination of cards/ bills
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum TradeOpponentDecision {
     Accept(),
     CounterOffer(Vec<Money>),
@@ -158,7 +158,7 @@ impl TradeOpponentDecision {
 
 /// Action to specify what combination of cards/ bills is send to another player to fulfill a requested minimum amount, or to acknowledge that it was a bluff  
 #[pyclass(unsendable)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum SendMoney {
     WasBluff(),
     Amount(Vec<Money>),

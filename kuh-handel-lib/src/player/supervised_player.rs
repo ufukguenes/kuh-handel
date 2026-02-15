@@ -3,18 +3,16 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use kuh_handel_lib::animals::Animal;
-use kuh_handel_lib::messages::actions::*;
-use kuh_handel_lib::messages::game_updates::*;
-use kuh_handel_lib::messages::message_protocol::StateMessage;
-use kuh_handel_lib::player::{
+use crate::animals::Animal;
+use crate::messages::actions::*;
+use crate::messages::game_updates::*;
+use crate::messages::message_protocol::StateMessage;
+use crate::player::{
     base_player::{Player, PlayerId},
     player_actions::PlayerActions,
     wallet::{Affordability::*, Wallet},
 };
-use kuh_handel_lib::{Money, Value};
-use serde::de;
-use serde::de::value;
+use crate::{Money, Value};
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:
@@ -26,16 +24,22 @@ pub struct SupervisedPlayer {
     pub player: Rc<RefCell<Player>>,
     opponents: Vec<Rc<RefCell<Player>>>,
     limit_bidding_until_next_auction: bool,
+    raise_faulty_action_warning: bool,
 }
 
 // todo tell the bot if action was changed
 
 impl SupervisedPlayer {
-    pub fn new(player: Rc<RefCell<Player>>, opponents: Vec<Rc<RefCell<Player>>>) -> Self {
+    pub fn new(
+        player: Rc<RefCell<Player>>,
+        opponents: Vec<Rc<RefCell<Player>>>,
+        raise_faulty_action_warning: bool,
+    ) -> Self {
         SupervisedPlayer {
             player: player,
             opponents: opponents,
             limit_bidding_until_next_auction: false,
+            raise_faulty_action_warning: raise_faulty_action_warning,
         }
     }
 
@@ -157,26 +161,39 @@ impl SupervisedPlayer {
         let action_msg = self.map_to_action(state_msg);
         T::extract(action_msg).unwrap()
     }
+
+    pub fn raise_warning<T: PartialEq>(&self, original_action: &T, rectified_action: &T) {
+        if self.raise_faulty_action_warning && original_action == rectified_action {
+            eprintln!("rectified action of:{}", self.id())
+        }
+    }
 }
 
 impl PlayerActions for SupervisedPlayer {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         let decision: PlayerTurnDecision =
             self.player.borrow_mut().player_actions()._draw_or_trade();
-        match decision {
-            PlayerTurnDecision::Draw() => return decision,
+
+        let rectified_decision = match decision {
+            PlayerTurnDecision::Draw() => decision.clone(),
             PlayerTurnDecision::Trade(initial_trade) => {
                 if self.can_trade().is_some() {
-                    return PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade));
+                    PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade));
                 }
                 return PlayerTurnDecision::Draw();
             }
-        }
+        };
+
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _trade(&mut self) -> InitialTrade {
         let decision: InitialTrade = self.player.borrow_mut().player_actions()._trade();
-        self.rectify_initial_trade(&decision)
+        let rectified_decision = self.rectify_initial_trade(&decision);
+
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
@@ -186,32 +203,31 @@ impl PlayerActions for SupervisedPlayer {
             .player_actions()
             ._provide_bidding(state.clone());
 
-        let current_max_bid_value: usize;
-        match state.bids.iter().max_by_key(|(_, bid)| bid) {
+        let current_max_bid_value = match state.bids.iter().max_by_key(|(_, bid)| bid) {
             Some((_, max_bid)) => match max_bid {
-                Bidding::Pass() => current_max_bid_value = 0,
-                Bidding::Bid(max_bid_value) => current_max_bid_value = *max_bid_value,
+                Bidding::Pass() => 0,
+                Bidding::Bid(max_bid_value) => *max_bid_value,
             },
-            None => current_max_bid_value = 0,
-        }
+            None => 0,
+        };
 
         let rectified_bidding = if self.limit_bidding_until_next_auction {
             let limit = self.player.borrow().wallet().total_money();
             match decision {
-                Bidding::Pass() => decision,
+                Bidding::Pass() => decision.clone(),
                 Bidding::Bid(value) => {
                     if value > limit {
                         Bidding::Bid(limit)
                     } else {
-                        decision
+                        decision.clone()
                     }
                 }
             }
         } else {
-            decision
+            decision.clone()
         };
 
-        match rectified_bidding {
+        let rectified_decision = match rectified_bidding {
             Bidding::Pass() => Bidding::Pass(),
             Bidding::Bid(value) => {
                 if value <= current_max_bid_value {
@@ -220,7 +236,9 @@ impl PlayerActions for SupervisedPlayer {
                     Bidding::Bid(value)
                 }
             }
-        }
+        };
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
@@ -229,10 +247,15 @@ impl PlayerActions for SupervisedPlayer {
             .borrow_mut()
             .player_actions()
             ._buy_or_sell(state);
-        if self.limit_bidding_until_next_auction {
+
+        let rectified_decision = if self.limit_bidding_until_next_auction {
             return AuctionDecision::Sell();
-        }
-        decision
+        } else {
+            decision.clone()
+        };
+
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
@@ -241,7 +264,11 @@ impl PlayerActions for SupervisedPlayer {
             .borrow_mut()
             .player_actions()
             ._send_money_to_player(player, amount);
-        self.rectify_payment(&decision, amount)
+
+        let rectified_decision = self.rectify_payment(&decision, amount);
+
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
@@ -250,12 +277,15 @@ impl PlayerActions for SupervisedPlayer {
             .borrow_mut()
             .player_actions()
             ._respond_to_trade(offer);
-        match decision {
-            TradeOpponentDecision::Accept() => decision,
+        let rectified_decision = match &decision {
+            TradeOpponentDecision::Accept() => decision.clone(),
             TradeOpponentDecision::CounterOffer(amount) => {
                 TradeOpponentDecision::CounterOffer(self.rectify_money_combination(&amount))
             }
-        }
+        };
+
+        self.raise_warning(&decision, &rectified_decision);
+        return rectified_decision;
     }
 
     fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {

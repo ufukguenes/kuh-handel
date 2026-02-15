@@ -11,7 +11,7 @@ pub fn player_actions_module_entry(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[pyclass(unsendable, subclass, name = "PlayerActions")]
+#[pyclass(subclass, name = "PlayerActions")]
 #[derive(Clone)]
 pub struct PlayerActions;
 

@@ -1,7 +1,7 @@
-use std::cell::RefCell;
-
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
+
+use tokio::sync::Mutex;
 
 use crate::animals::Animal;
 use crate::messages::actions::*;
@@ -21,8 +21,8 @@ use crate::{Money, Value};
 /// 3. if for example the opponent exists but it doesn't have the animals,
 /// the alternative would not be to switch from trade to draw, but to find a fitting alternative trade
 pub struct SupervisedPlayer {
-    pub player: Rc<RefCell<Player>>,
-    opponents: Vec<Rc<RefCell<Player>>>,
+    pub player: Arc<Mutex<Player>>,
+    opponents: Vec<Arc<Mutex<Player>>>,
     limit_bidding_until_next_auction: bool,
     raise_faulty_action_warning: bool,
 }
@@ -31,8 +31,8 @@ pub struct SupervisedPlayer {
 
 impl SupervisedPlayer {
     pub fn new(
-        player: Rc<RefCell<Player>>,
-        opponents: Vec<Rc<RefCell<Player>>>,
+        player: Arc<Mutex<Player>>,
+        opponents: Vec<Arc<Mutex<Player>>>,
         raise_faulty_action_warning: bool,
     ) -> Self {
         SupervisedPlayer {
@@ -44,29 +44,32 @@ impl SupervisedPlayer {
     }
 
     pub fn clone_wallet(&self) -> Wallet {
-        self.player.borrow().wallet().clone()
+        self.player.blocking_lock().wallet().clone()
     }
 
     pub fn id(&self) -> PlayerId {
-        self.player.borrow().id().clone()
+        self.player.blocking_lock().id().clone()
     }
 
     pub fn can_trade(&self) -> Option<InitialTrade> {
-        self.player.borrow().can_trade(&self.opponents)
+        self.player
+            .blocking_lock()
+            .can_trade(self.opponents.clone())
     }
     pub fn clone_owned_animals(&self) -> BTreeMap<Animal, usize> {
-        self.player.borrow().owned_animals().clone()
+        self.player.blocking_lock().owned_animals().clone()
     }
 
     pub fn calculate_points(&self) -> Points {
-        self.player.borrow().calculate_points()
+        self.player.blocking_lock().calculate_points()
     }
 
     fn rectify_money_combination(&self, combination: &Vec<Money>) -> Vec<Money> {
-        match self.player.borrow().wallet().can_afford(combination) {
+        let binding = self.player.blocking_lock();
+        match binding.wallet().can_afford(combination) {
             Exact(exact_amount) => exact_amount,
             Alternative(alternative) => alternative,
-            CannotAfford() => self.player.borrow().wallet().to_vec(),
+            CannotAfford() => binding.wallet().to_vec(),
         }
     }
 
@@ -80,7 +83,12 @@ impl SupervisedPlayer {
         let trade_animal = trade.animal;
         let animal_count: usize = trade.animal_count.clone() as usize;
 
-        let animal_trade_count = match self.player.borrow().owned_animals().get(&trade_animal) {
+        let animal_trade_count = match self
+            .player
+            .blocking_lock()
+            .owned_animals()
+            .get(&trade_animal)
+        {
             Some(&count) => {
                 if count > 0 {
                     count
@@ -93,17 +101,21 @@ impl SupervisedPlayer {
             None => return self.can_trade().unwrap(), // player does not have animal, todo remove unwrap if return is changed to option
         };
 
-        let opponent: Option<&Rc<RefCell<Player>>> = self
+        let opponent: Option<&Arc<Mutex<Player>>> = self
             .opponents
             .iter()
-            .find(|player| player.borrow().id() == &trade.opponent);
+            .find(|player| player.blocking_lock().id() == &trade.opponent);
 
         let opponent = match opponent {
             Some(opponent) => opponent,
             None => return self.can_trade().unwrap(), // opponent does not exist, todo remove unwrap if return is changed to option
         };
 
-        let opponent_animal_count = match opponent.borrow().owned_animals().get(&trade_animal) {
+        let opponent_animal_count = match opponent
+            .blocking_lock()
+            .owned_animals()
+            .get(&trade_animal)
+        {
             Some(&count) => {
                 if count > 0 {
                     count
@@ -118,7 +130,7 @@ impl SupervisedPlayer {
         // is never 0
 
         let mut new_trade = trade.clone();
-        new_trade.opponent = opponent.borrow().id().clone();
+        new_trade.opponent = opponent.blocking_lock().id().clone();
         new_trade.animal = trade_animal;
         new_trade.amount = new_amount;
         new_trade.animal_count = std::cmp::min(opponent_animal_count, animal_trade_count);
@@ -128,7 +140,7 @@ impl SupervisedPlayer {
     fn rectify_payment(&self, send_money: &SendMoney, value_amount: Value) -> SendMoney {
         let mut has_enough_money = self
             .player
-            .borrow()
+            .blocking_lock()
             .wallet()
             .can_afford(&vec![value_amount]);
 
@@ -139,7 +151,7 @@ impl SupervisedPlayer {
                 if total_payed >= value_amount {
                     has_enough_money = self
                         .player
-                        .borrow()
+                        .blocking_lock()
                         .wallet()
                         .can_afford(bill_combination_amount);
                 }
@@ -171,8 +183,11 @@ impl SupervisedPlayer {
 
 impl PlayerActions for SupervisedPlayer {
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
-        let decision: PlayerTurnDecision =
-            self.player.borrow_mut().player_actions()._draw_or_trade();
+        let decision: PlayerTurnDecision = self
+            .player
+            .blocking_lock()
+            .player_actions()
+            ._draw_or_trade();
 
         let rectified_decision = match decision {
             PlayerTurnDecision::Draw() => decision.clone(),
@@ -189,7 +204,7 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _trade(&mut self) -> InitialTrade {
-        let decision: InitialTrade = self.player.borrow_mut().player_actions()._trade();
+        let decision: InitialTrade = self.player.blocking_lock().player_actions()._trade();
         let rectified_decision = self.rectify_initial_trade(&decision);
 
         self.raise_warning(&decision, &rectified_decision);
@@ -199,7 +214,7 @@ impl PlayerActions for SupervisedPlayer {
     fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
         let decision = self
             .player
-            .borrow_mut()
+            .blocking_lock()
             .player_actions()
             ._provide_bidding(state.clone());
 
@@ -212,7 +227,7 @@ impl PlayerActions for SupervisedPlayer {
         };
 
         let rectified_bidding = if self.limit_bidding_until_next_auction {
-            let limit = self.player.borrow().wallet().total_money();
+            let limit = self.player.blocking_lock().wallet().total_money();
             match decision {
                 Bidding::Pass() => decision.clone(),
                 Bidding::Bid(value) => {
@@ -244,7 +259,7 @@ impl PlayerActions for SupervisedPlayer {
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
         let decision = self
             .player
-            .borrow_mut()
+            .blocking_lock()
             .player_actions()
             ._buy_or_sell(state);
 
@@ -261,7 +276,7 @@ impl PlayerActions for SupervisedPlayer {
     fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
         let decision = self
             .player
-            .borrow_mut()
+            .blocking_lock()
             .player_actions()
             ._send_money_to_player(player, amount);
 
@@ -274,7 +289,7 @@ impl PlayerActions for SupervisedPlayer {
     fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
         let decision = self
             .player
-            .borrow_mut()
+            .blocking_lock()
             .player_actions()
             ._respond_to_trade(offer);
         let rectified_decision = match &decision {
@@ -292,10 +307,12 @@ impl PlayerActions for SupervisedPlayer {
         match update.clone() {
             GameUpdate::Auction(auction_kind) => {
                 self.limit_bidding_until_next_auction = false;
+                let mut binding = self.player.blocking_lock();
+
                 match auction_kind {
                     AuctionKind::NoBiddings { host_id, animal } => {
-                        if &host_id == self.player.borrow().id() {
-                            self.player.borrow_mut().add_animals(&animal, 1);
+                        if &host_id == binding.id() {
+                            binding.add_animals(&animal, 1);
                         }
                     }
                     AuctionKind::NormalAuction {
@@ -305,7 +322,7 @@ impl PlayerActions for SupervisedPlayer {
                         money_transfer,
                     } => match money_transfer {
                         MoneyTransfer::Private { amount } => {
-                            let mut player = self.player.borrow_mut();
+                            let mut player = binding;
                             if player.id() == &from {
                                 let _ = player.wallet_mut().withdraw(&amount);
                                 player.add_animals(&rounds.animal, 1);
@@ -328,8 +345,9 @@ impl PlayerActions for SupervisedPlayer {
                 receiver,
                 money_trade,
             } => {
+                let mut player = self.player.blocking_lock();
+
                 let animal_count: usize = animal_count.clone();
-                let mut player = self.player.borrow_mut();
                 let player_id = player.id().clone();
                 if player_id == challenger || player_id == opponent {
                     if player_id == receiver {
@@ -358,23 +376,26 @@ impl PlayerActions for SupervisedPlayer {
                 }
             }
             GameUpdate::ExposePlayer { player, wallet: _ } => {
-                if &player == self.player.borrow().id() {
+                if &player == self.player.blocking_lock().id() {
                     self.limit_bidding_until_next_auction = true;
                 }
             }
             GameUpdate::Inflation(inflation) => {
-                self.player.borrow_mut().wallet_mut().add_money(inflation);
+                self.player
+                    .blocking_lock()
+                    .wallet_mut()
+                    .add_money(inflation);
             }
             GameUpdate::Start {
                 wallet: _,
                 players_in_turn_order: _,
                 animals: _,
-            } => {} // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Rc
+            } => {} // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Arc
             GameUpdate::End { ranking: _ } => {} // nothing to do
         }
 
         self.player
-            .borrow_mut()
+            .blocking_lock()
             .player_actions()
             ._receive_game_update(update)
     }

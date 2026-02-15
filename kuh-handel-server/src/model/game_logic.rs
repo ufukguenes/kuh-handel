@@ -13,6 +13,7 @@ use kuh_handel_lib::player::{
     wallet::Wallet,
 };
 use kuh_handel_lib::{Money, Value};
+use tokio::sync::Mutex;
 
 use crate::game_error::GameError;
 
@@ -22,19 +23,18 @@ use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 use tracing::error;
 
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use std::fmt;
 use std::fmt::Display;
 use std::ops::Not;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Game {
-    players: Vec<Rc<RefCell<SupervisedPlayer>>>,
-    game_stack: Vec<Rc<Animal>>,
-    animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>>,
-    animal_sets: Vec<Rc<AnimalSet>>,
+    players: Vec<Arc<Mutex<SupervisedPlayer>>>,
+    game_stack: Vec<Arc<Animal>>,
+    animal_usage: BTreeMap<Arc<Animal>, Arc<Mutex<AnimalSet>>>,
+    animal_sets: Vec<Arc<Mutex<AnimalSet>>>,
     num_players: usize,
     num_bidding_rounds: usize,
     num_trading_rounds: usize,
@@ -57,7 +57,7 @@ impl Display for Game {
         write!(f, " \nnum_animal_sets: {} \n", self.animal_sets.len())?;
 
         for (i, set) in self.animal_sets.iter().enumerate() {
-            write!(f, "     {}: {}\n", i, set)?;
+            write!(f, "     {}: {}\n", i, set.blocking_lock())?;
         }
         write!(f, "")
     }
@@ -67,60 +67,65 @@ impl Game {
     pub fn new(
         players: Vec<Player>,
         start_wallet: Wallet,
-        animal_sets: Vec<Rc<AnimalSet>>,
+        animal_sets: Vec<Arc<Mutex<AnimalSet>>>,
         seed: u64,
         num_bidding_rounds: usize,
         num_trading_rounds: usize,
         num_drawing_rounds: usize,
     ) -> Self {
-        let mut animal_usage: BTreeMap<Rc<Animal>, Rc<AnimalSet>> = BTreeMap::new();
-        let mut game_stack: Vec<Rc<Animal>> = Vec::new();
+        let mut animal_usage: BTreeMap<Arc<Animal>, Arc<Mutex<AnimalSet>>> = BTreeMap::new();
+        let mut game_stack: Vec<Arc<Animal>> = Vec::new();
         let num_players = players.len();
 
         for set in animal_sets.iter() {
-            for animal in set.animals() {
-                animal_usage.insert(Rc::clone(animal), Rc::clone(set));
-                game_stack.push(Rc::clone(animal));
+            let binding = set.blocking_lock();
+            for animal in binding.animals() {
+                animal_usage.insert(Arc::clone(animal), Arc::clone(set));
+                game_stack.push(Arc::clone(animal));
             }
         }
-
         game_stack.shuffle(&mut ChaCha8Rng::seed_from_u64(seed));
 
-        let players: Vec<Rc<RefCell<Player>>> = players
+        let players: Vec<Arc<Mutex<Player>>> = players
             .into_iter()
-            .map(|p| Rc::new(RefCell::new(p)))
+            .map(|p| Arc::new(Mutex::new(p)))
             .collect();
 
         let mut supervised_players = Vec::new();
         for player in players.iter() {
-            let opponents: Vec<Rc<RefCell<Player>>> = players
+            let current_id = player.blocking_lock().id().clone();
+            let opponents: Vec<Arc<Mutex<Player>>> = players
                 .iter()
-                .filter(|p| p.borrow().id() != player.borrow().id())
+                .filter(|p| *p.blocking_lock().id() != current_id)
                 .cloned()
                 .collect();
             let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents, false);
-            supervised_players.push(Rc::new(RefCell::new(new_supervised_player)));
+            supervised_players.push(Arc::new(Mutex::new(new_supervised_player)));
         }
+        let players_in_turn_order = supervised_players
+            .iter()
+            .map(|ref_player| ref_player.blocking_lock().id().clone())
+            .collect();
+
+        let animals = animal_sets
+            .iter()
+            .map(|rc_animal| rc_animal.blocking_lock().clone())
+            .collect::<Vec<AnimalSet>>();
+
+        let wallet = start_wallet.clone();
 
         let update = GameUpdate::Start {
-            wallet: start_wallet.clone(),
-            players_in_turn_order: supervised_players
-                .iter()
-                .map(|ref_player| ref_player.borrow().id().clone())
-                .collect(),
-            animals: animal_sets
-                .clone()
-                .into_iter()
-                .map(|rc_animal| (*rc_animal).clone())
-                .collect(),
+            wallet: wallet,
+            players_in_turn_order: players_in_turn_order,
+            animals: animals,
         };
-
         for player in supervised_players.iter() {
-            let _: NoAction = player
-                .borrow_mut()
-                .map_to_action_inner(StateMessage::GameUpdate {
-                    update: update.clone(),
-                });
+            let _: NoAction =
+                player
+                    .blocking_lock()
+                    .map_to_action_inner(StateMessage::GameUpdate {
+                        update: update.clone(),
+                    });
         }
 
         Game {
@@ -153,7 +158,10 @@ impl Game {
         let mut ranking: Vec<(PlayerId, Points)> = self
             .players
             .iter()
-            .map(|p| (p.borrow().id(), p.borrow().calculate_points()))
+            .map(|p| {
+                let binding = p.blocking_lock();
+                (binding.id(), binding.calculate_points())
+            })
             .collect();
 
         ranking.sort_by(|(_, points_a), (_, points_b)| points_b.cmp(points_a));
@@ -168,7 +176,7 @@ impl Game {
     pub fn validate_players_money(&self) -> bool {
         let mut all_money_from_players: BTreeMap<Money, usize> = BTreeMap::new();
         for player in self.players.iter() {
-            let binding = player.borrow().clone_wallet();
+            let binding = player.blocking_lock().clone_wallet();
             let current_bank_notes = binding.bank_notes();
 
             for (money, count) in current_bank_notes.into_iter() {
@@ -198,35 +206,35 @@ impl Game {
     pub fn validate_players_animals(&self) -> bool {
         let mut beginning_animals = self.animal_sets.clone();
         for (i, player) in self.players.iter().enumerate() {
-            let binding = player.borrow();
-            let current_animals = binding.clone_owned_animals();
+            let current_animals = player.blocking_lock().clone_owned_animals();
             // check if animal occurs the right amount of times
             for (animal, count) in current_animals.into_iter() {
-                let pos = beginning_animals
-                    .iter()
-                    .position(|set| *set.animal() == animal);
+                let pos = beginning_animals.iter().position(|set| {
+                    let binding = set.blocking_lock();
+                    *binding.animal() == animal
+                });
                 match pos {
                     Some(pos) => {
                         let current_set = beginning_animals.remove(pos);
-                        if current_set.occurrences() != count {
+                        if current_set.blocking_lock().occurrences() != count {
                             {
                                 error!(
                                     "gl | validation: wrong occurrences {} instead of {}",
                                     count,
-                                    current_set.occurrences()
+                                    current_set.blocking_lock().occurrences()
                                 );
 
                                 for player in self.players.iter() {
                                     error!(
                                         "gl | validation: \t {:?}",
-                                        player.borrow().clone_owned_animals()
+                                        player.blocking_lock().clone_owned_animals()
                                     );
                                 }
 
                                 for player in self.players.iter() {
                                     error!(
                                         "gl | validation: \t {:?}",
-                                        player.borrow().clone_wallet()
+                                        player.blocking_lock().clone_wallet()
                                     );
                                 }
 
@@ -237,7 +245,7 @@ impl Game {
                     None => {
                         error!(
                             "gl | validation: player {} has animal {} that does not exist",
-                            player.borrow().id(),
+                            player.blocking_lock().id(),
                             animal
                         );
                         return false;
@@ -247,37 +255,43 @@ impl Game {
 
             // check that no two players share the same animal
             for other in self.players[i + 1..].iter() {
-                let binding = other.borrow();
+                let binding = other.blocking_lock();
                 let others_animals = binding.clone_owned_animals();
 
                 if others_animals.is_empty() {
                     return true;
                 }
 
-                let has_shared = others_animals
-                    .keys()
-                    .all(|animal| player.borrow().clone_owned_animals().contains_key(animal));
+                let has_shared = others_animals.keys().all(|animal| {
+                    player
+                        .blocking_lock()
+                        .clone_owned_animals()
+                        .contains_key(animal)
+                });
                 if has_shared {
                     // println!(
                     //    "{} and {} share animals",
-                    //    other.borrow().id(),
-                    //    player.borrow().id()
+                    //    other.blocking_lock().id(),
+                    //    player.blocking_lock().id()
                     //);
                     error!(
                         "gl | validation: {} and {} share animals",
-                        other.borrow().id(),
-                        player.borrow().id()
+                        other.blocking_lock().id(),
+                        player.blocking_lock().id()
                     );
 
                     for player in self.players.iter() {
                         error!(
                             "gl | validation: \t {:?}",
-                            player.borrow().clone_owned_animals()
+                            player.blocking_lock().clone_owned_animals()
                         );
                     }
 
                     for player in self.players.iter() {
-                        error!("gl | validation: \t {:?}", player.borrow().clone_wallet());
+                        error!(
+                            "gl | validation: \t {:?}",
+                            player.blocking_lock().clone_wallet()
+                        );
                     }
                     return false;
                 }
@@ -303,18 +317,18 @@ impl Game {
     pub fn get_all_ids(&self) -> Vec<String> {
         let mut all_ids = Vec::new();
         for player in self.players.iter() {
-            all_ids.push(player.borrow().id().to_string());
+            all_ids.push(player.blocking_lock().id().to_string());
         }
         return all_ids;
     }
 
-    fn auction(&mut self, player: Rc<RefCell<SupervisedPlayer>>, animal: &Rc<Animal>) {
-        let host_id = player.borrow().id().clone();
+    fn auction(&mut self, player: Arc<Mutex<SupervisedPlayer>>, animal: &Arc<Animal>) {
+        let host_id = player.blocking_lock().id().clone();
 
-        let auction_players = self.get_players_excluding(vec![&host_id]);
+        let auction_players = self.get_players_excluding(vec![host_id.clone()]);
         // print!("gl | \t host {}, auction_player: ", host_id);
         for p in auction_players.clone() {
-            // print!("{}, ", p.borrow().id().name);
+            // print!("{}, ", p.blocking_lock().id().name);
         }
         // println!();
 
@@ -324,20 +338,21 @@ impl Game {
             let mut pass_count = 0usize;
             for bidder in auction_players.iter() {
                 let auction_round = AuctionRound {
-                    animal: Rc::clone(&animal),
+                    animal: Arc::clone(&animal),
                     host: host_id.clone(),
                     bids: bids.clone(),
                 };
                 let state_msg = StateMessage::ProvideBidding {
                     state: auction_round,
                 };
-                let player_decision: Bidding = bidder.borrow_mut().map_to_action_inner(state_msg);
+                let player_decision: Bidding =
+                    bidder.blocking_lock().map_to_action_inner(state_msg);
 
-                bids.push((bidder.borrow().id().clone(), player_decision.clone()));
+                bids.push((bidder.blocking_lock().id().clone(), player_decision.clone()));
 
                 // println!(
                 //    "gl | \t\t Player {} bids {:?} in auction for animal {}",
-                //    bidder.borrow().id(),
+                //    bidder.blocking_lock().id(),
                 //    player_decision,
                 //    animal
                 // );
@@ -356,7 +371,7 @@ impl Game {
             Some((max_bidder_id, max_bid)) => {
                 let auction_winner = auction_players
                     .iter()
-                    .find(|p| p.borrow().id() == *max_bidder_id)
+                    .find(|p| p.blocking_lock().id() == *max_bidder_id)
                     .unwrap(); // if there is a bid there will also always be a player who made that bid
                 let auction_winner = auction_winner;
 
@@ -367,7 +382,7 @@ impl Game {
 
                 if max_bid == 0 {
                     let update: GameUpdate = GameUpdate::Auction(AuctionKind::NoBiddings {
-                        host_id: host_id,
+                        host_id: host_id.clone(),
                         animal: **animal,
                     });
 
@@ -385,7 +400,7 @@ impl Game {
                     state: final_auction_round.clone(),
                 };
                 let player_decision: AuctionDecision =
-                    player.borrow_mut().map_to_action_inner(state_msg);
+                    player.blocking_lock().map_to_action_inner(state_msg);
 
                 let (sender, receiver) = match player_decision {
                     AuctionDecision::Buy() => {
@@ -394,7 +409,7 @@ impl Game {
                         //    host_id, animal, max_bidder_id, max_bid
                         //);
 
-                        (player, Rc::clone(auction_winner))
+                        (player, Arc::clone(auction_winner))
                     }
                     AuctionDecision::Sell() => {
                         // println!(
@@ -402,7 +417,7 @@ impl Game {
                         //    host_id, animal, max_bidder_id, max_bid
                         //);
 
-                        (Rc::clone(auction_winner), player)
+                        (Arc::clone(auction_winner), player)
                     }
                 };
 
@@ -421,38 +436,44 @@ impl Game {
 
     fn process_auction(
         &mut self,
-        sender: Rc<RefCell<SupervisedPlayer>>,
-        receiver: Rc<RefCell<SupervisedPlayer>>,
+        sender: Arc<Mutex<SupervisedPlayer>>,
+        receiver: Arc<Mutex<SupervisedPlayer>>,
         max_bid: Value,
         final_auction_round: AuctionRound,
     ) {
         let state_msg = StateMessage::SendMoney {
-            player_id: receiver.borrow().id().clone(),
+            player_id: receiver.blocking_lock().id().clone(),
             amount: max_bid,
         };
-        let player_decision: SendMoney = sender.borrow_mut().map_to_action_inner(state_msg);
+
+        let player_decision: SendMoney = sender.blocking_lock().map_to_action_inner(state_msg);
         match player_decision {
             SendMoney::WasBluff() => {
+                let player_id = sender.blocking_lock().id();
+                let player_wallet = sender.blocking_lock().clone_wallet();
                 let update = GameUpdate::ExposePlayer {
-                    player: sender.borrow().id(),
-                    wallet: sender.borrow().clone_wallet(),
+                    player: player_id,
+                    wallet: player_wallet,
                 };
                 // limit for the player is enforced in supervised_player until auction is over, hence this will execute at most "number of players" many times
 
                 Self::update_multiple_players(&self.players, update);
-                let host = self.get_by_id(&final_auction_round.host).unwrap(); // player always exists
+                let host = self.get_by_id(final_auction_round.host).unwrap(); // player always exists
                 // println!(
                 //    "gl | \t player {} bluffed, exposed value {}",
-                //    sender.borrow().id(),
-                //    sender.borrow().clone_wallet().total_money(),
+                //    sender.blocking_lock().id(),
+                //    sender.blocking_lock().clone_wallet().total_money(),
                 // );
 
                 self.auction(host, &final_auction_round.animal);
             }
             SendMoney::Amount(amount) => {
-                let sender_id = sender.borrow().id().clone();
-                let receiver_id = receiver.borrow().id().clone();
+                let sender_id = sender.blocking_lock().id().clone();
+
+                let receiver_id = receiver.blocking_lock().id().clone();
+
                 let rounds = final_auction_round.clone();
+
                 let public_kind = MoneyTransfer::Public {
                     card_amount: amount.len(),
                     min_value: max_bid,
@@ -460,9 +481,9 @@ impl Game {
 
                 // println!(
                 //    "gl | \t player {} sends {} bills to {}",
-                //    sender.borrow().id(),
+                //    sender.blocking_lock().id(),
                 //    amount.len(),
-                //    receiver.borrow().id().clone()
+                //    receiver.blocking_lock().id().clone()
                 //);
 
                 let update = |transfer_kind| {
@@ -486,37 +507,35 @@ impl Game {
         }
     }
 
-    fn update_multiple_players(players: &Vec<Rc<RefCell<SupervisedPlayer>>>, update: GameUpdate) {
+    fn update_multiple_players(players: &Vec<Arc<Mutex<SupervisedPlayer>>>, update: GameUpdate) {
         for other_player in players {
-            let _: NoAction =
-                other_player
-                    .borrow_mut()
-                    .map_to_action_inner(StateMessage::GameUpdate {
-                        update: update.clone(),
-                    });
+            let mut binding = other_player.blocking_lock();
+            let _: NoAction = binding.map_to_action_inner(StateMessage::GameUpdate {
+                update: update.clone(),
+            });
         }
     }
 
     fn public_private_update(
         &self,
-        player_a: Rc<RefCell<SupervisedPlayer>>,
-        player_b: Rc<RefCell<SupervisedPlayer>>,
+        player_a: Arc<Mutex<SupervisedPlayer>>,
+        player_b: Arc<Mutex<SupervisedPlayer>>,
         public_update: GameUpdate,
         private_update: GameUpdate,
     ) {
-        let other_player =
-            self.get_players_excluding(vec![&player_a.borrow().id(), &player_b.borrow().id()]);
-
+        let player_a_id = player_a.blocking_lock().id().clone();
+        let player_b_id = player_b.blocking_lock().id().clone();
+        let other_player = self.get_players_excluding(vec![player_a_id, player_b_id]);
         Self::update_multiple_players(&other_player, public_update);
 
         let _: NoAction = player_a
-            .borrow_mut()
+            .blocking_lock()
             .map_to_action_inner(StateMessage::GameUpdate {
                 update: private_update.clone(),
             });
 
         let _: NoAction = player_b
-            .borrow_mut()
+            .blocking_lock()
             .map_to_action_inner(StateMessage::GameUpdate {
                 update: private_update,
             });
@@ -524,8 +543,8 @@ impl Game {
 
     fn offer_trade_to_opponent(
         &self,
-        challenger: Rc<RefCell<SupervisedPlayer>>,
-        opponent: Rc<RefCell<SupervisedPlayer>>,
+        challenger: Arc<Mutex<SupervisedPlayer>>,
+        opponent: Arc<Mutex<SupervisedPlayer>>,
         amount: Vec<Money>,
         animal: Animal,
         animal_count: usize,
@@ -534,7 +553,7 @@ impl Game {
         let challenger_card_count = amount.len();
         let challenger_offer_vec = amount;
         let offer: TradeOffer = TradeOffer {
-            challenger: challenger.borrow().id().clone(),
+            challenger: challenger.blocking_lock().id().clone(),
             animal: animal,
             animal_count: animal_count.clone(),
             challenger_card_offer: challenger_card_count,
@@ -542,18 +561,18 @@ impl Game {
 
         let state_msg = StateMessage::RespondToTrade { offer: offer };
         let player_decision: TradeOpponentDecision =
-            opponent.borrow_mut().map_to_action_inner(state_msg);
+            opponent.blocking_lock().map_to_action_inner(state_msg);
 
         let (opponent_total_value, opponent_card_count, opponent_offer_vec) = match player_decision
         {
             TradeOpponentDecision::Accept() => {
-                // println!("gl | \t Trade accepted by {}", opponent.borrow().id());
+                // println!("gl | \t Trade accepted by {}", opponent.blocking_lock().id());
                 (0, None, None)
             }
             TradeOpponentDecision::CounterOffer(amount) => {
                 // println!(
                 //    "gl | \t Trade countered by {} with amount {}",
-                //    opponent.borrow().id(),
+                //    opponent.blocking_lock().id(),
                 //    amount.iter().map(|m| m.as_usize()).sum::<usize>(),
                 //);
                 (
@@ -565,13 +584,13 @@ impl Game {
         };
 
         let winner_id = if challenger_total_value >= opponent_total_value {
-            challenger.borrow().id().clone()
+            challenger.blocking_lock().id().clone()
         } else {
-            opponent.borrow().id().clone()
+            opponent.blocking_lock().id().clone()
         };
 
-        let challenger_id = challenger.borrow().id().clone();
-        let opponent_id = opponent.borrow().id().clone();
+        let challenger_id = challenger.blocking_lock().id().clone();
+        let opponent_id = opponent.blocking_lock().id().clone();
         let update = |trade_kind| GameUpdate::Trade {
             challenger: challenger_id,
             opponent: opponent_id,
@@ -598,19 +617,19 @@ impl Game {
         );
     }
 
-    fn player_must_trade(&self, player: Rc<RefCell<SupervisedPlayer>>) {
-        // println!("gl | {} must trade", player.borrow().id());
+    fn player_must_trade(&self, player: Arc<Mutex<SupervisedPlayer>>) {
+        // println!("gl | {} must trade", player.blocking_lock().id());
 
         let state_msg = StateMessage::Trade();
-        let player_decision: InitialTrade = player.borrow_mut().map_to_action_inner(state_msg);
+        let player_decision: InitialTrade = player.blocking_lock().map_to_action_inner(state_msg);
 
-        let opponent = self.get_by_id(&player_decision.opponent);
+        let opponent = self.get_by_id(player_decision.opponent);
         match opponent {
             Ok(opponent) => {
                 let opponent_count = opponent
-                    .borrow()
+                    .blocking_lock()
                     .player
-                    .borrow()
+                    .blocking_lock()
                     .owned_animals()
                     .get(&player_decision.animal)
                     .unwrap_or(&0)
@@ -618,7 +637,7 @@ impl Game {
 
                 // println!(
                 //   "gl | \t {} trades {}-{} for {}, against {} who has {} many",
-                //   player.borrow().id(),
+                //   player.blocking_lock().id(),
                 ////   player_decision.animal_count,
                 //   player_decision.animal,
                 //   player_decision
@@ -643,7 +662,7 @@ impl Game {
     }
 
     fn process_card_inflation(&mut self, card: &Animal) {
-        let animal_set = self.animal_usage.get(card).unwrap(); // must not fail as all animals of the game are in the mapping
+        let mut animal_set = self.animal_usage.get(card).unwrap().blocking_lock(); // must not fail as all animals of the game are in the mapping
 
         let inflation = animal_set.get_next_inflation();
         if inflation > 0 {
@@ -667,12 +686,12 @@ impl Game {
 
             // println!("gl | --- New turn ---");
 
-            let player: Rc<RefCell<SupervisedPlayer>> =
-                Rc::clone(self.players.get(current_player_idx).unwrap());
+            let player: Arc<Mutex<SupervisedPlayer>> =
+                Arc::clone(self.players.get(current_player_idx).unwrap());
 
             let state_msg = StateMessage::DrawOrTrade();
             let player_decision: PlayerTurnDecision =
-                player.borrow_mut().map_to_action_inner(state_msg);
+                player.blocking_lock().map_to_action_inner(state_msg);
 
             match player_decision {
                 PlayerTurnDecision::Draw() => {
@@ -682,7 +701,7 @@ impl Game {
 
                     // println!(
                     //    "gl | \t Player {} drew card: {}",
-                    //    player.borrow().id(),
+                    //    player.blocking_lock().id(),
                     //    card
                     // );
                     self.auction(player, &card)
@@ -693,13 +712,13 @@ impl Game {
                     animal_count,
                     amount,
                 }) => {
-                    let opponent = self.get_by_id(&opponent);
+                    let opponent = self.get_by_id(opponent);
                     match opponent {
                         Ok(opponent) => {
                             let opponent_count = opponent
-                                .borrow()
+                                .blocking_lock()
                                 .player
-                                .borrow()
+                                .blocking_lock()
                                 .owned_animals()
                                 .get(&animal)
                                 .unwrap_or(&0)
@@ -707,11 +726,11 @@ impl Game {
 
                             // println!(
                             //   "gl | \t {} trades {}-{} for {}, against {} who has {} many",
-                            //   player.borrow().id(),
+                            //   player.blocking_lock().id(),
                             //    animal_count,
                             //   animal,
                             //   amount.iter().map(|m| m.as_usize()).sum::<usize>(),
-                            //   opponent.borrow().id(),
+                            //   opponent.blocking_lock().id(),
                             //   opponent_count
                             //);
                             self.offer_trade_to_opponent(
@@ -733,22 +752,24 @@ impl Game {
     fn trading_phase(&mut self) {
         let mut skip_players: Vec<PlayerId> = Vec::new();
 
-        for _ in 0..self.num_trading_rounds {
+        for idx in 0..self.num_trading_rounds {
             for player in self.players.iter() {
                 if skip_players.len() == self.players.len() {
                     // println!("gl | game ended as no player can trade anymore");
                     break;
                 }
 
-                if !skip_players.contains(&player.borrow().id()) {
-                    if player.borrow().can_trade().is_some() {
-                        self.player_must_trade(Rc::clone(player));
+                let player_id = player.blocking_lock().id().clone();
+                if !skip_players.contains(&player_id) {
+                    let can_trade = player.blocking_lock().can_trade().is_some();
+                    if can_trade {
+                        self.player_must_trade(Arc::clone(player));
                     } else {
                         // println!(
                         //    "gl | player will be {} skipped in trading",
-                        //    player.borrow().id()
+                        //    player.blocking_lock().id()
                         //);
-                        skip_players.push(player.borrow().id().clone());
+                        skip_players.push(player_id);
                     }
                 }
             }
@@ -757,26 +778,26 @@ impl Game {
 
     pub fn get_players_excluding(
         &self,
-        excluding: Vec<&PlayerId>,
-    ) -> Vec<Rc<RefCell<SupervisedPlayer>>> {
+        excluding: Vec<PlayerId>,
+    ) -> Vec<Arc<Mutex<SupervisedPlayer>>> {
         self.players
             .iter()
-            .filter(|p| excluding.contains(&&p.borrow().id()).not())
+            .filter(|p| excluding.contains(&&p.blocking_lock().id()).not())
             .cloned()
             .collect()
     }
 
     pub fn get_by_id(
         &self,
-        player_id: &PlayerId,
-    ) -> Result<Rc<RefCell<SupervisedPlayer>>, GameError> {
+        player_id: PlayerId,
+    ) -> Result<Arc<Mutex<SupervisedPlayer>>, GameError> {
         let player = self
             .players
             .iter()
-            .find(|player| player.borrow().id() == *player_id);
+            .find(|player| player.blocking_lock().id() == *player_id);
 
         match player {
-            Some(player) => Ok(Rc::clone(player)),
+            Some(player) => Ok(Arc::clone(player)),
             None => Err(GameError::PlayerNotFound),
         }
     }

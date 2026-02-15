@@ -1,6 +1,6 @@
-use reqwest::header::SEC_WEBSOCKET_ACCEPT;
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
 
 use crate::player::wallet::Wallet;
 use crate::{Money, Value};
@@ -22,13 +22,13 @@ pub type Points = usize;
 /// `host` - the player that hosts the current auction
 /// `animal` - the animal that is auctioned off by the host
 /// `bids` - the current bids that have been placed until now by all other players
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AuctionRound {
     #[pyo3(get)]
     pub host: PlayerId,
 
-    pub animal: Rc<Animal>,
+    pub animal: Arc<Animal>,
 
     #[pyo3(get)]
     pub bids: Vec<(PlayerId, Bidding)>,
@@ -50,7 +50,7 @@ impl AuctionRound {
 /// `animal` - The animal that is offered for the trade
 /// `animal_count` - the number of animals that are going to be traded
 /// `challenger_card_offer` - the number of cards/ bills the challenger has offered, the actual card values are hidden
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradeOffer {
     #[pyo3(get)]
@@ -64,7 +64,7 @@ pub struct TradeOffer {
 }
 
 /// After each game event, all players are informed about what happened.
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GameUpdate {
     /// Sent after an auction has finished.
@@ -122,7 +122,7 @@ pub enum GameUpdate {
 }
 
 /// After an auction has finished it is described by a kind
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AuctionKind {
     /// No one has placed a bid. The host will receive the animal
@@ -138,7 +138,7 @@ pub enum AuctionKind {
 }
 
 /// Information about what money has been transferred after an auction
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTransfer {
     /// only the number of cards/ bills that have been exchanged and the minimum value to be payed are exposed to players not participating in the current money transfer
@@ -152,7 +152,7 @@ pub enum MoneyTransfer {
 }
 
 /// Information about what money has been transferred after a trade
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MoneyTrade {
     /// only the number of cards/ bills that have been exchanged are exposed to players not participating in the current money trade

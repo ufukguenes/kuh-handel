@@ -11,7 +11,7 @@ use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Actions a player can make after receiving a state message
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum ActionMessage {
@@ -25,7 +25,7 @@ pub enum ActionMessage {
 }
 
 /// State Messages are sent to a player describing a state of the current game which leads to an action
-#[pyclass(unsendable)]
+#[pyclass()]
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "payload")]
 pub enum StateMessage {

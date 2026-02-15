@@ -10,29 +10,29 @@ use crate::player::random_player::RandomPlayerActions;
 use crate::player::simple_player::SimplePlayer;
 use crate::player::wallet::Wallet;
 use pyo3::prelude::*;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::Display;
-use std::rc::Rc;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub type PlayerId = String;
 
-#[pyclass(unsendable)]
+#[pyclass()]
 pub struct Player {
     id: PlayerId,
     wallet: Wallet,
     owned_animals: BTreeMap<Animal, usize>,
-    game_stack: Vec<Rc<AnimalSet>>,
-    player_actions: Box<dyn PlayerActions>,
+    game_stack: Vec<Arc<Mutex<AnimalSet>>>,
+    player_actions: Box<dyn PlayerActions + Send + Sync>,
 }
 
 impl Player {
     pub fn new(
         id: String,
         wallet: Wallet,
-        game_stack: Vec<Rc<AnimalSet>>,
-        player_actions: Box<dyn PlayerActions>,
+        game_stack: Vec<Arc<Mutex<AnimalSet>>>,
+        player_actions: Box<dyn PlayerActions + Send + Sync>,
     ) -> Self {
         Player {
             id: id,
@@ -47,9 +47,12 @@ impl Player {
         let mut full_stacks: usize = 0;
         let mut total_points: usize = 0;
         for (animal, current_animal_count) in self.owned_animals.iter() {
-            let animal_set = self.game_stack.iter().find(|set| set.animal() == animal);
+            let animal_set = self
+                .game_stack
+                .iter()
+                .find(|set| set.blocking_lock().animal() == animal);
             if let Some(animal_set) = animal_set {
-                if animal_set.occurrences() == *current_animal_count {
+                if animal_set.blocking_lock().occurrences() == *current_animal_count {
                     total_points += animal.value();
                     full_stacks += 1;
                 }
@@ -58,9 +61,9 @@ impl Player {
         full_stacks * total_points
     }
 
-    pub fn can_trade(&self, opponents: &Vec<Rc<RefCell<Player>>>) -> Option<InitialTrade> {
+    pub fn can_trade(&self, opponents: Vec<Arc<Mutex<Player>>>) -> Option<InitialTrade> {
         for opponent in opponents.iter() {
-            let possible_trade = self.can_trade_against(Rc::clone(opponent));
+            let possible_trade = self.can_trade_against(Arc::clone(opponent));
             match possible_trade {
                 Some(trade) => {
                     return Some(trade);
@@ -76,16 +79,16 @@ impl Player {
     pub fn can_trade_animal(
         &self,
         animal: &Animal,
-        opponents: &Vec<Rc<RefCell<Player>>>,
+        opponents: &Vec<Arc<Mutex<Player>>>,
     ) -> Option<InitialTrade> {
         if let Some(&animal_count) = self.owned_animals.get(animal) {
             for opponent in opponents.iter() {
-                if let Some(&opponent_animal_count) = opponent.borrow().owned_animals().get(animal)
-                {
+                let binding = opponent.blocking_lock();
+                if let Some(&opponent_animal_count) = binding.owned_animals().get(animal) {
                     let max_trade_count = std::cmp::min(animal_count, opponent_animal_count);
 
                     return Some(InitialTrade {
-                        opponent: opponent.borrow().id().clone(),
+                        opponent: binding.id().clone(),
                         animal: animal.clone(),
                         animal_count: max_trade_count,
                         amount: Vec::new(),
@@ -96,22 +99,22 @@ impl Player {
         None
     }
 
-    pub fn can_trade_against(&self, opponent: Rc<RefCell<Player>>) -> Option<InitialTrade> {
+    pub fn can_trade_against(&self, opponent: Arc<Mutex<Player>>) -> Option<InitialTrade> {
         for (&animal, &animal_count) in self.owned_animals.iter() {
             if animal_count
                 < self
                     .game_stack
                     .iter()
-                    .find(|set| set.animal() == &animal)
-                    .map(|set| set.occurrences())
+                    .find(|set| set.blocking_lock().animal() == &animal)
+                    .map(|set| set.blocking_lock().occurrences())
                     .unwrap_or(0)
             {
-                let binding = opponent.borrow();
+                let binding = opponent.blocking_lock();
                 let opponent_animals = binding.owned_animals();
                 if let Some(&opponent_animal_count) = opponent_animals.get(&animal) {
                     let max_trade_count = std::cmp::min(animal_count, opponent_animal_count);
                     return Some(InitialTrade {
-                        opponent: opponent.borrow().id().clone(),
+                        opponent: binding.id().clone(),
                         animal: animal,
                         animal_count: max_trade_count,
                         amount: Vec::new(),
@@ -190,7 +193,10 @@ impl Player {
     #[new]
     pub fn new_py(id: String, wallet: Wallet, game_stack: Vec<AnimalSet>) -> Self {
         let dummy_action = SimplePlayer::new_from_seed(id.clone(), 0);
-        let game_stack = game_stack.iter().map(|set| Rc::new(set.clone())).collect();
+        let game_stack = game_stack
+            .iter()
+            .map(|set| Arc::new(Mutex::new(set.clone())))
+            .collect();
         Player::new(id, wallet, game_stack, Box::new(dummy_action))
     }
 

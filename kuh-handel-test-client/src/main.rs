@@ -43,7 +43,7 @@ pub fn spawn_player(id: String, base_url: String, risk: f32) -> tokio::task::Joi
                 .clone()
                 .lock()
                 .await
-                .play_one_round("game".to_string())
+                .play_one_round("pvp_games".to_string())
                 .await;
         }
     })

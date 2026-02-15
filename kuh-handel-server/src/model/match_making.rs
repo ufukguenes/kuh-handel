@@ -186,12 +186,9 @@ pub fn spawn_game(
     let amount_seeds = ws_players.len() + server_bots.len() + 1;
     let mut seeds: Vec<u64> = rng.random_iter().take(amount_seeds).collect();
     tokio::spawn(async move {
-        println!("1");
         let start_time = tokio::time::Instant::now();
 
         let mut ws_actions: Vec<WebsocketActions> = Vec::new();
-        println!("1.1");
-
         {
             let mut channel_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
 
@@ -204,7 +201,6 @@ pub fn spawn_game(
                 ));
             }
         }
-        println!("2");
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
         for idx in 0..server_bots.len() {
             let mut risk = SimplePlayer::get_random_risk(seeds.pop().unwrap());
@@ -219,7 +215,6 @@ pub fn spawn_game(
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
         all_ids.extend(server_bots.clone());
-        println!("3");
         let game_handle = tokio::task::spawn_blocking(move || {
             let mut all_actions: Vec<Box<dyn PlayerActions + Send + Sync>> = Vec::new();
             all_actions.extend(ws_actions.into_iter().map(|action: WebsocketActions| {
@@ -229,7 +224,6 @@ pub fn spawn_game(
                 Box::new(action) as Box<dyn PlayerActions + Send + Sync>
             }));
 
-            println!("default game");
             let mut game = Game::new_default_game(all_ids, all_actions, seeds.pop().unwrap());
 
             let ranking = game.play();

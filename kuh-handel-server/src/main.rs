@@ -137,7 +137,7 @@ async fn main() {
             routing::get(games_per_second_handler).with_state(pvp_ws_lobby.clone()),
         )
         .route(
-            "/kuh-handel/game",
+            "/kuh-handel/pvp_games",
             routing::get(websocket_handler)
                 .with_state((pvp_ws_lobby.clone(), authentication.clone())),
         )

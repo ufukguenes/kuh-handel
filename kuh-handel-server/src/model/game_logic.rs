@@ -121,14 +121,7 @@ impl Game {
             players_in_turn_order: players_in_turn_order,
             animals: animals,
         };
-        for player in supervised_players.iter() {
-            let _: NoAction =
-                player
-                    .blocking_lock()
-                    .map_to_action_inner(StateMessage::GameUpdate {
-                        update: update.clone(),
-                    });
-        }
+        Self::update_multiple_players(&supervised_players, update);
 
         Game {
             players: supervised_players,
@@ -543,18 +536,7 @@ impl Game {
         let player_b_id = player_b.blocking_lock().id().clone();
         let other_player = self.get_players_excluding(vec![player_a_id, player_b_id]);
         Self::update_multiple_players(&other_player, public_update);
-
-        let _: NoAction = player_a
-            .blocking_lock()
-            .map_to_action_inner(StateMessage::GameUpdate {
-                update: private_update.clone(),
-            });
-
-        let _: NoAction = player_b
-            .blocking_lock()
-            .map_to_action_inner(StateMessage::GameUpdate {
-                update: private_update,
-            });
+        Self::update_multiple_players(&vec![player_a, player_b], private_update);
     }
 
     fn offer_trade_to_opponent(

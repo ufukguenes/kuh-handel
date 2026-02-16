@@ -512,26 +512,11 @@ impl Game {
     fn update_multiple_players(players: &Vec<Arc<Mutex<SupervisedPlayer>>>, update: GameUpdate) {
         let t = std::time::Instant::now();
 
-        let mut handles = Vec::new();
-
-        for player_arc in players {
-            let player_arc = Arc::clone(player_arc);
-            let update_clone = update.clone();
-
-            let handle = std::thread::spawn(move || {
-                let mut binding = player_arc.blocking_lock();
-
-                let _: NoAction = binding.map_to_action_inner(StateMessage::GameUpdate {
-                    update: update_clone,
-                });
+        for other_player in players {
+            let mut binding = other_player.blocking_lock();
+            let _: NoAction = binding.map_to_action_inner(StateMessage::GameUpdate {
+                update: update.clone(),
             });
-
-            handles.push(handle);
-        }
-
-        // Wait for ALL threads to finish
-        for handle in handles {
-            let _ = handle.join();
         }
 
         let time = std::time::Instant::now() - t;

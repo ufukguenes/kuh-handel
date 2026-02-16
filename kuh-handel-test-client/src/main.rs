@@ -33,7 +33,6 @@ pub fn spawn_player(id: String, base_url: String, risk: f32) -> tokio::task::Joi
         "abcd".to_string(),
         Box::new(simple_bot),
         base_url.clone(),
-        true,
     )));
 
     tokio::task::spawn_local(async move {

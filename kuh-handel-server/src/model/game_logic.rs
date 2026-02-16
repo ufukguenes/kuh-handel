@@ -101,7 +101,7 @@ impl Game {
                 .filter(|p| *p.blocking_lock().id() != current_id)
                 .cloned()
                 .collect();
-            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents, false);
+            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents);
             supervised_players.push(Arc::new(Mutex::new(new_supervised_player)));
         }
         let players_in_turn_order = supervised_players

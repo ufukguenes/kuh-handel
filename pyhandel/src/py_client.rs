@@ -20,13 +20,7 @@ pub struct Client {
 #[pymethods]
 impl Client {
     #[new]
-    pub fn new(
-        name: String,
-        token: String,
-        bot: Py<PlayerActions>,
-        base_url: String,
-        raise_faulty_action_warning: bool,
-    ) -> Self {
+    pub fn new(name: String, token: String, bot: Py<PlayerActions>, base_url: String) -> Self {
         let bot = RustPlayer { inner: bot };
         Client {
             inner: Arc::new(Mutex::new(CoreClient::new(
@@ -34,7 +28,6 @@ impl Client {
                 token,
                 Box::new(bot),
                 base_url,
-                raise_faulty_action_warning,
             ))),
         }
     }

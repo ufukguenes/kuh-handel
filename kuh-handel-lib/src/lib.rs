@@ -19,7 +19,6 @@ pub mod player {
     pub mod player_error;
     pub mod random_player;
     pub mod simple_player;
-    pub mod supervised_player;
     pub mod wallet;
 }
 

@@ -19,7 +19,7 @@ use tokio::task::JoinSet;
 
 use crate::game_error::GameError;
 
-use kuh_handel_lib::player::supervised_player::SupervisedPlayer;
+use crate::server_side_player::supervised_player::SupervisedPlayer;
 use rand::SeedableRng;
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;

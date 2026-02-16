@@ -3,16 +3,16 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::animals::Animal;
-use crate::messages::actions::*;
-use crate::messages::game_updates::*;
-use crate::messages::message_protocol::StateMessage;
-use crate::player::{
+use kuh_handel_lib::animals::Animal;
+use kuh_handel_lib::messages::actions::*;
+use kuh_handel_lib::messages::game_updates::*;
+use kuh_handel_lib::messages::message_protocol::StateMessage;
+use kuh_handel_lib::player::{
     base_player::{Player, PlayerId},
     player_actions::PlayerActions,
     wallet::{Affordability::*, Wallet},
 };
-use crate::{Money, Value};
+use kuh_handel_lib::{Money, Value};
 
 /// This changes an action based on the deepest nested thing that breaks the action
 /// example:

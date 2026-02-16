@@ -22,6 +22,7 @@ pub struct Client {
     pub base_url: String,
     last_ranking: Vec<(String, usize)>,
     illegal_moves_made: Vec<String>,
+    raise_faulty_action_warning: bool,
 }
 
 impl Client {
@@ -31,6 +32,7 @@ impl Client {
         token: String,
         bot: Box<dyn PlayerActions + Send + Sync>,
         base_url: String,
+        raise_faulty_action_warning: bool,
     ) -> Self {
         Client {
             name,
@@ -39,6 +41,7 @@ impl Client {
             base_url,
             last_ranking: Vec::new(),
             illegal_moves_made: Vec::default(),
+            raise_faulty_action_warning: raise_faulty_action_warning,
         }
     }
 
@@ -165,9 +168,11 @@ impl Client {
 
         let res = send.close().await;
         println!("result {}: {:?}", self.name, self.last_ranking);
-        println!(
-            "illegal moves made {}: {:?}",
-            self.name, self.illegal_moves_made
-        );
+        if self.raise_faulty_action_warning {
+            println!(
+                "illegal moves made {}: {:?}",
+                self.name, self.illegal_moves_made
+            );
+        }
     }
 }

@@ -93,7 +93,6 @@ impl PartialEq for InitialTrade {
         } else {
             same_amount = self.amount == other.amount
         }
-        println!("{}, {:?}, {:?}", same_amount, self.amount, other.amount);
 
         return same_player && same_animal && same_count && same_amount;
     }

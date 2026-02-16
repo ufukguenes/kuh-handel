@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "kuh-handel-lib"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "float-ord",
  "futures-util",
@@ -975,7 +975,7 @@ dependencies = [
 
 [[package]]
 name = "kuh-handel-test-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "kuh-handel-lib",
  "tokio",
@@ -1264,7 +1264,7 @@ dependencies = [
 
 [[package]]
 name = "pyhandel"
-version = "0.1.44"
+version = "0.2.0"
 dependencies = [
  "kuh-handel-lib",
  "pyo3",

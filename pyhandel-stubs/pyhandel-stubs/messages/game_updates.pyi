@@ -83,9 +83,12 @@ class GameUpdate:
 
     class End(GameUpdate):
         ranking: list[tuple[PlayerId, Points]]
-        def __init__(self, ranking: list[tuple[PlayerId, Points]]) -> None: ...
+        illegal_moves_made: list[str]
+        def __init__(
+            self, ranking: list[tuple[PlayerId, Points]], illegal_moves_made: list[str]
+        ) -> None: ...
 
-        __match_args__ = ("ranking",)
+        __match_args__ = ("ranking", "illegal_moves_made")
 
     class ExposePlayer(GameUpdate):
         player: PlayerId

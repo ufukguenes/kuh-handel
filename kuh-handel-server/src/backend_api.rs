@@ -21,11 +21,26 @@ use tracing::{error, info};
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
+use serde_aux::prelude::deserialize_bool_from_anything;
 
 #[derive(Deserialize)]
 pub struct AuthParams {
     player_id: String,
     token: String,
+}
+
+#[derive(Deserialize)]
+pub struct SettingsParams {
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
+    raise_faulty_action_warning: bool,
+}
+
+#[derive(Deserialize)]
+pub struct GameParams {
+    #[serde(flatten)]
+    pub auth: AuthParams,
+    #[serde(flatten)]
+    pub settings: SettingsParams,
 }
 
 #[derive(Clone)]
@@ -164,19 +179,20 @@ pub async fn games_per_second_handler(State(state): State<WebsocketLobby>) -> Ht
 #[debug_handler]
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
-    Query(params): Query<AuthParams>,
+    Query(params): Query<GameParams>,
     State(state): State<(WebsocketLobby, JsonLog<String>)>,
 ) -> impl IntoResponse {
-    let player_id = params.player_id.clone();
+    let player_id = params.auth.player_id.clone();
+    let raise_faulty_action_warning = params.settings.raise_faulty_action_warning.clone();
     let (ws_lobby, authentication) = state;
 
-    if !authenticate(authentication, &params).await {
+    if !authenticate(authentication, &params.auth).await {
         info!("bck | Authentication failed for player: {}", player_id);
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
     if ws_lobby
-        .channels_for_ws_actions
+        .player_settings
         .lock()
         .await
         .get(&player_id)
@@ -190,10 +206,17 @@ pub async fn websocket_handler(
     }
 
     info!("bck | Player {} authenticated successfully.", player_id);
-    ws.on_upgrade(|socket| handle_socket(socket, ws_lobby, player_id))
+    ws.on_upgrade(move |socket| {
+        handle_socket(socket, ws_lobby, player_id, raise_faulty_action_warning)
+    })
 }
 
-async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: String) {
+async fn handle_socket(
+    mut socket: WebSocket,
+    lobby: WebsocketLobby,
+    player_id: String,
+    raise_faulty_action_warning: bool,
+) {
     info!("bck | New bot connecting...");
 
     let (state_sender, mut state_receiver): (
@@ -203,13 +226,13 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
     let (action_sender, action_receiver): (Sender<serde_json::Value>, Receiver<serde_json::Value>) =
         mpsc::channel(1);
 
-    let arc_channels_for_ws_actions = Arc::clone(&lobby.channels_for_ws_actions);
+    let arc_player_settings = Arc::clone(&lobby.player_settings);
     let channels_for_this_bot = Some((state_sender, action_receiver));
 
-    arc_channels_for_ws_actions
-        .lock()
-        .await
-        .insert(player_id.clone(), channels_for_this_bot);
+    arc_player_settings.lock().await.insert(
+        player_id.clone(),
+        (channels_for_this_bot, raise_faulty_action_warning),
+    );
 
     // for each bot, create two channels
     // 1. to send messages containing the actions received from the client-bot over the websocket to the server-bot from our logic (from action_sender to action_receiver)
@@ -332,9 +355,6 @@ async fn handle_socket(mut socket: WebSocket, lobby: WebsocketLobby, player_id: 
     state_receiver.close();
     let _ = socket.close().await;
 
-    arc_channels_for_ws_actions
-        .lock()
-        .await
-        .remove(&player_id.clone());
+    arc_player_settings.lock().await.remove(&player_id.clone());
     info!("bck | Bot ID {} disconnected.", player_id);
 }

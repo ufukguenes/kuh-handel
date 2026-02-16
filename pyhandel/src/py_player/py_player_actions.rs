@@ -50,10 +50,6 @@ impl PlayerActions {
         }
     }
 
-    fn raise_faulty_action_warning(&self) -> bool {
-        false
-    }
-
     pub fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         panic!("needs to be implemented by user in Python")
     }
@@ -94,17 +90,6 @@ impl RustPlayer {
 }
 
 impl CorePlayerActions for RustPlayer {
-    fn raise_faulty_action_warning(&self) -> bool {
-        Python::with_gil(|py| {
-            let result = self
-                .inner
-                .bind(py)
-                .call_method0("raise_faulty_action_warning")
-                .unwrap();
-            result.extract::<bool>().unwrap_or(false)
-        })
-    }
-
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
         Python::with_gil(|py| {
             let result = self

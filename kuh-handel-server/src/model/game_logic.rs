@@ -74,6 +74,7 @@ impl Game {
         num_bidding_rounds: usize,
         num_trading_rounds: usize,
         num_drawing_rounds: usize,
+        raise_faulty_action_warnings: Vec<bool>,
     ) -> Self {
         let mut animal_usage: BTreeMap<Arc<Animal>, Arc<Mutex<AnimalSet>>> = BTreeMap::new();
         let mut game_stack: Vec<Arc<Animal>> = Vec::new();
@@ -90,18 +91,19 @@ impl Game {
 
         let players: Vec<Arc<Mutex<Player>>> = players
             .into_iter()
-            .map(|p| Arc::new(Mutex::new(p)))
+            .map(|p| (Arc::new(Mutex::new(p))))
             .collect();
 
         let mut supervised_players = Vec::new();
-        for player in players.iter() {
+        for (player, warning) in players.iter().zip(raise_faulty_action_warnings) {
             let current_id = player.blocking_lock().id().clone();
             let opponents: Vec<Arc<Mutex<Player>>> = players
                 .iter()
                 .filter(|p| *p.blocking_lock().id() != current_id)
                 .cloned()
                 .collect();
-            let new_supervised_player = SupervisedPlayer::new(player.clone(), opponents);
+            let new_supervised_player =
+                SupervisedPlayer::new(player.clone(), opponents, warning.clone());
             supervised_players.push(Arc::new(Mutex::new(new_supervised_player)));
         }
         let players_in_turn_order = supervised_players

@@ -35,12 +35,6 @@ pub trait PlayerActions {
         }
     }
 
-    /// If true, the server collects all illegal moves made by the bot and returns an overview of them
-    /// at the end of the game
-    fn raise_faulty_action_warning(&self) -> bool {
-        false
-    }
-
     /// If it is a players turn, it must decide whether to draw a card or to trade with an other player.
     /// In the latter case it must provide all the information necessary for the trade.
     fn _draw_or_trade(&mut self) -> PlayerTurnDecision;

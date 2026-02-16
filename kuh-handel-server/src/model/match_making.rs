@@ -24,8 +24,16 @@ use tracing::{Level, error, info};
 #[derive(Clone)]
 pub struct WebsocketLobby {
     pub lobby_name: String,
-    pub channels_for_ws_actions: Arc<
-        Mutex<BTreeMap<PlayerId, Option<(Sender<serde_json::Value>, Receiver<serde_json::Value>)>>>,
+    pub player_settings: Arc<
+        Mutex<
+            BTreeMap<
+                PlayerId,
+                (
+                    Option<(Sender<serde_json::Value>, Receiver<serde_json::Value>)>,
+                    bool,
+                ),
+            >,
+        >,
     >,
     pub time_last_n_games: Arc<Mutex<Vec<tokio::time::Duration>>>,
     pub average_time_over_n_games: usize,
@@ -40,7 +48,7 @@ impl WebsocketLobby {
     ) -> Self {
         WebsocketLobby {
             lobby_name,
-            channels_for_ws_actions: Arc::default(),
+            player_settings: Arc::default(),
             time_last_n_games: Arc::default(),
             average_time_over_n_games: average_time_over_n_games,
             player_time_out,
@@ -71,9 +79,9 @@ pub async fn organize_new_game(
 
         let mut available_players_ids = Vec::new();
         {
-            let channels_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
+            let channels_for_ws_actions = ws_lobby.player_settings.lock().await;
             for (id, channels) in channels_for_ws_actions.iter() {
-                if channels.is_some() {
+                if channels.0.is_some() {
                     available_players_ids.push(id.clone());
                 }
             }
@@ -189,16 +197,20 @@ pub fn spawn_game(
         let start_time = tokio::time::Instant::now();
 
         let mut ws_actions: Vec<WebsocketActions> = Vec::new();
+        let mut vec_raise_faulty_action_warnings: Vec<bool> = Vec::new();
         {
-            let mut channel_for_ws_actions = ws_lobby.channels_for_ws_actions.lock().await;
+            let mut channel_for_ws_actions = ws_lobby.player_settings.lock().await;
 
             for id in &ws_players {
-                let player_channels = channel_for_ws_actions.get_mut(id).unwrap();
+                let (player_channels, raise_faulty_action_warning) =
+                    channel_for_ws_actions.get_mut(id).unwrap();
                 ws_actions.push(WebsocketActions::new(
                     id.clone(),
                     player_channels.take().unwrap(),
                     seeds.pop().unwrap(),
                 ));
+
+                vec_raise_faulty_action_warnings.push(*raise_faulty_action_warning);
             }
         }
         let mut server_bot_actions: Vec<SimplePlayer> = Vec::new();
@@ -210,6 +222,7 @@ pub fn spawn_game(
             let new_id = format!("{old_id}_risk_{risk}");
             server_bots[idx] = new_id.clone();
             server_bot_actions.push(SimplePlayer::new(new_id.clone(), risk));
+            vec_raise_faulty_action_warnings.push(false);
         }
 
         let mut all_ids: Vec<String> = Vec::new();
@@ -217,14 +230,21 @@ pub fn spawn_game(
         all_ids.extend(server_bots.clone());
         let game_handle = tokio::task::spawn_blocking(move || {
             let mut all_actions: Vec<Box<dyn PlayerActions + Send + Sync>> = Vec::new();
-            all_actions.extend(ws_actions.into_iter().map(|action: WebsocketActions| {
-                Box::new(action) as Box<dyn PlayerActions + Send + Sync>
-            }));
+            all_actions.extend(
+                ws_actions
+                    .into_iter()
+                    .map(|action| Box::new(action) as Box<dyn PlayerActions + Send + Sync>),
+            );
             all_actions.extend(server_bot_actions.into_iter().map(|action: SimplePlayer| {
                 Box::new(action) as Box<dyn PlayerActions + Send + Sync>
             }));
 
-            let mut game = Game::new_default_game(all_ids, all_actions, seeds.pop().unwrap());
+            let mut game = Game::new_default_game(
+                all_ids,
+                all_actions,
+                seeds.pop().unwrap(),
+                vec_raise_faulty_action_warnings,
+            );
 
             let ranking = game.play();
 

@@ -10,6 +10,7 @@ futures-util = {workspace = true}
 serde = {workspace = true}
 serde_json = {workspace = true}
 serde_with = {workspace = true}
+serde-aux = "4.5"
 tokio-tungstenite = {workspace = true}
 tokio = {workspace = true}
 rand = {workspace = true}

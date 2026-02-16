@@ -25,17 +25,23 @@ pub struct SupervisedPlayer {
     opponents: Vec<Arc<Mutex<Player>>>,
     limit_bidding_until_next_auction: bool,
     pub illegal_moves_made: Vec<String>,
+    raise_faulty_action_warning: bool,
 }
 
 // todo tell the bot if action was changed
 
 impl SupervisedPlayer {
-    pub fn new(player: Arc<Mutex<Player>>, opponents: Vec<Arc<Mutex<Player>>>) -> Self {
+    pub fn new(
+        player: Arc<Mutex<Player>>,
+        opponents: Vec<Arc<Mutex<Player>>>,
+        raise_faulty_action_warning: bool,
+    ) -> Self {
         SupervisedPlayer {
             player: player,
             opponents: opponents,
             limit_bidding_until_next_auction: false,
             illegal_moves_made: Vec::default(),
+            raise_faulty_action_warning,
         }
     }
 
@@ -175,13 +181,7 @@ impl SupervisedPlayer {
         original_action: &T,
         rectified_action: &T,
     ) {
-        if self
-            .player
-            .blocking_lock()
-            .player_actions()
-            .raise_faulty_action_warning()
-            && original_action != rectified_action
-        {
+        if self.raise_faulty_action_warning && original_action != rectified_action {
             let illegal_move = format!(
                 "rectified action of:{}, {:?}, {:?}",
                 self.id(),

@@ -14,6 +14,7 @@ impl Game {
         player_ids: Vec<String>,
         player_actions: Vec<Box<dyn PlayerActions + Send + Sync>>,
         seed: u64,
+        raise_faulty_action_warnings: Vec<bool>,
     ) -> Self {
         let mut bank_notes: BTreeMap<Money, usize> = BTreeMap::new();
         bank_notes.insert(0, 2);
@@ -59,13 +60,23 @@ impl Game {
             })
             .collect();
 
-        Game::new(players, wallet, game_stack, seed, 15, 500, 500)
+        Game::new(
+            players,
+            wallet,
+            game_stack,
+            seed,
+            15,
+            500,
+            500,
+            raise_faulty_action_warnings,
+        )
     }
 
     pub fn new_random_game(
         player_ids: Vec<String>,
         player_actions: Vec<Box<dyn PlayerActions + Send + Sync>>,
         seed: u64,
+        raise_faulty_action_warnings: Vec<bool>,
     ) -> Self {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let ratio_player_money: usize = rng.random_range(1..=3).try_into().unwrap();
@@ -129,6 +140,15 @@ impl Game {
             })
             .collect();
 
-        Game::new(players, wallet, game_stack, seed, 15, 500, 500)
+        Game::new(
+            players,
+            wallet,
+            game_stack,
+            seed,
+            15,
+            500,
+            500,
+            raise_faulty_action_warnings,
+        )
     }
 }

@@ -22,6 +22,7 @@ pub struct Client {
     pub base_url: String,
     last_ranking: Vec<(String, usize)>,
     illegal_moves_made: Vec<String>,
+    raise_faulty_action_warning: bool,
 }
 
 impl Client {
@@ -31,6 +32,7 @@ impl Client {
         token: String,
         bot: Box<dyn PlayerActions + Send + Sync>,
         base_url: String,
+        raise_faulty_action_warning: bool,
     ) -> Self {
         Client {
             name,
@@ -39,6 +41,7 @@ impl Client {
             base_url,
             last_ranking: Vec::new(),
             illegal_moves_made: Vec::default(),
+            raise_faulty_action_warning: raise_faulty_action_warning,
         }
     }
 
@@ -68,12 +71,12 @@ impl Client {
     ///                   game: waits for other players to join and then plays against those. These games are counted in the results
     ///                   server_bot_game: only play against random bots provided by the server. Use this for testing if your bot can play valid games. NOT counted in the results
     pub async fn play_one_round(&mut self, game_type_url: String) {
-        let (ws_stream, _) = connect_async(format!(
-            "ws{}/kuh-handel/{}?player_id={}&token={}",
-            self.base_url, game_type_url, self.name, self.token
-        ))
-        .await
-        .expect("Failed to connect");
+        let url = format!(
+            "ws{}/kuh-handel/{}?player_id={}&token={}&raise_faulty_action_warning={}",
+            self.base_url, game_type_url, self.name, self.token, self.raise_faulty_action_warning
+        );
+
+        let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
 
         println!("Connected to server!");
 
@@ -165,7 +168,7 @@ impl Client {
 
         let res = send.close().await;
         println!("result {}: {:?}", self.name, self.last_ranking);
-        if self.bot.raise_faulty_action_warning() {
+        if self.raise_faulty_action_warning {
             println!(
                 "illegal moves made {}: {:?}",
                 self.name, self.illegal_moves_made

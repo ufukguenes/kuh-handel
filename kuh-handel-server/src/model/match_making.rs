@@ -215,7 +215,7 @@ pub fn spawn_game(
         let mut all_ids: Vec<String> = Vec::new();
         all_ids.extend(ws_players.clone());
         all_ids.extend(server_bots.clone());
-        let game_handle = tokio::spawn(async move {
+        let game_handle = tokio::task::spawn_blocking(move || {
             let mut all_actions: Vec<Box<dyn PlayerActions + Send + Sync>> = Vec::new();
             all_actions.extend(ws_actions.into_iter().map(|action: WebsocketActions| {
                 Box::new(action) as Box<dyn PlayerActions + Send + Sync>
@@ -226,7 +226,7 @@ pub fn spawn_game(
 
             let mut game = Game::new_default_game(all_ids, all_actions, seeds.pop().unwrap());
 
-            let ranking = game.play().await;
+            let ranking = game.play();
 
             ranking
         });

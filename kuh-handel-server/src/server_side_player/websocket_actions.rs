@@ -50,7 +50,11 @@ impl WebsocketActions {
         );
 
         if let StateMessage::GameUpdate {
-            update: GameUpdate::End { ranking: _ },
+            update:
+                GameUpdate::End {
+                    ranking: _,
+                    illegal_moves_made: _,
+                },
         } = &msg
         {
             close_channel = true;

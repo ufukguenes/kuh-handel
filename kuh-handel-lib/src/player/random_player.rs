@@ -277,7 +277,10 @@ impl PlayerActions for RandomPlayerActions {
                 self.wallet = wallet;
                 self.owned_animals = BTreeMap::new();
             }
-            GameUpdate::End { ranking } => {
+            GameUpdate::End {
+                ranking,
+                illegal_moves_made,
+            } => {
                 self.final_ranking = ranking;
             }
             GameUpdate::Inflation(value) => {

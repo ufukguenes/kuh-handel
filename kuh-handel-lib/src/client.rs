@@ -21,6 +21,7 @@ pub struct Client {
     /// the url requires "s://" for a secure connection
     pub base_url: String,
     last_ranking: Vec<(String, usize)>,
+    illegal_moves_made: Vec<String>,
 }
 
 impl Client {
@@ -37,6 +38,7 @@ impl Client {
             bot,
             base_url,
             last_ranking: Vec::new(),
+            illegal_moves_made: Vec::default(),
         }
     }
 
@@ -128,10 +130,15 @@ impl Client {
 
                 let state_message: StateMessage = serde_json::from_str(&text).unwrap();
                 if let StateMessage::GameUpdate {
-                    update: crate::messages::game_updates::GameUpdate::End { ranking },
+                    update:
+                        crate::messages::game_updates::GameUpdate::End {
+                            ranking,
+                            illegal_moves_made,
+                        },
                 } = &state_message
                 {
                     self.last_ranking = ranking.clone();
+                    self.illegal_moves_made = illegal_moves_made.clone();
                     break;
                 };
             }
@@ -158,5 +165,9 @@ impl Client {
 
         let res = send.close().await;
         println!("res: {}, {:?}", self.name, self.last_ranking);
+        println!(
+            "illegal moves made {}, {:?}, {:?}",
+            self.name, self.last_ranking, self.illegal_moves_made
+        );
     }
 }

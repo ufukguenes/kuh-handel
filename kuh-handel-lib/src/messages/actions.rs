@@ -28,7 +28,7 @@ impl FromActionMessage for NoAction {
 
 /// Action to decide if a bot, whose turn it currently is, wants to draw a new card or trade a card it already owns
 #[pyclass()]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum PlayerTurnDecision {
     Draw(),
     Trade(InitialTrade),
@@ -59,7 +59,7 @@ impl PlayerTurnDecision {
 
 /// Action to specify the a trade offer
 #[pyclass()]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitialTrade {
     /// The player id of the opponent with which to trade
     #[pyo3(get)]
@@ -76,6 +76,27 @@ pub struct InitialTrade {
     /// Action to describe a trade that is initialized by the called bot
     #[pyo3(get)]
     pub amount: Vec<Money>,
+}
+
+impl PartialEq for InitialTrade {
+    fn eq(&self, other: &Self) -> bool {
+        let same_player = self.opponent == other.opponent;
+        let same_animal = self.animal == other.animal;
+        let same_count = self.animal_count == other.animal_count;
+        let same_amount;
+
+        let other_has_zero = other.amount.len() == 0 || other.amount.iter().all(|&x| x == 0);
+        let self_has_zero = self.amount.len() == 0 || self.amount.iter().all(|&x| x == 0);
+
+        if self_has_zero {
+            same_amount = other_has_zero;
+        } else {
+            same_amount = self.amount == other.amount
+        }
+        println!("{}, {:?}, {:?}", same_amount, self.amount, other.amount);
+
+        return same_player && same_animal && same_count && same_amount;
+    }
 }
 
 #[pymethods]
@@ -158,10 +179,21 @@ impl TradeOpponentDecision {
 
 /// Action to specify what combination of cards/ bills is send to another player to fulfill a requested minimum amount, or to acknowledge that it was a bluff  
 #[pyclass()]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SendMoney {
     WasBluff(),
     Amount(Vec<Money>),
+}
+
+impl PartialEq for SendMoney {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (SendMoney::WasBluff(), SendMoney::WasBluff()) => true,
+            (SendMoney::WasBluff(), SendMoney::Amount(a)) => a.iter().sum::<usize>() == 0,
+            (SendMoney::Amount(a), SendMoney::WasBluff()) => a.iter().sum::<usize>() == 0,
+            (SendMoney::Amount(a), SendMoney::Amount(b)) => a == b,
+        }
+    }
 }
 
 #[pymethods]

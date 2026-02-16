@@ -107,7 +107,10 @@ pub enum GameUpdate {
     /// # Arguments
     ///
     /// `ranking` - the points each player achieved in this game
-    End { ranking: Vec<(PlayerId, Points)> },
+    End {
+        ranking: Vec<(PlayerId, Points)>,
+        illegal_moves_made: Vec<String>,
+    },
 
     /// Sent if a player has bluffed
     ///

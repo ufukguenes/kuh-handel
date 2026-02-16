@@ -192,7 +192,10 @@ impl PlayerActions for SimplePlayer {
                 players_in_turn_order,
                 animals,
             } => self.handle_update_start(wallet, players_in_turn_order, animals),
-            GameUpdate::End { ranking } => (),
+            GameUpdate::End {
+                ranking,
+                illegal_moves_made,
+            } => (),
             GameUpdate::ExposePlayer { player, wallet } => {
                 self.handle_update_expose(player, wallet)
             }

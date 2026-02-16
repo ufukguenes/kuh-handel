@@ -124,7 +124,10 @@ impl PlayerActions for LeonBot {
                 players_in_turn_order,
                 animals,
             } => (),
-            GameUpdate::End { ranking } => (),
+            GameUpdate::End {
+                ranking,
+                illegal_moves_made,
+            } => (),
             GameUpdate::ExposePlayer { player, wallet } => (),
             GameUpdate::Inflation(_) => (),
         }

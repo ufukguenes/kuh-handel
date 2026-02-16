@@ -163,6 +163,7 @@ impl Game {
 
         let update = GameUpdate::End {
             ranking: ranking.clone(),
+            illegal_moves_made: Vec::default(),
         };
         Self::update_multiple_players(&self.players, update);
         Ok(ranking)
@@ -507,7 +508,20 @@ impl Game {
 
         for player_arc in players {
             let player_arc = Arc::clone(player_arc);
-            let update_clone = update.clone();
+            let update_clone = match update.clone() {
+                GameUpdate::End {
+                    ranking,
+                    illegal_moves_made: _,
+                } => {
+                    let personalized_illegal_moves =
+                        player_arc.blocking_lock().illegal_moves_made.clone();
+                    GameUpdate::End {
+                        ranking,
+                        illegal_moves_made: personalized_illegal_moves,
+                    }
+                }
+                _ => update.clone(),
+            };
 
             let handle = std::thread::spawn(move || {
                 let mut binding = player_arc.blocking_lock();

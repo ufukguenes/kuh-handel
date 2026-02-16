@@ -25,6 +25,7 @@ pub struct SupervisedPlayer {
     opponents: Vec<Arc<Mutex<Player>>>,
     limit_bidding_until_next_auction: bool,
     raise_faulty_action_warning: bool,
+    pub illegal_moves_made: Vec<String>,
 }
 
 // todo tell the bot if action was changed
@@ -40,6 +41,7 @@ impl SupervisedPlayer {
             opponents: opponents,
             limit_bidding_until_next_auction: false,
             raise_faulty_action_warning: raise_faulty_action_warning,
+            illegal_moves_made: Vec::default(),
         }
     }
 
@@ -174,9 +176,19 @@ impl SupervisedPlayer {
         T::extract(action_msg).unwrap()
     }
 
-    pub fn raise_warning<T: PartialEq>(&self, original_action: &T, rectified_action: &T) {
-        if self.raise_faulty_action_warning && original_action == rectified_action {
-            eprintln!("rectified action of:{}", self.id())
+    pub fn raise_warning<T: PartialEq + std::fmt::Debug>(
+        &mut self,
+        original_action: &T,
+        rectified_action: &T,
+    ) {
+        if self.raise_faulty_action_warning && original_action != rectified_action {
+            let illegal_move = format!(
+                "rectified action of:{}, {:?}, {:?}",
+                self.id(),
+                original_action,
+                rectified_action
+            );
+            self.illegal_moves_made.push(illegal_move);
         }
     }
 }
@@ -189,13 +201,14 @@ impl PlayerActions for SupervisedPlayer {
             .player_actions()
             ._draw_or_trade();
 
-        let rectified_decision = match decision {
+        let rectified_decision = match decision.clone() {
             PlayerTurnDecision::Draw() => decision.clone(),
             PlayerTurnDecision::Trade(initial_trade) => {
                 if self.can_trade().is_some() {
-                    PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade));
+                    PlayerTurnDecision::Trade(self.rectify_initial_trade(&initial_trade))
+                } else {
+                    PlayerTurnDecision::Draw()
                 }
-                return PlayerTurnDecision::Draw();
             }
         };
 
@@ -264,7 +277,7 @@ impl PlayerActions for SupervisedPlayer {
             ._buy_or_sell(state);
 
         let rectified_decision = if self.limit_bidding_until_next_auction {
-            return AuctionDecision::Sell();
+            AuctionDecision::Sell()
         } else {
             decision.clone()
         };
@@ -391,7 +404,10 @@ impl PlayerActions for SupervisedPlayer {
                 players_in_turn_order: _,
                 animals: _,
             } => {} // GameUpdate::Start is handled by the game logic when initializing a new player, because then the opponents can be Arc
-            GameUpdate::End { ranking: _ } => {} // nothing to do
+            GameUpdate::End {
+                ranking: _,
+                illegal_moves_made: _,
+            } => {} // nothing to do
         }
 
         self.player

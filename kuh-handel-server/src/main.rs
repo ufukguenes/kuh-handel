@@ -41,9 +41,10 @@ async fn main() {
     fmt()
         .with_writer(log_writer)
         .with_ansi(false)
+        .with_max_level(Level::ERROR)
         .finish()
         .init();
-    // diable tracing of info! with: .with_max_level(Level::ERROR)
+    // diable tracing of info! with:
 
     let multi_progress = MultiProgress::new();
 

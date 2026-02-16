@@ -535,7 +535,7 @@ impl Game {
         }
 
         let time = std::time::Instant::now() - t;
-        println!("time: {:?}", time.as_micros());
+        error!("time: {:?}", time.as_micros());
     }
 
     fn public_private_update(

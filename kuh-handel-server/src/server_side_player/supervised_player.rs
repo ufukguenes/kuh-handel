@@ -270,13 +270,23 @@ impl PlayerActions for SupervisedPlayer {
     }
 
     fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        let current_max_bid_value = match state.bids.iter().max_by_key(|(_, bid)| bid) {
+            Some((_, max_bid)) => match max_bid {
+                Bidding::Pass() => 0,
+                Bidding::Bid(max_bid_value) => *max_bid_value,
+            },
+            None => 0,
+        };
+
         let decision = self
             .player
             .blocking_lock()
             .player_actions()
             ._buy_or_sell(state);
 
-        let rectified_decision = if self.limit_bidding_until_next_auction {
+        let rectified_decision = if self.limit_bidding_until_next_auction
+            && self.player.blocking_lock().wallet().total_money() < current_max_bid_value
+        {
             AuctionDecision::Sell()
         } else {
             decision.clone()

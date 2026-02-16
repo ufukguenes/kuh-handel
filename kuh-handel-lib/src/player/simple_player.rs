@@ -125,9 +125,10 @@ impl PlayerActions for SimplePlayer {
             1,
         );
 
-        if Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals)
-            <= self.mean_points as f32
-            || (highest_bid <= value_allowed_to_spend && averaged_subj_values < current_subj_value)
+        if highest_bid <= value_allowed_to_spend
+            && (Self::sqrt_points_for_player(&self.all_animals, &self.owned_animals)
+                <= self.mean_points as f32
+                || averaged_subj_values < current_subj_value)
         {
             return AuctionDecision::Buy();
         }

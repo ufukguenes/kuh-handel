@@ -164,10 +164,10 @@ impl Client {
         }
 
         let res = send.close().await;
-        println!("res: {}, {:?}", self.name, self.last_ranking);
+        println!("result {}: {:?}", self.name, self.last_ranking);
         println!(
-            "illegal moves made {}, {:?}, {:?}",
-            self.name, self.last_ranking, self.illegal_moves_made
+            "illegal moves made {}: {:?}",
+            self.name, self.illegal_moves_made
         );
     }
 }

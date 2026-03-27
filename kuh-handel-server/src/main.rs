@@ -83,7 +83,7 @@ async fn main() {
         (3, 6),
         1,
         true,
-        true,
+        false,
         bot_time_out,
         &multi_progress,
     )

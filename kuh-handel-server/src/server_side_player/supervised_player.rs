@@ -54,10 +54,13 @@ impl SupervisedPlayer {
     }
 
     pub fn can_trade(&self) -> Option<InitialTrade> {
-        self.player
+        let response = self
+            .player
             .blocking_lock()
-            .can_trade(self.opponents.clone())
+            .can_trade(self.opponents.clone());
+        response
     }
+
     pub fn clone_owned_animals(&self) -> BTreeMap<Animal, usize> {
         self.player.blocking_lock().owned_animals().clone()
     }
@@ -83,7 +86,6 @@ impl SupervisedPlayer {
         let new_amount = self.rectify_money_combination(&trade.amount);
 
         let trade_animal = trade.animal;
-        let animal_count: usize = trade.animal_count.clone() as usize;
 
         let animal_trade_count = match self
             .player
@@ -93,14 +95,19 @@ impl SupervisedPlayer {
         {
             Some(&count) => {
                 if count > 0 {
-                    count
+                    Some(count)
                 } else {
                     panic!(
                         "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"
                     )
                 }
             }
-            None => return self.can_trade().unwrap(), // player does not have animal, todo remove unwrap if return is changed to option
+            None => None, // player does not have animal, todo remove unwrap if return is changed to option
+        };
+
+        let animal_trade_count = match animal_trade_count {
+            Some(count) => count,
+            None => return self.can_trade().unwrap(),
         };
 
         let opponent: Option<&Arc<Mutex<Player>>> = self
@@ -120,16 +127,20 @@ impl SupervisedPlayer {
         {
             Some(&count) => {
                 if count > 0 {
-                    count
+                    Some(count)
                 } else {
                     panic!(
                         "animal was in BTreeMap, but amount was set to zero, this should/ can not happen"
                     )
                 }
             }
-            None => return self.can_trade().unwrap(), // opponent does not have animal, todo remove unwrap if return is changed to option
+            None => None, // opponent does not have animal, todo remove unwrap if return is changed to option
         };
         // is never 0
+        let opponent_animal_count = match opponent_animal_count {
+            Some(count) => count,
+            None => return self.can_trade().unwrap(),
+        };
 
         let mut new_trade = trade.clone();
         new_trade.opponent = opponent.blocking_lock().id().clone();

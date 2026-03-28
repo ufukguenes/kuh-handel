@@ -1,6 +1,6 @@
 # pyhandel-stubs
 
-Type stubs for [pyhandel](https://pypi.org/project/pyhandel/), the Python client library for the [Kuh-Handel](https://ufuk-guenes.com/kuh-handel) bot coding challenge.
+Type stubs for [pyhandel](https://pypi.org/project/pyhandel/), the Python client library for the [Kuh-Handel](https://ufuk-guenes.com/kuh-handel-blog) bot coding challenge.
 
 Installing these stubs enables type checking and autocompletion in your IDE for pyhandel objects, which is especially useful for navigating the game state and message types.
 

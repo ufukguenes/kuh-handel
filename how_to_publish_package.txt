@@ -1,0 +1,10 @@
+# pyhandel
+maturin publish
+
+# pyhandel-stubs
+python -m build
+twine upload --skip-existing dist/*
+
+# kuh-handel-lib/server
+cargo publish -p kuh-handel-lib
+cargo publish -p kuh-handel-server

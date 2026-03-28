@@ -1,6 +1,6 @@
 # kuh-handel-lib
 
-Rust library for building bots for the [Kuh-Handel](https://ufuk-guenes.com/kuh-handel) online bot coding challenge.
+Rust library for building bots for the [Kuh-Handel](https://ufuk-guenes.com-blog) online bot coding challenge.
 
 ## Usage
 

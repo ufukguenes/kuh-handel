@@ -1,6 +1,6 @@
 # pyhandel
 
-Python wrapper for building bots for the [Kuh-Handel](https://ufuk-guenes.com/kuh-handel) online bot coding challenge. Wraps the core Rust implementation via PyO3.
+Python wrapper for building bots for the [Kuh-Handel](https://ufuk-guenes.com/kuh-handel-blog) online bot coding challenge. Wraps the core Rust implementation via PyO3.
 
 ## Installation
 

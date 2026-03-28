@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "kuh-handel-lib"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "float-ord",
  "futures-util",

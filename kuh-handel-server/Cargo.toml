@@ -6,7 +6,7 @@ description = "The server code for the Kuh-Handel game"
 license = "MIT"
 
 [dependencies]
-kuh-handel-lib = {path = "../kuh-handel-lib"}
+kuh-handel-lib = {path = "../kuh-handel-lib", version="*"}
 
 futures-util = {workspace = true}
 serde = {workspace = true}

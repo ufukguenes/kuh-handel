@@ -1,7 +1,9 @@
 [package]
 name = "kuh-handel-server"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+description = "The server code for the Kuh-Handel game"
+license = "MIT"
 
 [dependencies]
 kuh-handel-lib = {path = "../kuh-handel-lib"}

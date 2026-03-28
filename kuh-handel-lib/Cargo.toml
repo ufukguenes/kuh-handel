@@ -1,6 +1,6 @@
 [package]
 name = "kuh-handel-lib"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 description = "A package for implementing a bot for the Kuh-Handel game"
 license = "MIT"

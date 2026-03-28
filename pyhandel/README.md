@@ -69,8 +69,8 @@ if __name__ == "__main__":
 
 ## Documentation
 
-- [Full tutorial](https://ufuk-guenes.com/kuh-handel/documentation)
-- [Game rules](https://ufuk-guenes.com/kuh-handel/rules)
+- [Full tutorial](https://ufuk-guenes.com/kuh-handel-blog/documentation)
+- [Game rules](https://ufuk-guenes.com/kuh-handel-blog/rules)
 - [API reference (Rust)](https://docs.rs/kuh-handel-lib)
 
 ## License

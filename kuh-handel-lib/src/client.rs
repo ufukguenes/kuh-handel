@@ -22,7 +22,7 @@ pub struct Client {
     pub base_url: String,
     last_ranking: Vec<(String, usize)>,
     illegal_moves_made: Vec<String>,
-    /// if true, a summary of illegal is printed to the terminal
+    /// if true, a summary of illegal actions that have been corrected is printed to the terminal
     pub raise_faulty_action_warning: bool,
 }
 

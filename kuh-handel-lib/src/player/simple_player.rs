@@ -54,6 +54,7 @@ impl ValueOwned {
     }
 }
 
+#[derive(Default)]
 pub struct SimplePlayer {
     id: PlayerId,
     opponents: BTreeMap<PlayerId, (BTreeMap<Animal, usize>, ValueOwned)>,

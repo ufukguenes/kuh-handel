@@ -1,51 +1,66 @@
-use kuh_handel_lib::{client::Client, player::simple_player::SimplePlayer};
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use kuh_handel_lib::Value;
+use kuh_handel_lib::client::Client;
+use kuh_handel_lib::messages::actions::{
+    AuctionDecision, Bidding, InitialTrade, NoAction, PlayerTurnDecision, SendMoney,
+    TradeOpponentDecision,
+};
+use kuh_handel_lib::messages::game_updates::{AuctionRound, GameUpdate, TradeOffer};
+use kuh_handel_lib::player::base_player::PlayerId;
+use kuh_handel_lib::player::player_actions::PlayerActions;
+use kuh_handel_lib::player::simple_player::SimplePlayer;
 
-fn main() {
-    let base_url = "://127.0.0.1:2000".to_string();
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-
-    rt.block_on(async move {
-        let local_set = tokio::task::LocalSet::new();
-
-        local_set
-            .run_until(async move {
-                let ufuk_handle = spawn_player("ufuk".to_string(), base_url.clone(), 0.1);
-                let leon_handle = spawn_player("leon".to_string(), base_url.clone(), 0.2);
-                let johannes_handle = spawn_player("johannes".to_string(), base_url.clone(), 0.3);
-                let viola_handle = spawn_player("viola".to_string(), base_url.clone(), 0.4);
-
-                let _ = tokio::join!(ufuk_handle, leon_handle, johannes_handle, viola_handle);
-            })
-            .await;
-    });
+#[derive(Default)]
+struct Bot {
+    simple_player: SimplePlayer,
 }
 
-pub fn spawn_player(id: String, base_url: String, risk: f32) -> tokio::task::JoinHandle<()> {
-    let simple_bot = SimplePlayer::new(id.clone(), risk);
-    let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::new(
-        id.clone(),
-        "abcd".to_string(),
-        Box::new(simple_bot),
-        base_url.clone(),
-        true,
-    )));
+impl PlayerActions for Bot {
+    fn _draw_or_trade(&mut self) -> PlayerTurnDecision {
+        self.simple_player._draw_or_trade()
+    }
 
-    tokio::task::spawn_local(async move {
-        let _ = client.clone().lock().await.register().await;
+    fn _trade(&mut self) -> InitialTrade {
+        self.simple_player._trade()
+    }
 
-        for _ in 0..10 {
-            client
-                .clone()
-                .lock()
-                .await
-                .play_one_round("pvp_games".to_string())
-                .await;
-        }
-    })
+    fn _provide_bidding(&mut self, state: AuctionRound) -> Bidding {
+        self.simple_player._provide_bidding(state)
+    }
+
+    fn _buy_or_sell(&mut self, state: AuctionRound) -> AuctionDecision {
+        self.simple_player._buy_or_sell(state)
+    }
+
+    fn _send_money_to_player(&mut self, player: &PlayerId, amount: Value) -> SendMoney {
+        self.simple_player._send_money_to_player(player, amount)
+    }
+
+    fn _respond_to_trade(&mut self, offer: TradeOffer) -> TradeOpponentDecision {
+        self.simple_player._respond_to_trade(offer)
+    }
+
+    fn _receive_game_update(&mut self, update: GameUpdate) -> NoAction {
+        self.simple_player._receive_game_update(update)
+    }
+}
+
+pub async fn run(client: &mut Client, num_rounds: u32) {
+    for _ in 0..num_rounds {
+        client.play_one_round("pvp_games".to_string()).await;
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let name = "your_bot_name".to_string();
+    let token = "your_private_token".to_string();
+    let base_url = "s://ufuk-guenes.com".to_string(); // "://127.0.0.1:2000"
+    let raise_faulty_action_warning = true;
+    let play_n_rounds = 1;
+
+    let bot = Box::new(Bot::default());
+
+    let mut client = Client::new(name, token, bot, base_url, raise_faulty_action_warning);
+
+    run(&mut client, play_n_rounds).await;
 }

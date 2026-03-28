@@ -3,8 +3,10 @@ use serde_with::serde_as;
 
 use crate::{Money, Value, player::player_error::PlayerError};
 use pyo3::{exceptions::PyValueError, prelude::*};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
+/// A simple wallet used to track the money of a player.
+/// Just counts the number of cards one players owns of the different [Money] cards.
 #[pyclass()]
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -16,9 +18,7 @@ pub struct Wallet {
 
 impl Wallet {
     pub fn new(bank_notes: BTreeMap<Money, usize>) -> Self {
-        Wallet {
-            bank_notes: bank_notes,
-        }
+        Wallet { bank_notes }
     }
 
     pub fn add_money(&mut self, money: Money) {
@@ -32,10 +32,10 @@ impl Wallet {
         let backup_notes = self.bank_notes.clone();
 
         for money in amount {
-            let count = self.bank_notes.get(&money);
+            let count = self.bank_notes.get(money);
             match count {
                 Some(&count) => {
-                    let new_count: isize = count as isize - 1 as isize;
+                    let new_count: isize = count as isize - 1;
                     if new_count > 0 {
                         self.bank_notes.insert(*money, new_count as usize);
                     } else if new_count == 0 {
@@ -67,7 +67,7 @@ impl Wallet {
     pub fn to_vec(&self) -> Vec<Money> {
         let mut all_bills = Vec::new();
         for (money, count) in &self.bank_notes {
-            let current_bills = vec![money; count.clone()];
+            let current_bills = vec![money; *count];
             all_bills.extend(current_bills);
         }
 

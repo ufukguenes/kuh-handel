@@ -6,7 +6,7 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 use crate::messages::message_protocol::{ActionMessage, StateMessage};
 use crate::player::player_actions::PlayerActions;
 
-/// This Client is used to connect a Bot too the kuh-handel server
+/// This Client is used to connect a Bot to the kuh-handel server
 pub struct Client {
     /// name of the client. Should be identical to the name the bot uses
     pub name: String,
@@ -22,7 +22,8 @@ pub struct Client {
     pub base_url: String,
     last_ranking: Vec<(String, usize)>,
     illegal_moves_made: Vec<String>,
-    raise_faulty_action_warning: bool,
+    /// if true, a summary of illegal is printed to the terminal
+    pub raise_faulty_action_warning: bool,
 }
 
 impl Client {

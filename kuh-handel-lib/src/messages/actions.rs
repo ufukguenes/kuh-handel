@@ -1,5 +1,5 @@
 use crate::messages::message_protocol::ActionMessage;
-use crate::{Money, Value, animals};
+use crate::{Money, Value};
 use crate::{animals::Animal, player::base_player::PlayerId};
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};

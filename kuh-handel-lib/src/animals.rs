@@ -16,14 +16,21 @@ pub enum AnimalError {
     InvalidDraw,
 }
 
+/// Collects all the information per animal that are necessary in the game.
+/// How many cards are available per animal or is there inflation when the animal is uncovered?
 #[pyclass()]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnimalSet {
+    /// prototype of the animal that can be cloned
     #[pyo3(get, set)]
     animal: Animal,
+    /// for index i this vector contains the money that is uncovered when the animal is drawn the
+    /// i-th time.
     #[pyo3(get, set)]
     inflation: Vec<Value>,
+    /// Internal counter
     draw_count: usize,
+    /// prototype of the animal that can be cloned
     animals: Vec<Arc<Animal>>,
 }
 
@@ -75,6 +82,8 @@ impl AnimalSet {
     }
 }
 
+/// Internal representation of an animal card in the game.
+/// Abstracts the value of the animal.
 #[pyclass()]
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, Debug, PartialOrd, Ord)]
 pub struct Animal {

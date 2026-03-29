@@ -23,7 +23,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use tokio;
 use tracing_appender::non_blocking;
-use tracing_subscriber::fmt;
+use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::backend_api::{JsonLog, register_handler, stats_handler};
 
@@ -37,11 +37,12 @@ use crate::backend_api::{JsonLog, register_handler, stats_handler};
 async fn main() {
     let game_log_file = tracing_appender::rolling::minutely("logs", "app.log");
     let (log_writer, _guard1) = non_blocking(game_log_file);
+    let env_filter = EnvFilter::try_from_env("KUH_LOG").unwrap_or_else(|_| EnvFilter::new("error"));
 
     fmt()
         .with_writer(log_writer)
         .with_ansi(false)
-        .with_max_level(Level::ERROR)
+        .with_env_filter(env_filter)
         .finish()
         .init();
     // diable tracing of info! with:

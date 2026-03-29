@@ -19,7 +19,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use backend_api::{games_per_second_handler, websocket_handler};
 use model::match_making::{WebsocketLobby, organize_new_game};
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::Path, sync::Arc};
 
 use tokio;
 use tracing_appender::non_blocking;
@@ -177,6 +177,7 @@ pub async fn create_lobby_log_handle_pair(
     JsonLog<Vec<usize>>,
     tokio::task::JoinHandle<()>,
 ) {
+    std::fs::create_dir_all(Path::new("./results/")).unwrap();
     let mut log = JsonLog::<Vec<usize>>::new(
         format!("./results/{}.json", lobby_name),
         format!("new {}", lobby_name.clone()),

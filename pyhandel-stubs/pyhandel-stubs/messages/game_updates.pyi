@@ -144,27 +144,35 @@ class MoneyTransfer:
 
         __match_args__ = ("card_amount", "min_value")
 
+    class Private(MoneyTransfer):
+        amount: list[Money]
+
+        def __init__(self, amount: list[Money]) -> None: ...
+        
+        __match_args__ = ("amount")
+
+
 class MoneyTrade:
     class Public(MoneyTrade):
         challenger_card_offer: int
-        opponent_card_offer: tuple[int | None]
+        opponent_card_offer: int | None
 
         def __init__(
             self,
             challenger_card_offer: int,
-            opponent_card_offer: tuple[int | None],
+            opponent_card_offer: int | None,
         ) -> None: ...
 
         __match_args__ = ("card_amount", "min_value")
 
     class Private(MoneyTrade):
         challenger_card_offer: list[Money]
-        opponent_card_offer: tuple[list[Money] | None]
+        opponent_card_offer: list[Money] | None
 
         def __init__(
             self,
             challenger_card_offer: list[Money],
-            opponent_card_offer: tuple[list[Money] | None],
+            opponent_card_offer: list[Money] | None,
         ) -> None: ...
 
         __match_args__ = ("challenger_card_offer", "opponent_card_offer")

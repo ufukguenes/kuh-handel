@@ -960,7 +960,7 @@ dependencies = [
 
 [[package]]
 name = "kuh-handel-server"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
  "axum-macros",

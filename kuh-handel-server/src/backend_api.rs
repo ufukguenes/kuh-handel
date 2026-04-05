@@ -206,9 +206,11 @@ pub async fn websocket_handler(
     }
 
     info!("bck | Player {} authenticated successfully.", player_id);
-    ws.on_upgrade(move |socket| {
-        handle_socket(socket, ws_lobby, player_id, raise_faulty_action_warning)
-    })
+    ws.max_frame_size(64 * 1024)
+        .max_message_size(256 * 1024)
+        .on_upgrade(move |socket| {
+            handle_socket(socket, ws_lobby, player_id, raise_faulty_action_warning)
+        })
 }
 
 async fn handle_socket(

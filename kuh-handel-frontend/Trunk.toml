@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+
+[[proxy]]
+# proxy requests during dev so the WS is accessible without CORS issues
+rewrite = "/kuh-handel"
+backend = "https://ufuk-guenes.com/kuh-handel"

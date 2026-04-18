@@ -4,7 +4,6 @@ members = [
     "kuh-handel-lib",
     "kuh-handel-test-client",
     "pyhandel",
-    "kuh-handel-frontend",
 ]
 
 [workspace.dependencies]
